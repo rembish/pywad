@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pywad"
+version = "0.0.1"
+description = "Python Library to work with id Doom WAD files"
+authors = ["Alex Rembish <alex@rembish.org>"]
+license = "BSD 2-Clause License"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+ipython = "^8.5.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
