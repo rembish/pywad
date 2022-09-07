@@ -1,0 +1,2 @@
+class WadFile:
+    pass
