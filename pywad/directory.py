@@ -1,7 +1,7 @@
 class DirectoryEntry:
     def __init__(self, owner, offset, size, name):
         self.owner = owner
-        self.name = name.decode("ascii").rstrip("\0")
+        self.name = name.decode("ascii").rstrip("\0") if isinstance(name, bytes) else name
         self.size = size
         self.offset = offset
 

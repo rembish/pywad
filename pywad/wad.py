@@ -4,8 +4,9 @@ from struct import unpack, calcsize
 
 from .constants import HEADER_FORMAT, DIRECTORY_ENTRY_FORMAT, DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
 from .directory import DirectoryEntry
-from .enums import WadType
+from .enums import WadType, MapData
 from .exceptions import BadHeaderWadException
+from .map import MapEntry
 
 
 class WadFile:
@@ -43,7 +44,11 @@ class WadFile:
     @cached_property
     def maps(self):
         mlist = []
+        last = None
         for entry in self.directory:
             if DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name):
-                mlist.append(entry)
+                last = MapEntry.from_directory(entry)
+                mlist.append(last)
+            elif entry.name in MapData.names():
+                last.attach(entry)
         return mlist
