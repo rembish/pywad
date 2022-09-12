@@ -6,7 +6,7 @@ from .constants import HEADER_FORMAT, DIRECTORY_ENTRY_FORMAT, DOOM1_MAP_NAME_REG
 from .directory import DirectoryEntry
 from .enums import WadType, MapData
 from .exceptions import BadHeaderWadException
-from .map import MapEntry
+from .lumps.map import MapEntry
 
 
 class WadFile:
@@ -47,7 +47,7 @@ class WadFile:
         last = None
         for entry in self.directory:
             if DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name):
-                last = MapEntry.from_directory(entry)
+                last = MapEntry(entry)
                 mlist.append(last)
             elif entry.name in MapData.names():
                 last.attach(entry)
