@@ -7,6 +7,7 @@ from .directory import DirectoryEntry
 from .enums import WadType, MapData
 from .exceptions import BadHeaderWadException
 from .lumps.map import MapEntry
+from .lumps.things import Things
 
 
 class WadFile:
@@ -50,5 +51,9 @@ class WadFile:
                 last = MapEntry(entry)
                 mlist.append(last)
             elif entry.name in MapData.names():
-                last.attach(entry)
+                if entry.name == "THINGS":
+                    things = Things(entry)
+                    last.attach_things(things)
+                else:
+                    last.attach(entry)
         return mlist

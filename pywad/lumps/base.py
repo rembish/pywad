@@ -8,7 +8,7 @@ class BaseLump:
         self.owner = entry.owner
         self._size = entry.size or None
         self._offset = entry.offset if self._size else None
-        self._rposition = self._offset
+        self._rposition = 0 if self._size else None
 
         self._name = entry.name
 
@@ -61,6 +61,7 @@ class BaseLump:
         self.owner.fd.seek(self._offset + self._rposition, SEEK_SET)
         if size == -1:
             size = self._size - self._rposition
+        self._rposition += size
         return self.owner.fd.read(size)
 
     def writable(self):
