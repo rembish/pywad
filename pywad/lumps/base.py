@@ -38,6 +38,7 @@ class BaseLump:
         return f'<{self.__class__.__name__}[{len(self) or "n/a"}]>'
 
     def __iter__(self):
+        self.seek(0)
         return self
 
     def __next__(self):
