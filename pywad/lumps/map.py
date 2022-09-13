@@ -1,5 +1,15 @@
+from dataclasses import dataclass
+from functools import cached_property
+from itertools import chain
+
 from .base import BaseLump
 from ..constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+
+
+@dataclass
+class Point:
+    x: int
+    y: int
 
 
 class BaseMapEntry(BaseLump):
@@ -18,6 +28,17 @@ class BaseMapEntry(BaseLump):
     @property
     def number(self):
         return int(self._match.group("number").lstrip("0"))
+
+    @cached_property
+    def boundaries(self):
+        min_x = max_x = self.things[0].x
+        min_y = max_y = self.things[0].y
+
+        for entry in chain(self.things, self.vertices):
+            min_x, max_x = min(min_x, entry.x), max(max_x, entry.x)
+            min_y, max_y = min(min_y, entry.y), max(max_y, entry.y)
+
+        return tuple([Point(min_x, min_y), Point(max_x, max_y)])
 
     def attach(self, lump: BaseLump):
         pass
