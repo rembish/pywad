@@ -8,23 +8,25 @@ class BaseMapEntry(BaseLump):
     def __init__(self, entry):
         super().__init__(entry)
         self._match = self._regex.match(self.name)
-        self._things = None
+
+        self.things = None
+        self.vertices = None
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.name}>'
 
     @property
     def number(self):
-        return self._match.group("number").lstrip("0")
-
-    @property
-    def things(self):
-        if not self._things:
-            raise
-        return self._things.data
+        return int(self._match.group("number").lstrip("0"))
 
     def attach(self, lump: BaseLump):
         pass
 
     def attach_things(self, things):
-        self._things = things
+        self.things = things
+
+    def attach_vertexes(self, vertices):
+        self.vertices = vertices
 
 
 class Doom1MapEntry(BaseMapEntry):
@@ -32,7 +34,7 @@ class Doom1MapEntry(BaseMapEntry):
 
     @property
     def episode(self):
-        return self._match.group("episode")
+        return int(self._match.group("episode"))
 
     def __repr__(self):
         return f'<{self.__class__.__name__} Episode {self.episode} Map {self.number}>'

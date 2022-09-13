@@ -8,6 +8,7 @@ from .enums import WadType, MapData
 from .exceptions import BadHeaderWadException
 from .lumps.map import MapEntry
 from .lumps.things import Things
+from .lumps.vertices import Vertices
 
 
 class WadFile:
@@ -52,8 +53,9 @@ class WadFile:
                 mlist.append(last)
             elif entry.name in MapData.names():
                 if entry.name == "THINGS":
-                    things = Things(entry)
-                    last.attach_things(things)
+                    last.attach_things(Things(entry))
+                elif entry.name == "VERTEXES":
+                    last.attach_vertexes(Vertices(entry))
                 else:
                     last.attach(entry)
         return mlist

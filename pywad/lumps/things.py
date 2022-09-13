@@ -1,15 +1,13 @@
 from dataclasses import dataclass
 from enum import IntFlag
-from functools import cached_property
-from struct import calcsize, unpack
 
 from .base import BaseLump
 
 DOOM_FORMAT = "<hhHHH"
-HEXEN_FORMAT = "<HhhhHHHbbbbb"  # How to understand that we are reading Hexen Wad?
+# TODO How to understand that we are reading Hexen Wad?
 
 
-class DoomFlags(IntFlag):
+class Flags(IntFlag):
     SKILL_1_2 = 0x0001
     SKILL_3 = 0x0002
     SKILL_4_5 = 0x0004
@@ -21,19 +19,14 @@ class DoomFlags(IntFlag):
 
 
 @dataclass
-class DoomThing:
+class Thing:
     x: int
     y: int
     direction: int
     type: int
-    flags: DoomFlags
+    flags: Flags
 
 
 class Things(BaseLump):
-    @cached_property
-    def data(self):
-        chunk_size = calcsize(DOOM_FORMAT)
-        for _ in range(self._size // chunk_size):
-            data = unpack(DOOM_FORMAT, self.read(chunk_size))
-            thing = DoomThing(*data)
-            yield thing
+    _row_format = DOOM_FORMAT
+    _row_item = Thing
