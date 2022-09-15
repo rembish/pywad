@@ -21,6 +21,7 @@ class BaseMapEntry(BaseLump):
 
         self.things = None
         self.vertices = None
+        self.lines = None
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.name}>'
@@ -48,6 +49,9 @@ class BaseMapEntry(BaseLump):
 
     def attach_vertexes(self, vertices):
         self.vertices = vertices
+
+    def attach_linedefs(self, lines):
+        self.lines = lines
 
 
 class Doom1MapEntry(BaseMapEntry):

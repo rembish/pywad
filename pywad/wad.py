@@ -6,6 +6,7 @@ from .constants import HEADER_FORMAT, DIRECTORY_ENTRY_FORMAT, DOOM1_MAP_NAME_REG
 from .directory import DirectoryEntry
 from .enums import WadType, MapData
 from .exceptions import BadHeaderWadException
+from .lumps.lines import Lines
 from .lumps.map import MapEntry
 from .lumps.things import Things
 from .lumps.vertices import Vertices
@@ -56,6 +57,8 @@ class WadFile:
                     last.attach_things(Things(entry))
                 elif entry.name == "VERTEXES":
                     last.attach_vertexes(Vertices(entry))
+                elif entry.name == "LINEDEFS":
+                    last.attach_linedefs(Lines(entry))
                 else:
                     last.attach(entry)
         return mlist
