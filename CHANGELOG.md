@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.20] - 2026-04-09
+
+### Added
+
+- `Flat` lump decoder (`wadlib.lumps.flat`) — decodes raw 64x64 palette-indexed floor/ceiling data into a PIL `RGB` image
+- `WadFile.flats` cached property — returns all flat lumps between `F_START`/`F_END` (and `FF_START`/`FF_END`) as `dict[str, Flat]`
+- `WadFile.get_flat(name) -> Flat | None` convenience accessor (case-insensitive)
+- 12 new tests
+
 ## [0.0.19] - 2026-04-09
 
 ### Added

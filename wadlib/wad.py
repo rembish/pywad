@@ -15,6 +15,7 @@ from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
 from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
+from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
@@ -163,6 +164,26 @@ class WadFile:
             if entry.name == "TEXTURE2":
                 return TextureList(entry)
         return None
+
+    @cached_property
+    def flats(self) -> dict[str, Flat]:
+        """Return all flat lumps (between F_START/F_END markers) by name."""
+        result: dict[str, Flat] = {}
+        inside = False
+        for entry in self.directory:
+            if entry.name in ("F_START", "FF_START"):
+                inside = True
+                continue
+            if entry.name in ("F_END", "FF_END"):
+                inside = False
+                continue
+            if inside and entry.size == 4096:
+                result[entry.name] = Flat(entry)
+        return result
+
+    def get_flat(self, name: str) -> Flat | None:
+        """Return a named flat, or None if not found."""
+        return self.flats.get(name.upper())
 
     def get_picture(self, name: str) -> Picture | None:
         """Return a named lump as a Picture (patch/sprite/graphic), or None."""
