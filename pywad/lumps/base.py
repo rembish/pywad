@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from functools import cached_property
-from io import SEEK_CUR, SEEK_END, SEEK_SET
+from io import SEEK_CUR, SEEK_END, SEEK_SET, BytesIO
 from struct import calcsize, unpack
 from typing import Any, ClassVar
 
@@ -8,15 +8,27 @@ from ..directory import DirectoryEntry
 
 
 class BaseLump:
+    """Base class for all WAD lump types.
+
+    Each instance buffers its raw bytes from the WAD file descriptor on
+    construction, making it completely independent of the shared fd
+    afterwards.  This means concurrent iteration over multiple lumps
+    from the same WAD is safe.
+    """
+
     _row_format: ClassVar[str | None] = None
     _row_item: ClassVar[type[Any] | None] = None
 
     def __init__(self, entry: DirectoryEntry) -> None:
-        self.owner = entry.owner
-        self._size: int | None = entry.size or None
-        self._offset: int | None = entry.offset if self._size else None
-        self._rposition: int | None = 0 if self._size else None
         self._name = entry.name
+        self._size: int | None = entry.size or None
+        self._rposition: int | None = 0 if self._size else None
+
+        if self._size:
+            entry.owner.fd.seek(entry.offset)
+            self._buf: BytesIO | None = BytesIO(entry.owner.fd.read(self._size))
+        else:
+            self._buf = None
 
     @property
     def name(self) -> str:
@@ -37,7 +49,7 @@ class BaseLump:
         return self.name
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}[{len(self) or "n/a"}]>'
+        return f"<{self.__class__.__name__}[{len(self) or 'n/a'}]>"
 
     def __iter__(self) -> Iterator[Any]:
         self.seek(0)
@@ -67,7 +79,6 @@ class BaseLump:
 
         assert self._rposition is not None
         assert self._size is not None
-        assert self._offset is not None
 
         if whence == SEEK_SET:
             self._rposition = min(offset, self._size)
@@ -80,9 +91,8 @@ class BaseLump:
             else:
                 self._rposition = new_pos
         elif whence == SEEK_END:
-            # Offset is negative
+            # Offset is expected to be negative
             self._rposition = self._size + min(offset, self._size)
-        self.owner.fd.seek(self._offset + self._rposition, SEEK_SET)
         return self._rposition
 
     def tell(self) -> int | None:
@@ -96,16 +106,17 @@ class BaseLump:
 
         assert self._rposition is not None
         assert self._size is not None
-        assert self._offset is not None
+        assert self._buf is not None
 
-        if self._rposition > self._size:
+        if self._rposition >= self._size:
             raise EOFError()
 
-        self.owner.fd.seek(self._offset + self._rposition, SEEK_SET)
         if size is None or size == -1:  # Standard .read compatibility
             size = self._size - self._rposition
-        self._rposition += size
-        return self.owner.fd.read(size)
+        self._buf.seek(self._rposition)
+        data = self._buf.read(size)
+        self._rposition += len(data)
+        return data
 
     def read_row(self, index: int | None = None) -> tuple[Any, ...] | None:
         if not self.readable():
@@ -129,6 +140,13 @@ class BaseLump:
         row = self.read_row(index)
         assert row is not None
         return self._row_item(*row)  # pylint: disable=not-callable
+
+    def raw(self) -> bytes:
+        """Return the entire lump as raw bytes."""
+        if self._buf is None:
+            return b""
+        self._buf.seek(0)
+        return self._buf.read()
 
     def writable(self) -> bool:
         return False

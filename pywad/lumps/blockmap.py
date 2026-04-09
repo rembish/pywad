@@ -23,16 +23,11 @@ class Reject:
     """Raw bitfield mapping sector-to-sector visibility."""
 
     def __init__(self, entry: DirectoryEntry) -> None:
-        self._size = entry.size
-        self._offset = entry.offset
-        self._owner = entry.owner
-        self._data: bytes | None = None
+        entry.owner.fd.seek(entry.offset)
+        self._data: bytes = entry.owner.fd.read(entry.size)
 
     @property
     def data(self) -> bytes:
-        if self._data is None:
-            self._owner.fd.seek(self._offset)
-            self._data = self._owner.fd.read(self._size)
         return self._data
 
     def can_see(self, from_sector: int, to_sector: int, num_sectors: int) -> bool:
@@ -43,73 +38,53 @@ class Reject:
         """
         bit_index = from_sector * num_sectors + to_sector
         byte_index, bit_offset = divmod(bit_index, 8)
-        if byte_index >= len(self.data):
+        if byte_index >= len(self._data):
             return True
-        return not bool(self.data[byte_index] & (1 << bit_offset))
+        return not bool(self._data[byte_index] & (1 << bit_offset))
 
     def __repr__(self) -> str:
-        return f"<Reject {self._size} bytes>"
+        return f"<Reject {len(self._data)} bytes>"
 
 
 class BlockMap:
     """Spatial acceleration structure for linedef collision queries."""
 
     def __init__(self, entry: DirectoryEntry) -> None:
-        self._size = entry.size
-        self._offset = entry.offset
-        self._owner = entry.owner
-        self._parsed = False
-
-        self._origin_x: int = 0
-        self._origin_y: int = 0
-        self._columns: int = 0
-        self._rows: int = 0
-        self._offsets: list[int] = []
-
-    def _parse(self) -> None:
-        if self._parsed:
-            return
-        fd = self._owner.fd
+        fd = entry.owner.fd
         hdr_size = calcsize(BLOCKMAP_HEADER_FORMAT)
-        fd.seek(self._offset)
-        self._origin_x, self._origin_y, self._columns, self._rows = unpack(
-            BLOCKMAP_HEADER_FORMAT, fd.read(hdr_size)
-        )
+        fd.seek(entry.offset)
+        ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, fd.read(hdr_size))
+        self._origin_x: int = int(ox)
+        self._origin_y: int = int(oy)
+        self._columns: int = int(cols)
+        self._rows: int = int(rows)
         num_blocks = self._columns * self._rows
         raw = fd.read(num_blocks * 2)
-        self._offsets = list(unpack(f"<{num_blocks}H", raw))
-        self._parsed = True
+        self._offsets: list[int] = [int(v) for v in unpack(f"<{num_blocks}H", raw)]
 
     @property
     def origin_x(self) -> int:
-        self._parse()
         return self._origin_x
 
     @property
     def origin_y(self) -> int:
-        self._parse()
         return self._origin_y
 
     @property
     def columns(self) -> int:
-        self._parse()
         return self._columns
 
     @property
     def rows(self) -> int:
-        self._parse()
         return self._rows
 
     @property
     def offsets(self) -> list[int]:
-        self._parse()
         return self._offsets
 
     @property
     def block_count(self) -> int:
-        self._parse()
         return self._columns * self._rows
 
     def __repr__(self) -> str:
-        self._parse()
         return f"<BlockMap {self._columns}x{self._rows} origin=({self._origin_x},{self._origin_y})>"

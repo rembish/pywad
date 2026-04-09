@@ -11,6 +11,7 @@ from pywad.wad import WadFile
 # Things
 # ---------------------------------------------------------------------------
 
+
 def test_things_yield_thing_objects(doom1_wad: WadFile) -> None:
     things = doom1_wad.maps[0].things
     first = things[0]
@@ -52,6 +53,7 @@ def test_minimal_thing_values(minimal_iwad: WadFile) -> None:
 # Vertices
 # ---------------------------------------------------------------------------
 
+
 def test_vertices_yield_vertex_objects(doom1_wad: WadFile) -> None:
     v = doom1_wad.maps[0].vertices[0]
     assert isinstance(v, Vertex)
@@ -72,6 +74,7 @@ def test_minimal_vertex_values(minimal_iwad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # LineDefs
 # ---------------------------------------------------------------------------
+
 
 def test_linedefs_yield_linedefinition(doom1_wad: WadFile) -> None:
     line = doom1_wad.maps[0].lines[0]
@@ -95,6 +98,7 @@ def test_minimal_linedef_values(minimal_iwad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # BaseLump seek / tell
 # ---------------------------------------------------------------------------
+
 
 def test_seek_set(minimal_iwad: WadFile) -> None:
     verts = minimal_iwad.maps[0].vertices
@@ -158,6 +162,7 @@ def test_lump_get_out_of_range_returns_default(minimal_iwad: WadFile) -> None:
 # Boundaries
 # ---------------------------------------------------------------------------
 
+
 def test_boundaries_returns_two_points(doom1_wad: WadFile) -> None:
     b = doom1_wad.maps[0].boundaries
     assert len(b) == 2
@@ -175,3 +180,29 @@ def test_boundaries_empty_map_returns_origin(minimal_pwad: WadFile) -> None:
     b = m.boundaries
     # things has one entry (10, 20); vertices is empty
     assert b[0].x <= b[1].x
+
+
+# ---------------------------------------------------------------------------
+# Concurrent iteration (fd hazard regression)
+# ---------------------------------------------------------------------------
+
+
+def test_zip_things_vertices_gives_correct_counts(doom1_wad: WadFile) -> None:
+    """zip(things, vertices) must not interleave seeks on the shared WAD fd.
+
+    Before the BytesIO buffering fix, iterating two lumps concurrently would
+    corrupt both streams because each lump seeked the same file descriptor.
+    """
+    m = doom1_wad.maps[0]
+    pairs = list(zip(m.things, m.vertices, strict=False))
+    assert len(pairs) == min(len(m.things), len(m.vertices))
+
+
+def test_parallel_iteration_values_unchanged(doom1_wad: WadFile) -> None:
+    """Values read via zip must match values read sequentially."""
+    m = doom1_wad.maps[0]
+    things_seq = list(m.things)
+    vertices_seq = list(m.vertices)
+    for i, (t, v) in enumerate(zip(m.things, m.vertices, strict=False)):
+        assert t == things_seq[i]
+        assert v == vertices_seq[i]
