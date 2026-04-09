@@ -171,8 +171,8 @@ wadcli export map wads/DOOM2.WAD E6M1 e6m1.png --floors --pwad wads/SIGIL_II.WAD
 # List all Scythe 2 maps with thing/linedef counts
 wadcli list maps wads/scythe2.wad
 
-# Export a sprite as PNG
-wadcli export sprite wads/DOOM.WAD TROOA1 trooper.png
+# Export a sprite as PNG (POSS = Former Human / Zombie Trooper)
+wadcli export sprite wads/DOOM.WAD POSSA1 trooper.png
 
 # Export music as MIDI
 wadcli export music wads/DOOM.WAD D_E1M1 e1m1.mid
