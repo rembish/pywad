@@ -3,6 +3,8 @@
 import argparse
 
 from .commands import (
+    export_animation,
+    export_colormap,
     export_endoom,
     export_flat,
     export_map,
@@ -13,6 +15,7 @@ from .commands import (
     export_texture,
     extract_lump,  # registered as "export lump"
     info,
+    list_animations,
     list_flats,
     list_lumps,
     list_maps,
@@ -39,6 +42,9 @@ def main() -> None:
     list_p = subs.add_parser("list", help="list WAD contents")
     list_p.set_defaults(func=lambda _: list_p.print_help())
     list_subs = list_p.add_subparsers(dest="list_cmd", metavar="<what>")
+    list_animations.configure(
+        list_subs.add_parser("animations", help="list ANIMDEFS flat/texture animation sequences")
+    )
     list_flats.configure(list_subs.add_parser("flats", help="list floor/ceiling flat names"))
     list_lumps.configure(list_subs.add_parser("lumps", help="list all directory entries"))
     list_maps.configure(list_subs.add_parser("maps", help="list maps with thing/linedef counts"))
@@ -56,6 +62,12 @@ def main() -> None:
     export_p = subs.add_parser("export", help="export WAD contents to files")
     export_p.set_defaults(func=lambda _: export_p.print_help())
     export_subs = export_p.add_subparsers(dest="export_cmd", metavar="<what>")
+    export_animation.configure(
+        export_subs.add_parser("animation", help="render an ANIMDEFS sequence as an animated GIF")
+    )
+    export_colormap.configure(
+        export_subs.add_parser("colormap", help="render COLORMAP lump as a PNG grid")
+    )
     export_endoom.configure(
         export_subs.add_parser("endoom", help="export ENDOOM lump as text or ANSI")
     )

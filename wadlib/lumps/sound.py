@@ -23,6 +23,17 @@ class DmxSound(BaseLump):
 
     _HEADER_FMT: ClassVar[str] = _HEADER_FMT
 
+    @property
+    def rate(self) -> int:
+        """Sample rate in Hz."""
+        return int.from_bytes(self.raw()[2:4], "little")
+
+    @property
+    def sample_count(self) -> int:
+        """Number of PCM samples (num_samples field minus the 16-byte padding)."""
+        ns = int.from_bytes(self.raw()[4:8], "little")
+        return max(0, ns - _PADDING)
+
     def to_wav(self) -> bytes:
         """Convert this DMX sound to a WAV file byte string."""
         data = self.raw()

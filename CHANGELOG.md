@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.28] - 2026-04-09
+
+### Added
+
+- `DmxSound.rate` and `DmxSound.sample_count` properties — callers no longer need to re-parse the DMX header
+- `wadcli export colormap` — renders the COLORMAP lump as a 1024×136 PNG grid (256 palette entries × 34 light levels, coloured via PLAYPAL)
+- `wadcli list animations` — lists all ANIMDEFS flat/texture sequences with frame count and timing
+- `wadcli export animation` — renders an ANIMDEFS animation sequence as an animated GIF; supports both flats and textures; frame duration derived from ANIMDEFS tic values at 35 Hz
+
+### Changed
+
+- `wadcli list sounds` now uses `DmxSound.rate` / `DmxSound.sample_count` instead of re-parsing the DMX header inline
+- `WadFile.sounds` scan now imports `_HEADER_SIZE` from `wadlib.lumps.sound` instead of duplicating the constant as a class attribute
+
 ## [0.0.27] - 2026-04-09
 
 ### Fixed

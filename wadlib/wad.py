@@ -32,6 +32,7 @@ from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
+from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
@@ -235,8 +236,6 @@ class WadFile:
         """Return a named MUS lump, or None if not found."""
         return self.music.get(name.upper())
 
-    _DMX_HEADER_SIZE: int = 8   # fmt(2) + rate(2) + num_samples(4)
-
     @cached_property
     def sounds(self) -> dict[str, DmxSound]:
         """Return all DMX digitized sound lumps, detected by format=3 magic bytes.
@@ -246,14 +245,14 @@ class WadFile:
         """
         result: dict[str, DmxSound] = {}
         for entry in self.directory:
-            if entry.size < self._DMX_HEADER_SIZE:
+            if entry.size < _DMX_HEADER_SIZE:
                 continue
             self.fd.seek(entry.offset)
-            raw_header = self.fd.read(self._DMX_HEADER_SIZE)
+            raw_header = self.fd.read(_DMX_HEADER_SIZE)
             fmt = int.from_bytes(raw_header[0:2], "little")
             rate = int.from_bytes(raw_header[2:4], "little")
             num_samples = int.from_bytes(raw_header[4:8], "little")
-            expected_size = self._DMX_HEADER_SIZE + num_samples
+            expected_size = _DMX_HEADER_SIZE + num_samples
             if fmt == 3 and 4000 <= rate <= 44100 and expected_size <= entry.size:
                 result[entry.name] = DmxSound(entry)
         return result
