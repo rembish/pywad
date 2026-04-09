@@ -139,3 +139,6 @@ wads/
 *.wav
 *.png
 *.ansi
+
+# Legacy lockfiles (project uses setuptools, not Poetry)
+poetry.lock

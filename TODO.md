@@ -1,0 +1,150 @@
+# TODO / Future ideas
+
+Ideas collected over the course of development. Roughly ordered by scope.
+
+---
+
+## Format support
+
+### pk3 / ZIP virtual filesystem
+ZDoom/GZDoom use `.pk3` files (ZIP archives) as a replacement for WADs.
+Implementing this requires:
+- `Pk3File` class that opens a ZIP and presents a WAD-compatible API
+- Namespace mapping: `flats/FOO.png` → flat `FOO`, `sprites/` → sprites, etc.
+- `DirectoryEntry` abstraction to support both offset-based (WAD) and
+  pre-loaded bytes (pk3 ZIP entries) — currently hardwired to file+offset
+- PNG/TGA/JPG image decoding for flats, sprites, textures (Pillow already a dep)
+- Embedded WAD-format maps inside `maps/MAP01.wad` entries
+
+### UDMF map format
+Universal Doom Map Format (text-based, used by myhouse.pk3 and most modern maps).
+Requires a complete text parser for the UDMF spec.  Very different from binary
+Doom/Hexen map format.  Needed before pk3 maps can be rendered.
+
+### ZNODES compressed BSP
+Modern PWADs may use `ZNODES` instead of `NODES`/`SSECTORS`/`SEGS`.
+Format: 4-byte magic (`XNOD` uncompressed, `ZNOD` zlib-compressed) followed by
+extended vertex list, subsector array, seg array, node array with 32-bit child
+indices.  Needed for correct rendering of GZDoom-compiled maps.
+
+### OGG/MP3 music
+Source-port PWADs often ship `D_*` lumps as OGG or MP3 instead of MUS.
+Add content-based detection (OGG `OggS` magic, MP3 `ID3` / `\xff\xfb`) and
+expose via `wad.music` alongside existing MUS lumps.
+
+---
+
+## Parsing / decoding
+
+### Full DEHACKED parsing
+Currently only PAR times are extracted.  A complete DEHACKED parser would cover:
+- Thing stat overrides (hit points, speed, damage, flags)
+- Frame/state sequence patches
+- Weapon patches
+- Sound remaps
+- Text string replacements
+- Cheat code changes
+
+### TEXTURE lump: animated texture support via ANIMDEFS
+`ANIMDEFS` maps sequences of flats/textures into animation cycles.  The
+compositor could accept a frame index and return the correct lump for that tick.
+
+### COLORMAP: sector light rendering
+The `ColormapLump` already decodes the 34 remapping tables.  The renderer
+could use sector light levels + colormap to shade floor/ceiling colours
+instead of rendering them at full brightness.
+
+### PC speaker sound (format 0)
+DMX format-0 lumps are PC-speaker beep sequences, not PCM.  A basic
+synthesiser (triangle or square wave per note) would let `to_wav()` produce
+audio for these.
+
+---
+
+## Renderer improvements
+
+### Texture-mapped walls (3D-ish overhead view)
+The flat renderer fills floors; an analogous pass could fill each wall seg
+with its upper/lower/middle texture, making the overhead view feel more like
+an isometric screenshot than a schematic.
+
+### Light-shaded floors
+Use sector `light_level` + COLORMAP to tint floor pixels at render time,
+approximating in-game lighting.
+
+### Thing sprites on map
+Render actual sprite frames (first rotation, front-facing) at thing positions
+instead of coloured circles, giving a "screenshot from above" feel.
+
+### Automap-style rendering mode
+A thin-line automap renderer (à la the in-game automap) with secret-line
+highlighting, keyed doors, etc.
+
+---
+
+## CLI / tooling
+
+### `wadcli diff`
+Compare two WADs (or a WAD+PWAD pair) and report added/removed/changed lumps,
+useful for understanding what a PWAD actually modifies.
+
+### `wadcli export font`
+Export a font (STCFN, FONTA, FONTB) as a sprite sheet PNG — one glyph per
+cell, labeled with the character, suitable for previewing HUD fonts.
+
+### `wadcli export palette`
+Export PLAYPAL as a visual swatch PNG (14 palettes × 256 colours).
+
+### `wadcli stats`
+Aggregate statistics across all maps: total things, total linedefs, sector
+area distribution, thing type breakdown, secret count, etc.
+
+### `wadcli check`
+Sanity-check a WAD for common authoring errors: missing textures, missing
+flats, unreachable sectors, duplicate map names, etc.
+
+### `--json` output flag
+Add `--json` to `info`, `list maps`, `list lumps`, etc. so wadlib can be
+used in shell pipelines and scripts.
+
+---
+
+## API quality
+
+### Type-safe map lump attributes
+`BaseMapEntry` uses `Any`-typed attributes for optional lumps (things, nodes,
+etc.).  Replace with proper `Optional[Things]` etc. and make `mypy --strict`
+happy throughout the map layer.
+
+### `BaseLump` shared `fd` hazard
+`BaseLump.raw()` seeks on the parent WAD's shared file descriptor.  Under
+concurrent access (threads, nested iteration) this is unsafe.  Options:
+open a second fd per lump read, or buffer lump bytes on first access.
+
+### `cached_property` invalidation for PWAD mutation
+`WadFile._pwads` is mutable after construction, but all properties are
+`cached_property`.  If a user appends a PWAD after first access, stale
+cached values are silently returned.  Either freeze `_pwads` after first
+property access or document the limitation clearly.
+
+---
+
+## Bigger ideas
+
+### Web / interactive map viewer
+A small Flask/FastAPI server that serves map renders and lets you pan/zoom,
+click things to see their type, hover sectors to see their properties.
+
+### Doom demo (`.lmp`) parser
+Doom demo files record player input at tic resolution.  Parsing them would
+let you replay or visualise routes through maps.
+
+### DECORATE / ZScript stub parser
+ZDoom's actor definition languages (DECORATE, ZScript) define custom things.
+Even a minimal name-extraction pass would let `wadcli list things` show
+meaningful names for custom actors in ZDoom PWADs.
+
+### Packaging and publishing
+- Publish to PyPI once API is stable
+- Add GitHub Actions CI (lint + test on push)
+- Proper versioned docs (Sphinx or MkDocs)
