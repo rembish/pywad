@@ -29,6 +29,7 @@ class BaseMapEntry(BaseLump):
         self.things: Any = None
         self.vertices: Any = None
         self.lines: Any = None
+        self.sidedefs: Any = None
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -64,6 +65,9 @@ class BaseMapEntry(BaseLump):
 
     def attach_linedefs(self, lines: Any) -> None:
         self.lines = lines
+
+    def attach_sidedefs(self, sidedefs: Any) -> None:
+        self.sidedefs = sidedefs
 
 
 class Doom1MapEntry(BaseMapEntry):
