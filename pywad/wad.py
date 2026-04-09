@@ -13,6 +13,7 @@ from .constants import (
 from .directory import DirectoryEntry
 from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
+from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
@@ -106,8 +107,7 @@ class WadFile:
 
         for entry in self.directory:
             is_marker = bool(
-                DOOM1_MAP_NAME_REGEX.match(entry.name)
-                or DOOM2_MAP_NAME_REGEX.match(entry.name)
+                DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name)
             )
             if is_marker:
                 if marker is not None:
@@ -128,3 +128,14 @@ class WadFile:
             result.append(map_entry)
 
         return result
+
+    def get_lump(self, name: str) -> BaseLump | None:
+        """Return the first directory lump with the given name, or None."""
+        for entry in self.directory:
+            if entry.name == name:
+                return BaseLump(entry)
+        return None
+
+    def get_lumps(self, name: str) -> list[BaseLump]:
+        """Return all directory lumps with the given name."""
+        return [BaseLump(e) for e in self.directory if e.name == name]

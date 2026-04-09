@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.14] - 2026-04-09
+
+### Added
+
+- `WadFile.get_lump(name) -> BaseLump | None` — returns the first flat directory lump with the given name
+- `WadFile.get_lumps(name) -> list[BaseLump]` — returns all flat directory lumps with the given name
+- 7 new tests covering both accessors (hit, miss, raw data, multiple matches)
+
 ## [0.0.13] - 2026-04-09
 
 ### Fixed
