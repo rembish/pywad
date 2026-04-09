@@ -3,7 +3,7 @@
 import argparse
 import re
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 _DOOM1_MAP_RE = re.compile(r"^E(\d)M(\d)$", re.IGNORECASE)
 _DOOM2_MAP_RE = re.compile(r"^MAP(\d{2})$", re.IGNORECASE)
@@ -67,12 +67,12 @@ def _music_for_map(map_name: str, music: dict, mi_entry: object) -> str:
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> None:
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         if not wad.maps:
             print("No maps found.")
             return

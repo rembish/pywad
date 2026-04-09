@@ -145,35 +145,43 @@ class WadFile:
 
     @cached_property
     def maps(self) -> list[BaseMapEntry]:
-        # Group directory entries into per-map buckets so we can detect
-        # BEHAVIOR (Hexen format marker) before parsing THINGS/LINEDEFS.
-        groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
-        current_lumps: list[DirectoryEntry] = []
-        marker: DirectoryEntry | None = None
+        # Collect maps from all WADs (base + PWADs), PWADs override same-named base maps.
+        # _all_wads order is PWAD-first (highest priority first); we scan each WAD
+        # independently then merge so later (higher-priority) entries win.
+        seen: dict[str, BaseMapEntry] = {}  # name → map entry, last writer wins
+        order: list[str] = []  # insertion order for base WAD
 
-        for entry in self.directory:
-            is_marker = bool(
-                DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name)
-            )
-            if is_marker:
-                if marker is not None:
-                    groups.append((marker, current_lumps))
-                marker = entry
-                current_lumps = []
-            elif marker is not None and entry.name in MapData.names():
-                current_lumps.append(entry)
+        for wad in reversed(self._all_wads):  # base first, PWADs overwrite
+            groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
+            current_lumps: list[DirectoryEntry] = []
+            marker: DirectoryEntry | None = None
 
-        if marker is not None:
-            groups.append((marker, current_lumps))
+            for entry in wad.directory:
+                is_marker = bool(
+                    DOOM1_MAP_NAME_REGEX.match(entry.name)
+                    or DOOM2_MAP_NAME_REGEX.match(entry.name)
+                )
+                if is_marker:
+                    if marker is not None:
+                        groups.append((marker, current_lumps))
+                    marker = entry
+                    current_lumps = []
+                elif marker is not None and entry.name in MapData.names():
+                    current_lumps.append(entry)
 
-        result: list[BaseMapEntry] = []
-        for map_marker, lumps in groups:
-            map_entry = MapEntry(map_marker)
-            hexen = any(e.name == "BEHAVIOR" for e in lumps)
-            _attach_lumps(map_entry, lumps, hexen)
-            result.append(map_entry)
+            if marker is not None:
+                groups.append((marker, current_lumps))
 
-        return result
+            for map_marker, lumps in groups:
+                map_entry = MapEntry(map_marker)
+                hexen = any(e.name == "BEHAVIOR" for e in lumps)
+                _attach_lumps(map_entry, lumps, hexen)
+                name = str(map_entry)
+                if name not in seen:
+                    order.append(name)
+                seen[name] = map_entry
+
+        return [seen[n] for n in order]
 
     def _find_lump(self, name: str) -> "DirectoryEntry | None":
         """Return the highest-priority directory entry with the given name.

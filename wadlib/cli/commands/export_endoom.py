@@ -3,11 +3,11 @@
 import argparse
 import sys
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("output", help="output file path")
     p.add_argument(
         "--ansi",
@@ -18,7 +18,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         endoom = wad.endoom
         if endoom is None:
             print("No ENDOOM lump found.", file=sys.stderr)

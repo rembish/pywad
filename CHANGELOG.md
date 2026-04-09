@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.35] - 2026-04-09
+
+### Added
+
+- `--pwad PATH` option on every `wadcli` subcommand (repeatable); layers one or more PWADs on top of the base WAD using `WadFile.open()`
+- `WadFile.maps` is now PWAD-aware: maps from all loaded WADs are merged, with PWAD maps overriding same-named base maps and new PWAD maps appended
+
+### Fixed
+
+- `wadcli export map --floors` with a PWAD (e.g. SIGIL II over DOOM2.WAD) now finds floor flat textures from the base IWAD; previously only base-WAD maps were searched
+
 ## [0.0.34] - 2026-04-09
 
 ### Added

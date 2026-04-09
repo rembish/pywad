@@ -3,11 +3,11 @@
 import argparse
 import sys
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("flat", help="flat name, e.g. FLOOR0_1")
     p.add_argument("output", help="output PNG path")
     p.add_argument(
@@ -24,7 +24,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         flat = wad.get_flat(args.flat.upper())
         if flat is None:
             print(f"Flat '{args.flat}' not found.", file=sys.stderr)

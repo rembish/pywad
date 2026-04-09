@@ -4,11 +4,11 @@ import argparse
 import sys
 
 from ...renderer import MapRenderer, RenderOptions
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p, pwad_help="PWAD to layer on top of base WAD (e.g. 'DOOM2.WAD --pwad SIGIL_II.WAD')")
     p.add_argument("map", help="map name, e.g. E1M1 or MAP01")
     p.add_argument("output", help="output PNG path")
     p.add_argument(
@@ -44,7 +44,7 @@ def run(args: argparse.Namespace) -> None:
         thing_scale=args.thing_scale,
         alpha=args.alpha,
     )
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         target = next((m for m in wad.maps if str(m) == map_name), None)
         if target is None:
             available = ", ".join(str(m) for m in wad.maps)

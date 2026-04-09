@@ -7,12 +7,13 @@ from PIL import Image
 from ...compositor import TextureCompositor
 from ...lumps.flat import Flat
 from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 _TICS_MS = 1000 / 35  # ms per tic at 35 Hz
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("name", help="flat or texture animation name (e.g. x_001)")
     p.add_argument("output", help="output GIF path")
     p.add_argument(
@@ -42,7 +43,7 @@ def _flat_directory_order(wad: WadFile) -> list[str]:
 
 
 def run(args: argparse.Namespace) -> None:
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         if wad.animdefs is None:
             print("No ANIMDEFS lump found.", file=sys.stderr)
             sys.exit(1)

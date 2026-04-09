@@ -3,11 +3,11 @@
 import argparse
 import sys
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("name", help="music lump name, e.g. D_E1M1")
     p.add_argument("output", help="output file path")
     p.add_argument(
@@ -20,7 +20,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     lump_name = args.name.upper()
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         mus = wad.get_music(lump_name)
         if mus is None:
             available = ", ".join(sorted(wad.music))

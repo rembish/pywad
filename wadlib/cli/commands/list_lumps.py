@@ -2,18 +2,18 @@
 
 import argparse
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("--filter", metavar="NAME", help="only show lumps whose name contains NAME")
     p.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> None:
     name_filter = args.filter.upper() if args.filter else None
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         print(f"{'#':>6}  {'NAME':<10}  {'SIZE':>10}  {'OFFSET':>10}")
         print("-" * 44)
         for i, entry in enumerate(wad.directory):

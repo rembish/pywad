@@ -3,11 +3,11 @@
 import argparse
 import sys
 
-from ...wad import WadFile
+from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    p.add_argument("wad", help="path to WAD file")
+    add_wad_args(p)
     p.add_argument("output", help="output PNG path")
     p.add_argument(
         "--palette", type=int, default=0, metavar="N",
@@ -17,7 +17,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    with WadFile(args.wad) as wad:
+    with open_wad(args) as wad:
         if wad.colormap is None:
             print("No COLORMAP lump found.", file=sys.stderr)
             sys.exit(1)
