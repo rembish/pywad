@@ -33,12 +33,12 @@ from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
 from .lumps.sndseq import SndSeqLump
-from .lumps.zmapinfo import ZMapInfoLump
 from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.vertices import Vertices
+from .lumps.zmapinfo import ZMapInfoLump
 
 # Doom-format lump dispatch: name -> (attach method, constructor)
 _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
@@ -91,8 +91,30 @@ class WadFile:
             raise BadHeaderWadException(magic)
 
         self.wad_type = WadType[magic]
+        self._pwads: list[WadFile] = []
+
+    @classmethod
+    def open(cls, base: str, *pwads: str) -> "WadFile":
+        """Open a base WAD with zero or more PWADs layered on top.
+
+        PWAD lumps shadow base-WAD lumps by name, exactly as the Doom engine
+        does when loading patches.  The returned object is the base ``WadFile``;
+        call ``.close()`` (or use it as a context manager) to release all files.
+
+        Example::
+
+            with WadFile.open("wads/DOOM2.WAD", "wads/scythe2.wad") as wad:
+                print(wad.maps)
+        """
+        wad = cls(base)
+        for path in pwads:
+            pwad = cls(path)
+            wad._pwads.append(pwad)
+        return wad
 
     def close(self) -> None:
+        for pwad in self._pwads:
+            pwad.close()
         if not self.fd.closed:
             self.fd.close()
 
@@ -101,6 +123,11 @@ class WadFile:
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         self.close()
+
+    @property
+    def _all_wads(self) -> "list[WadFile]":
+        """PWAD-first order: later (higher-priority) WADs come first."""
+        return [*list(reversed(self._pwads)), self]
 
     @cached_property
     def directory(self) -> list[DirectoryEntry]:
@@ -144,94 +171,101 @@ class WadFile:
 
         return result
 
+    def _find_lump(self, name: str) -> "DirectoryEntry | None":
+        """Return the highest-priority directory entry with the given name.
+
+        PWADs are checked newest-first, then the base WAD — mirroring how
+        the Doom engine resolves lump names when multiple WADs are loaded.
+        """
+        for wad in self._all_wads:
+            for entry in wad.directory:
+                if entry.name == name:
+                    return entry
+        return None
+
     @cached_property
     def playpal(self) -> PlayPal | None:
-        """Return the PLAYPAL lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "PLAYPAL":
-                return PlayPal(entry)
-        return None
+        """Return the PLAYPAL lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("PLAYPAL")
+        return PlayPal(entry) if entry else None
 
     @cached_property
     def colormap(self) -> ColormapLump | None:
-        """Return the COLORMAP lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "COLORMAP":
-                return ColormapLump(entry)
-        return None
+        """Return the COLORMAP lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("COLORMAP")
+        return ColormapLump(entry) if entry else None
 
     @cached_property
     def pnames(self) -> PNames | None:
-        """Return the PNAMES lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "PNAMES":
-                return PNames(entry)
-        return None
+        """Return the PNAMES lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("PNAMES")
+        return PNames(entry) if entry else None
 
     @cached_property
     def texture1(self) -> TextureList | None:
-        """Return the TEXTURE1 lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "TEXTURE1":
-                return TextureList(entry)
-        return None
+        """Return the TEXTURE1 lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("TEXTURE1")
+        return TextureList(entry) if entry else None
 
     @cached_property
     def texture2(self) -> TextureList | None:
-        """Return the TEXTURE2 lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "TEXTURE2":
-                return TextureList(entry)
-        return None
+        """Return the TEXTURE2 lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("TEXTURE2")
+        return TextureList(entry) if entry else None
 
     @cached_property
     def flats(self) -> dict[str, Flat]:
-        """Return all flat lumps (between F_START/F_END markers) by name."""
+        """Return all flat lumps (PWAD-aware), base WAD first then PWAD overrides."""
         result: dict[str, Flat] = {}
-        inside = False
-        for entry in self.directory:
-            if entry.name in ("F_START", "FF_START"):
-                inside = True
-                continue
-            if entry.name in ("F_END", "FF_END"):
-                inside = False
-                continue
-            if inside and entry.size == 4096:
-                result[entry.name] = Flat(entry)
+        # Collect base-first so PWAD entries overwrite base entries
+        for wad in reversed(self._all_wads):
+            inside = False
+            for entry in wad.directory:
+                if entry.name in ("F_START", "FF_START"):
+                    inside = True
+                    continue
+                if entry.name in ("F_END", "FF_END"):
+                    inside = False
+                    continue
+                if inside and entry.size == 4096:
+                    result[entry.name] = Flat(entry)
         return result
 
     def get_flat(self, name: str) -> Flat | None:
-        """Return a named flat, or None if not found."""
+        """Return a named flat (PWAD-aware), or None if not found."""
         return self.flats.get(name.upper())
 
     def get_picture(self, name: str) -> Picture | None:
-        """Return a named lump as a Picture (patch/sprite/graphic), or None."""
-        for entry in self.directory:
-            if entry.name == name:
-                return Picture(entry)
-        return None
+        """Return a named lump as a Picture (PWAD-aware), or None."""
+        entry = self._find_lump(name.upper())
+        return Picture(entry) if entry else None
 
     def get_lump(self, name: str) -> BaseLump | None:
-        """Return the first directory lump with the given name, or None."""
-        for entry in self.directory:
-            if entry.name == name:
-                return BaseLump(entry)
-        return None
+        """Return the first directory lump with the given name (PWAD-aware), or None."""
+        entry = self._find_lump(name.upper())
+        return BaseLump(entry) if entry else None
 
     def get_lumps(self, name: str) -> list[BaseLump]:
-        """Return all directory lumps with the given name."""
-        return [BaseLump(e) for e in self.directory if e.name == name]
+        """Return all directory lumps with the given name across all loaded WADs."""
+        upper = name.upper()
+        return [
+            BaseLump(e)
+            for wad in self._all_wads
+            for e in wad.directory
+            if e.name == upper
+        ]
 
     @cached_property
     def music(self) -> dict[str, Mus]:
-        """Return all MUS music lumps by name, detected by MUS\\x1a magic bytes."""
+        """Return all MUS music lumps by name (PWAD-aware), detected by magic bytes."""
         result: dict[str, Mus] = {}
-        for entry in self.directory:
-            if entry.size < _MUS_MIN_SIZE:
-                continue
-            self.fd.seek(entry.offset)
-            if self.fd.read(4) == _MUS_MAGIC:
-                result[entry.name] = Mus(entry)
+        for wad in reversed(self._all_wads):
+            for entry in wad.directory:
+                if entry.size < _MUS_MIN_SIZE:
+                    continue
+                wad.fd.seek(entry.offset)
+                if wad.fd.read(4) == _MUS_MAGIC:
+                    result[entry.name] = Mus(entry)
         return result
 
     def get_music(self, name: str) -> Mus | None:
@@ -240,23 +274,20 @@ class WadFile:
 
     @cached_property
     def sounds(self) -> dict[str, DmxSound]:
-        """Return all DMX digitized sound lumps, detected by format=3 magic bytes.
-
-        num_samples in the DMX header includes the 16-byte padding, so the
-        expected total lump size is header(8) + num_samples.
-        """
+        """Return all DMX digitized sound lumps (PWAD-aware), detected by magic bytes."""
         result: dict[str, DmxSound] = {}
-        for entry in self.directory:
-            if entry.size < _DMX_HEADER_SIZE:
-                continue
-            self.fd.seek(entry.offset)
-            raw_header = self.fd.read(_DMX_HEADER_SIZE)
-            fmt = int.from_bytes(raw_header[0:2], "little")
-            rate = int.from_bytes(raw_header[2:4], "little")
-            num_samples = int.from_bytes(raw_header[4:8], "little")
-            expected_size = _DMX_HEADER_SIZE + num_samples
-            if fmt == 3 and 4000 <= rate <= 44100 and expected_size <= entry.size:
-                result[entry.name] = DmxSound(entry)
+        for wad in reversed(self._all_wads):
+            for entry in wad.directory:
+                if entry.size < _DMX_HEADER_SIZE:
+                    continue
+                wad.fd.seek(entry.offset)
+                raw_header = wad.fd.read(_DMX_HEADER_SIZE)
+                fmt = int.from_bytes(raw_header[0:2], "little")
+                rate = int.from_bytes(raw_header[2:4], "little")
+                num_samples = int.from_bytes(raw_header[4:8], "little")
+                expected_size = _DMX_HEADER_SIZE + num_samples
+                if fmt == 3 and 4000 <= rate <= 44100 and expected_size <= entry.size:
+                    result[entry.name] = DmxSound(entry)
         return result
 
     def get_sound(self, name: str) -> DmxSound | None:
@@ -264,17 +295,19 @@ class WadFile:
 
     @cached_property
     def sprites(self) -> dict[str, Picture]:
+        """Return all sprite lumps (PWAD-aware), base WAD first then PWAD overrides."""
         result: dict[str, Picture] = {}
-        inside = False
-        for entry in self.directory:
-            if entry.name in ("S_START", "SS_START"):
-                inside = True
-                continue
-            if entry.name in ("S_END", "SS_END"):
-                inside = False
-                continue
-            if inside and entry.size > 0:
-                result[entry.name] = Picture(entry)
+        for wad in reversed(self._all_wads):
+            inside = False
+            for entry in wad.directory:
+                if entry.name in ("S_START", "SS_START"):
+                    inside = True
+                    continue
+                if entry.name in ("S_END", "SS_END"):
+                    inside = False
+                    continue
+                if inside and entry.size > 0:
+                    result[entry.name] = Picture(entry)
         return result
 
     def get_sprite(self, name: str) -> Picture | None:
@@ -282,47 +315,36 @@ class WadFile:
 
     @cached_property
     def endoom(self) -> Endoom | None:
-        for entry in self.directory:
-            if entry.name == "ENDOOM":
-                return Endoom(entry)
-        return None
+        entry = self._find_lump("ENDOOM")
+        return Endoom(entry) if entry else None
 
     @cached_property
     def sndinfo(self) -> SndInfo | None:
-        """Return the SNDINFO lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "SNDINFO":
-                return SndInfo(entry)
-        return None
+        """Return the SNDINFO lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("SNDINFO")
+        return SndInfo(entry) if entry else None
 
     @cached_property
     def sndseq(self) -> SndSeqLump | None:
-        """Return the SNDSEQ lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "SNDSEQ":
-                return SndSeqLump(entry)
-        return None
+        """Return the SNDSEQ lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("SNDSEQ")
+        return SndSeqLump(entry) if entry else None
 
     @cached_property
     def mapinfo(self) -> MapInfoLump | None:
-        """Return the MAPINFO lump (Hexen format), or None if not present."""
-        for entry in self.directory:
-            if entry.name == "MAPINFO":
-                return MapInfoLump(entry)
-        return None
+        """Return the MAPINFO lump (Hexen format, PWAD-aware), or None if not present."""
+        entry = self._find_lump("MAPINFO")
+        return MapInfoLump(entry) if entry else None
 
     @cached_property
     def zmapinfo(self) -> ZMapInfoLump | None:
-        """Return the ZMAPINFO lump (ZDoom format), or None if not present."""
-        for entry in self.directory:
-            if entry.name == "ZMAPINFO":
-                return ZMapInfoLump(entry)
-        return None
+        """Return the ZMAPINFO lump (ZDoom format, PWAD-aware), or None if not present."""
+        entry = self._find_lump("ZMAPINFO")
+        return ZMapInfoLump(entry) if entry else None
 
     @cached_property
     def animdefs(self) -> AnimDefsLump | None:
-        """Return the ANIMDEFS lump, or None if not present."""
-        for entry in self.directory:
-            if entry.name == "ANIMDEFS":
-                return AnimDefsLump(entry)
-        return None
+        """Return the ANIMDEFS lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("ANIMDEFS")
+        return AnimDefsLump(entry) if entry else None
+

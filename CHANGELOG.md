@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.32] - 2026-04-09
+
+### Added
+
+- PWAD layering: `WadFile.open(base, *pwads)` opens a base IWAD with one or more PWADs stacked on top; PWAD lumps shadow base-WAD lumps by name, mirroring Doom engine load order
+- `WadFile.close()` and context-manager support now close all layered PWAD file handles
+- All lump accessors (textures, flats, sprites, sounds, music, colormap, playpal, pnames, endoom, sndinfo, sndseq, mapinfo, zmapinfo, animdefs, maps) are PWAD-aware: single-lump properties use `_find_lump()` (PWAD-first); collection properties (flats, sprites, music, sounds) iterate base-first so PWAD entries overwrite base entries
+
+### Fixed
+
+- Orphaned `_animdefs_unused` dead code removed from `WadFile`
+- Floors missing in SIGIL II renders: use `WadFile.open("DOOM2.WAD", "SIGIL_II.WAD")` so the renderer finds base-game flats when rendering PWAD maps
+
 ## [0.0.31] - 2026-04-09
 
 ### Added
