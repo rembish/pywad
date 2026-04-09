@@ -24,14 +24,16 @@ def main() -> None:
         prog="wadcli",
         description="Doom WAD file toolkit — inspect and export WAD contents.",
     )
-    subs = parser.add_subparsers(dest="group", required=True, metavar="<command>")
+    parser.set_defaults(func=lambda _: parser.print_help())
+    subs = parser.add_subparsers(dest="group", metavar="<command>")
 
     # info (top-level, no subgroup)
     info.configure(subs.add_parser("info", help="show WAD header and summary stats"))
 
     # list group
     list_p = subs.add_parser("list", help="list WAD contents")
-    list_subs = list_p.add_subparsers(dest="list_cmd", required=True, metavar="<what>")
+    list_p.set_defaults(func=lambda _: list_p.print_help())
+    list_subs = list_p.add_subparsers(dest="list_cmd", metavar="<what>")
     list_maps.configure(list_subs.add_parser("maps", help="list maps with thing/linedef counts"))
     list_lumps.configure(list_subs.add_parser("lumps", help="list all directory entries"))
     list_textures.configure(
@@ -43,7 +45,8 @@ def main() -> None:
 
     # export group
     export_p = subs.add_parser("export", help="export WAD contents to files")
-    export_subs = export_p.add_subparsers(dest="export_cmd", required=True, metavar="<what>")
+    export_p.set_defaults(func=lambda _: export_p.print_help())
+    export_subs = export_p.add_subparsers(dest="export_cmd", metavar="<what>")
     export_map.configure(export_subs.add_parser("map", help="render a map to a PNG image"))
     export_music.configure(
         export_subs.add_parser(
