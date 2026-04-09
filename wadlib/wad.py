@@ -19,6 +19,7 @@ from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.nodes import Nodes
+from .lumps.picture import Picture
 from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
@@ -161,6 +162,13 @@ class WadFile:
         for entry in self.directory:
             if entry.name == "TEXTURE2":
                 return TextureList(entry)
+        return None
+
+    def get_picture(self, name: str) -> Picture | None:
+        """Return a named lump as a Picture (patch/sprite/graphic), or None."""
+        for entry in self.directory:
+            if entry.name == name:
+                return Picture(entry)
         return None
 
     def get_lump(self, name: str) -> BaseLump | None:
