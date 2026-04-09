@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.26] - 2026-04-09
+
+### Added
+
+- `ColormapLump` (`wadlib.lumps.colormap`) — 34-entry light-level remapping table; `get(index) -> bytes`, `apply(colormap_index, palette_index) -> int`, `count` property
+- `SndInfo` (`wadlib.lumps.sndinfo`) — parses the `SNDINFO` text lump; exposes `.sounds` as `dict[str, str]` mapping logical name → uppercase WAD lump name (Hexen/Heretic)
+- `MapInfoLump` / `MapInfoEntry` (`wadlib.lumps.mapinfo`) — parses Hexen `MAPINFO`; `MapInfoEntry` carries `map_num`, `title`, `warptrans`, `next`, `cluster`, `sky1`, `sky2`, `cdtrack`, `lightning`, `doublesky`, `fadetable`; `.get(map_num)` accessor
+- `AnimDefsLump` / `AnimDef` / `AnimFrame` (`wadlib.lumps.animdefs`) — parses Hexen `ANIMDEFS`; `.animations`, `.flats`, `.textures` properties; `AnimFrame` records `pic`, `min_tics`, `max_tics`; `AnimDef.is_random` property
+- `WadFile.colormap`, `.sndinfo`, `.mapinfo`, `.animdefs` cached properties
+- `wadcli list maps` now shows TITLE (from MAPINFO when present) and MUSIC lump (for Doom 1/2 maps matching `D_E#M#` / Doom 2 conventional names)
+
 ## [0.0.25] - 2026-04-09
 
 ### Fixed

@@ -13,13 +13,16 @@ from .constants import (
 from .directory import DirectoryEntry
 from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
+from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
+from .lumps.colormap import ColormapLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
+from .lumps.mapinfo import MapInfoLump
 from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
 from .lumps.mus import _MUS_MAGIC, Mus
 from .lumps.nodes import Nodes
@@ -28,6 +31,7 @@ from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
+from .lumps.sndinfo import SndInfo
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
@@ -143,6 +147,14 @@ class WadFile:
         for entry in self.directory:
             if entry.name == "PLAYPAL":
                 return PlayPal(entry)
+        return None
+
+    @cached_property
+    def colormap(self) -> ColormapLump | None:
+        """Return the COLORMAP lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "COLORMAP":
+                return ColormapLump(entry)
         return None
 
     @cached_property
@@ -272,4 +284,28 @@ class WadFile:
         for entry in self.directory:
             if entry.name == "ENDOOM":
                 return Endoom(entry)
+        return None
+
+    @cached_property
+    def sndinfo(self) -> SndInfo | None:
+        """Return the SNDINFO lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "SNDINFO":
+                return SndInfo(entry)
+        return None
+
+    @cached_property
+    def mapinfo(self) -> MapInfoLump | None:
+        """Return the MAPINFO lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "MAPINFO":
+                return MapInfoLump(entry)
+        return None
+
+    @cached_property
+    def animdefs(self) -> AnimDefsLump | None:
+        """Return the ANIMDEFS lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "ANIMDEFS":
+                return AnimDefsLump(entry)
         return None
