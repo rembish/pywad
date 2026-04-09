@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wadlib"
-version = "0.0.21"
+version = "0.0.22"
 description = "Python library to work with id Doom WAD files"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
 license = { text = "BSD-2-Clause" }
 requires-python = ">=3.12"
 dependencies = ["Pillow>=9.2"]
+
+[project.scripts]
+wadcli = "wadlib.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -76,6 +79,7 @@ disable = [
     "R0903",  # too-few-public-methods
     "W0511",  # fixme — TODO comments are intentional
     "C0414",  # useless-import-alias — used for explicit re-exports (mypy)
+    "R0801",  # duplicate-code — CLI commands share similar boilerplate by design
 ]
 
 [tool.pylint.format]
