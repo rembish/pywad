@@ -130,3 +130,6 @@ dmypy.json
 
 # Testing WADs to be excluded
 wads/
+
+# OMC (oh-my-claudecode) orchestration state
+.omc/
