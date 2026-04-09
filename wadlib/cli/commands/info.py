@@ -53,3 +53,11 @@ def run(args: argparse.Namespace) -> None:
         if wad.fontb:
             fonts.append(f"FONTB ({len(wad.fontb)} glyphs)")
         print(f"Fonts   : {', '.join(fonts) if fonts else 'none'}")
+        deh = wad.dehacked
+        if deh is not None:
+            par_count = len(deh.par_times)
+            ver = deh.doom_version
+            ver_str = f" (Doom v{ver})" if ver else ""
+            print(f"DEHACKED: yes{ver_str}{', ' + str(par_count) + ' par times' if par_count else ''}")
+        else:
+            print("DEHACKED: none")

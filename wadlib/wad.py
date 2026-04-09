@@ -18,6 +18,7 @@ from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
 from .lumps.colormap import ColormapLump
+from .lumps.dehacked import DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
@@ -410,4 +411,10 @@ class WadFile:
                     result[33 + index] = Picture(entry)
                     index += 1
         return result
+
+    @cached_property
+    def dehacked(self) -> DehackedLump | None:
+        """Return the DEHACKED lump (PWAD-aware), or None if not present."""
+        entry = self._find_lump("DEHACKED")
+        return DehackedLump(entry) if entry else None
 
