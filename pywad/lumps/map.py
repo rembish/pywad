@@ -32,14 +32,18 @@ class BaseMapEntry(BaseLump):
 
     @cached_property
     def boundaries(self):
-        min_x = max_x = self.things[0].x
-        min_y = max_y = self.things[0].y
+        entries = list(chain(self.things or [], self.vertices or []))
+        if not entries:
+            return (Point(0, 0), Point(0, 0))
 
-        for entry in chain(self.things, self.vertices):
+        min_x = max_x = entries[0].x
+        min_y = max_y = entries[0].y
+
+        for entry in entries[1:]:
             min_x, max_x = min(min_x, entry.x), max(max_x, entry.x)
             min_y, max_y = min(min_y, entry.y), max(max_y, entry.y)
 
-        return tuple([Point(min_x, min_y), Point(max_x, max_y)])
+        return (Point(min_x, min_y), Point(max_x, max_y))
 
     def attach(self, lump: BaseLump):
         pass
@@ -79,3 +83,5 @@ class MapEntry(BaseLump):
 
         if DOOM2_MAP_NAME_REGEX.match(entry.name):
             return Doom2MapEntry(entry)
+
+        raise ValueError(f"Unknown map name format: {entry.name!r}")

@@ -66,10 +66,13 @@ class BaseLump:
                 offset = self._size
             self._rposition = offset
         elif whence == SEEK_CUR:
-            if self._rposition + offset > offset:
+            new_pos = self._rposition + offset
+            if new_pos > self._size:
                 self._rposition = self._size
-            elif self._rposition + offset < 0:
+            elif new_pos < 0:
                 self._rposition = 0
+            else:
+                self._rposition = new_pos
         elif whence == SEEK_END:
             # Offset is negative
             if offset > self._size:
