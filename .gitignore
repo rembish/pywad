@@ -133,4 +133,9 @@ wads/
 
 # OMC (oh-my-claudecode) orchestration state
 .omc/
-e1m1.mid
+
+# Export artifacts
+*.mid
+*.wav
+*.png
+*.ansi

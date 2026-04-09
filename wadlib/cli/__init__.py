@@ -3,10 +3,13 @@
 import argparse
 
 from .commands import (
+    export_endoom,
     export_flat,
     export_map,
     export_music,
     export_patch,
+    export_sound,
+    export_sprite,
     export_texture,
     extract_lump,  # registered as "export lump"
     info,
@@ -15,6 +18,8 @@ from .commands import (
     list_maps,
     list_music,
     list_patches,
+    list_sounds,
+    list_sprites,
     list_textures,
 )
 
@@ -39,6 +44,10 @@ def main() -> None:
     list_maps.configure(list_subs.add_parser("maps", help="list maps with thing/linedef counts"))
     list_music.configure(list_subs.add_parser("music", help="list music lumps with sizes"))
     list_patches.configure(list_subs.add_parser("patches", help="list patch names from PNAMES"))
+    list_sounds.configure(list_subs.add_parser("sounds", help="list DMX sound lumps"))
+    list_sprites.configure(
+        list_subs.add_parser("sprites", help="list sprite lumps with dimensions")
+    )
     list_textures.configure(
         list_subs.add_parser("textures", help="list composite texture names and dimensions")
     )
@@ -47,6 +56,9 @@ def main() -> None:
     export_p = subs.add_parser("export", help="export WAD contents to files")
     export_p.set_defaults(func=lambda _: export_p.print_help())
     export_subs = export_p.add_subparsers(dest="export_cmd", metavar="<what>")
+    export_endoom.configure(
+        export_subs.add_parser("endoom", help="export ENDOOM lump as text or ANSI")
+    )
     export_flat.configure(export_subs.add_parser("flat", help="render a floor/ceiling flat to PNG"))
     extract_lump.configure(export_subs.add_parser("lump", help="dump raw lump bytes to a file"))
     export_map.configure(export_subs.add_parser("map", help="render a map to a PNG image"))
@@ -56,6 +68,10 @@ def main() -> None:
         )
     )
     export_patch.configure(export_subs.add_parser("patch", help="render a patch or sprite to PNG"))
+    export_sound.configure(
+        export_subs.add_parser("sound", help="export a DMX sound lump as WAV or raw (--raw)")
+    )
+    export_sprite.configure(export_subs.add_parser("sprite", help="render a sprite to PNG"))
     export_texture.configure(export_subs.add_parser("texture", help="render a wall texture to PNG"))
 
     args = parser.parse_args()

@@ -15,18 +15,20 @@ from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
 from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
+from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
-from .lumps.mus import _HEADER_SIZE as _MUS_MAGIC_SIZE
-from .lumps.mus import Mus
+from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
+from .lumps.mus import _MUS_MAGIC, Mus
 from .lumps.nodes import Nodes
 from .lumps.picture import Picture
 from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
+from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.vertices import Vertices
@@ -207,13 +209,52 @@ class WadFile:
 
     @cached_property
     def music(self) -> dict[str, Mus]:
-        """Return all MUS music lumps by name (D_* for Doom, MUS_* for Heretic)."""
+        """Return all MUS music lumps by name, detected by MUS\\x1a magic bytes."""
         result: dict[str, Mus] = {}
         for entry in self.directory:
-            if entry.name.startswith(("D_", "MUS_")) and entry.size > _MUS_MAGIC_SIZE:
+            if entry.size < _MUS_MIN_SIZE:
+                continue
+            self.fd.seek(entry.offset)
+            if self.fd.read(4) == _MUS_MAGIC:
                 result[entry.name] = Mus(entry)
         return result
 
     def get_music(self, name: str) -> Mus | None:
         """Return a named MUS lump, or None if not found."""
         return self.music.get(name.upper())
+
+    @cached_property
+    def sounds(self) -> dict[str, DmxSound]:
+        result: dict[str, DmxSound] = {}
+        for entry in self.directory:
+            if (entry.name.startswith("DS") or entry.name.startswith("DP")) and entry.size > 8:
+                result[entry.name] = DmxSound(entry)
+        return result
+
+    def get_sound(self, name: str) -> DmxSound | None:
+        return self.sounds.get(name.upper())
+
+    @cached_property
+    def sprites(self) -> dict[str, Picture]:
+        result: dict[str, Picture] = {}
+        inside = False
+        for entry in self.directory:
+            if entry.name in ("S_START", "SS_START"):
+                inside = True
+                continue
+            if entry.name in ("S_END", "SS_END"):
+                inside = False
+                continue
+            if inside and entry.size > 0:
+                result[entry.name] = Picture(entry)
+        return result
+
+    def get_sprite(self, name: str) -> Picture | None:
+        return self.sprites.get(name.upper())
+
+    @cached_property
+    def endoom(self) -> Endoom | None:
+        for entry in self.directory:
+            if entry.name == "ENDOOM":
+                return Endoom(entry)
+        return None

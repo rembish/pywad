@@ -1,0 +1,32 @@
+"""DMX digitized sound lump decoder."""
+
+from __future__ import annotations
+
+import struct
+from typing import ClassVar
+
+from .base import BaseLump
+
+_DMX_FORMAT: int = 3
+_HEADER_FMT: str = "<HHI"
+_PADDING: int = 16
+
+
+class DmxSound(BaseLump):
+    """A Doom digitized sound effect stored in DMX format."""
+
+    _HEADER_FMT: ClassVar[str] = _HEADER_FMT
+
+    def to_wav(self) -> bytes:
+        """Convert this DMX sound to a WAV file byte string."""
+        data = self.raw()
+        header_size = struct.calcsize(_HEADER_FMT)
+        fmt, rate, num_samples = struct.unpack_from(_HEADER_FMT, data)
+        if fmt != _DMX_FORMAT:
+            raise ValueError(f"Unsupported DMX format: {fmt}")
+        samples = data[header_size + _PADDING : header_size + _PADDING + num_samples]
+
+        riff = struct.pack("<4sI4s", b"RIFF", 36 + len(samples), b"WAVE")
+        fmt_chunk = struct.pack("<4sIHHIIHH", b"fmt ", 16, 1, 1, rate, rate, 1, 8)
+        data_chunk = struct.pack("<4sI", b"data", len(samples)) + samples
+        return riff + fmt_chunk + data_chunk
