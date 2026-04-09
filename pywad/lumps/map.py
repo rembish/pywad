@@ -4,10 +4,19 @@ from dataclasses import dataclass
 from functools import cached_property
 from itertools import chain
 from re import Pattern
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from ..constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
 from .base import BaseLump
+from .blockmap import BlockMap, Reject
+from .hexen import HexenLineDefs, HexenThings
+from .lines import Lines
+from .nodes import Nodes
+from .sectors import Sectors
+from .segs import Segs, SubSectors
+from .sidedefs import SideDefs
+from .things import Things
+from .vertices import Vertices
 
 if TYPE_CHECKING:
     from ..directory import DirectoryEntry
@@ -26,19 +35,19 @@ class BaseMapEntry(BaseLump):
         super().__init__(entry)
         self._match = self._regex.match(self.name)
 
-        self.things: Any = None
-        self.vertices: Any = None
-        self.lines: Any = None
-        self.sidedefs: Any = None
-        self.sectors: Any = None
-        self.segs: Any = None
-        self.ssectors: Any = None
-        self.nodes: Any = None
-        self.reject: Any = None
-        self.blockmap: Any = None
+        self.things: Things | HexenThings | None = None
+        self.vertices: Vertices | None = None
+        self.lines: Lines | HexenLineDefs | None = None
+        self.sidedefs: SideDefs | None = None
+        self.sectors: Sectors | None = None
+        self.segs: Segs | None = None
+        self.ssectors: SubSectors | None = None
+        self.nodes: Nodes | None = None
+        self.reject: Reject | None = None
+        self.blockmap: BlockMap | None = None
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} {self.name}>'
+        return f"<{self.__class__.__name__} {self.name}>"
 
     @property
     def number(self) -> int:
@@ -60,37 +69,37 @@ class BaseMapEntry(BaseLump):
 
         return (Point(min_x, min_y), Point(max_x, max_y))
 
-    def attach(self, lump: Any) -> None:
+    def attach(self, lump: object) -> None:
         pass
 
-    def attach_things(self, things: Any) -> None:
+    def attach_things(self, things: Things | HexenThings) -> None:
         self.things = things
 
-    def attach_vertexes(self, vertices: Any) -> None:
+    def attach_vertexes(self, vertices: Vertices) -> None:
         self.vertices = vertices
 
-    def attach_linedefs(self, lines: Any) -> None:
+    def attach_linedefs(self, lines: Lines | HexenLineDefs) -> None:
         self.lines = lines
 
-    def attach_sidedefs(self, sidedefs: Any) -> None:
+    def attach_sidedefs(self, sidedefs: SideDefs) -> None:
         self.sidedefs = sidedefs
 
-    def attach_sectors(self, sectors: Any) -> None:
+    def attach_sectors(self, sectors: Sectors) -> None:
         self.sectors = sectors
 
-    def attach_segs(self, segs: Any) -> None:
+    def attach_segs(self, segs: Segs) -> None:
         self.segs = segs
 
-    def attach_ssectors(self, ssectors: Any) -> None:
+    def attach_ssectors(self, ssectors: SubSectors) -> None:
         self.ssectors = ssectors
 
-    def attach_nodes(self, nodes: Any) -> None:
+    def attach_nodes(self, nodes: Nodes) -> None:
         self.nodes = nodes
 
-    def attach_reject(self, reject: Any) -> None:
+    def attach_reject(self, reject: Reject) -> None:
         self.reject = reject
 
-    def attach_blockmap(self, blockmap: Any) -> None:
+    def attach_blockmap(self, blockmap: BlockMap) -> None:
         self.blockmap = blockmap
 
 
@@ -103,14 +112,14 @@ class Doom1MapEntry(BaseMapEntry):
         return int(self._match.group("episode"))
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} Episode {self.episode} Map {self.number}>'
+        return f"<{self.__class__.__name__} Episode {self.episode} Map {self.number}>"
 
 
 class Doom2MapEntry(BaseMapEntry):
     _regex = DOOM2_MAP_NAME_REGEX
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} Map {self.number}>'
+        return f"<{self.__class__.__name__} Map {self.number}>"
 
 
 def MapEntry(entry: DirectoryEntry) -> BaseMapEntry:  # pylint: disable=invalid-name
