@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21] - 2026-04-09
+
+### Added
+
+- `TextureCompositor` (`wadlib.compositor`) — blits patches from PNAMES onto a per-texture canvas using TEXTURE1/TEXTURE2 patch descriptors; produces PIL `RGBA` images with correct dimensions
+- `compose(name) -> Image | None` for single texture lookup (case-insensitive via `TextureList.find`)
+- `compose_all() -> dict[str, Image]` to render every texture in TEXTURE1 + TEXTURE2
+- Optional `palette` constructor argument; defaults to PLAYPAL palette 0
+- 10 new tests covering construction, dimensions, blank-check, unknown texture, custom palette, Doom 2
+
 ## [0.0.20] - 2026-04-09
 
 ### Added
