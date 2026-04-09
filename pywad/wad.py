@@ -23,6 +23,7 @@ from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
+from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.vertices import Vertices
 
@@ -136,6 +137,30 @@ class WadFile:
         for entry in self.directory:
             if entry.name == "PLAYPAL":
                 return PlayPal(entry)
+        return None
+
+    @cached_property
+    def pnames(self) -> PNames | None:
+        """Return the PNAMES lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "PNAMES":
+                return PNames(entry)
+        return None
+
+    @cached_property
+    def texture1(self) -> TextureList | None:
+        """Return the TEXTURE1 lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "TEXTURE1":
+                return TextureList(entry)
+        return None
+
+    @cached_property
+    def texture2(self) -> TextureList | None:
+        """Return the TEXTURE2 lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "TEXTURE2":
+                return TextureList(entry)
         return None
 
     def get_lump(self, name: str) -> BaseLump | None:

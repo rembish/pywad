@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.17] - 2026-04-09
+
+### Added
+
+- `PNames` lump reader (`pywad.lumps.textures`) — parses the PNAMES lump; exposes `.names` (list of patch name strings) and `len()`
+- `TextureList` lump reader — parses TEXTURE1/TEXTURE2 composite texture definitions; exposes `.textures` (list of `TextureDef`), `len()`, and `.find(name)` (case-insensitive lookup)
+- `TextureDef` and `PatchDescriptor` dataclasses for structured access to texture/patch data
+- `WadFile.pnames`, `WadFile.texture1`, `WadFile.texture2` cached properties
+- 17 new tests covering PNAMES length, name types, TEXTURE1 entry count/dimensions/patches, find() hit/miss/case-insensitive
+
 ## [0.0.16] - 2026-04-09
 
 ### Added
