@@ -20,18 +20,29 @@ _DOOM2_MUSIC = [
 ]
 
 
-def _music_for_map(map_name: str, music: dict) -> str:
-    """Return the music lump name for this map, or empty string."""
+def _music_for_map(map_name: str, music: dict, mapinfo_entry: object = None) -> str:
+    """Return the music lump name (or cdtrack label) for this map."""
     m1 = _DOOM1_MAP_RE.match(map_name)
     if m1:
-        lump = f"D_E{m1.group(1)}M{m1.group(2)}"
-        return lump if lump in music else ""
+        e, m = m1.group(1), m1.group(2)
+        # Doom 1 convention: D_E1M1; Heretic convention: MUS_E1M1
+        for lump in (f"D_E{e}M{m}", f"MUS_E{e}M{m}"):
+            if lump in music:
+                return lump
+        return ""
     m2 = _DOOM2_MAP_RE.match(map_name)
     if m2:
         idx = int(m2.group(1)) - 1
+        # Doom 2 conventional lump names
         if 0 <= idx < len(_DOOM2_MUSIC):
             lump = _DOOM2_MUSIC[idx]
-            return lump if lump in music else ""
+            if lump in music:
+                return lump
+        # Hexen (and PWADs): fall back to cdtrack from MAPINFO
+        if mapinfo_entry is not None:
+            cdtrack = getattr(mapinfo_entry, "cdtrack", None)
+            if cdtrack is not None:
+                return f"cd:{cdtrack}"
     return ""
 
 
@@ -70,22 +81,23 @@ def run(args: argparse.Namespace) -> None:
             verts = len(m.vertices) if m.vertices else 0
             sectors = len(m.sectors) if m.sectors else 0
 
+            # Resolve MAPINFO entry once for both title and music
+            mi_entry = None
+            if mapinfo is not None:
+                try:
+                    num = int(map_name.lstrip("MAPmap"))
+                except ValueError:
+                    num = -1
+                mi_entry = mapinfo.get(num) if num >= 0 else None
+
             row = f"{map_name:<10}"
 
             if has_title:
-                title = ""
-                if mapinfo is not None:
-                    try:
-                        num = int(map_name.lstrip("MAPmap"))
-                    except ValueError:
-                        num = -1
-                    entry = mapinfo.get(num) if num >= 0 else None
-                    if entry:
-                        title = entry.title
+                title = mi_entry.title if mi_entry else ""
                 row += f"  {title:<28}"
 
             if has_music:
-                lump = _music_for_map(map_name, music)
+                lump = _music_for_map(map_name, music, mi_entry)
                 row += f"  {lump:<12}"
 
             row += f"  {things:>8}  {lines:>10}  {verts:>10}  {sectors:>8}"

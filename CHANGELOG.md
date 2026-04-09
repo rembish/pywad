@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.27] - 2026-04-09
+
+### Fixed
+
+- `wadcli list maps` MUSIC column now works for all supported games:
+  - Doom 1: `D_E1M1` naming (unchanged)
+  - Heretic: `MUS_E1M1` naming (was returning empty)
+  - Hexen: no MUS lump naming convention — falls back to `cd:N` from MAPINFO cdtrack
+  - Doom 2: `D_RUNNIN` table (unchanged)
+- MAPINFO entry resolved once per row (was looked up twice, once for title and once for music)
+
 ## [0.0.26] - 2026-04-09
 
 ### Added
