@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.24] - 2026-04-09
+
+### Added
+
+- `DmxSound` lump decoder (`wadlib.lumps.sound`) — converts DMX PCM data to a RIFF WAV (mono, 8-bit unsigned); `to_wav() -> bytes`
+- `Endoom` lump decoder (`wadlib.lumps.endoom`) — parses the 80×25 CGA text screen; `to_text() -> str` (plain ASCII) and `to_ansi() -> str` (ANSI escape colour codes)
+- `WadFile.sounds` / `get_sound(name)` — collects `DS*`/`DP*` lumps by name
+- `WadFile.sprites` / `get_sprite(name)` — collects lumps between `S_START`/`S_END` markers
+- `WadFile.endoom` — returns the `ENDOOM` lump or `None`
+- CLI commands: `export sound`, `export sprite`, `export endoom`, `list sounds`, `list sprites`
+
+### Fixed
+
+- `WadFile.music` now detects MUS lumps by `MUS\x1a` magic bytes instead of `D_`/`MUS_` name prefix — Hexen's arbitrarily named music lumps (e.g. `WINNOWR`, `JACHR`, `CHESS`) are now found correctly
+
+### Changed
+
+- `.gitignore` extended to cover `*.mid`, `*.wav`, `*.png`, `*.ansi` export artifacts
+
+## [0.0.23] - 2026-04-09
+
+### Added
+
+- `Mus` lump decoder (`wadlib.lumps.mus`) — full MUS→SMF type-0 MIDI conversion (`to_midi() -> bytes`); channel mapping (MUS ch 15 → MIDI ch 9), 140 BPM / 70 ticks/quarter-note tempo
+- `WadFile.music` / `get_music(name)` — returns all MUS lumps as `dict[str, Mus]`
+- CLI restructured from flat hyphenated subcommands to a two-level grouped interface: `wadcli list <what>` and `wadcli export <what>`; bare invocation of any group now prints help
+- `wadcli export music` — saves MUS lump as MIDI (default) or raw MUS bytes (`--raw`)
+- `wadcli list music` — lists all music lumps with sizes
+- `extract-lump` folded into `wadcli export lump`
+- Subcommands sorted alphabetically within each group
+- `--alpha` flag on `wadcli export map` — RGBA output with transparent void and 5 px black exterior outline
+- Directional equilateral triangle markers for `PLAYER` and `MONSTER` things (replaces filled circle + arrow)
+- 12 MUS tests
+
+### Fixed
+
+- Floor rendering rewritten: BSP node-tree walk with Sutherland-Hodgman polygon clipping derives each subsector's exact convex region, then clips against the subsector's own segs to prevent bleeding — achieves 237/237 subsectors on E1M1 without void bleed
+
+## [0.0.22] - 2026-04-09
+
+### Added
+
+- `MapRenderer` (`wadlib.renderer`) — replaces `MapExporter`; `RenderOptions` dataclass (`scale`, `show_things`, `show_floors`, `palette_index`, `thing_scale`, `alpha`); per-category thing markers (triangles for player/monster, diamonds for keys, squares for pickups); optional BSP subsector floor-flat fill
+- `ThingCategory` enum and 100-entry Doom 1/2 thing catalog (`wadlib.doom_types`)
+- `MapExporter` kept as a `DeprecationWarning` shim wrapping `MapRenderer`
+- `wadcli` entry point with 11 modular subcommands: `info`, `list-maps`, `list-lumps`, `list-textures`, `list-flats`, `list-patches`, `export-map`, `export-texture`, `export-flat`, `export-patch`, `extract-lump`
+- 14 renderer tests, 14 doom_types tests, 3 exporter deprecation tests
+
 ## [0.0.21] - 2026-04-09
 
 ### Added
