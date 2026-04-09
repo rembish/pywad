@@ -23,6 +23,7 @@ from PIL.ImageDraw import ImageDraw
 
 from .doom_types import ThingCategory, get_category
 from .lumps.map import BaseMapEntry
+from .lumps.nodes import SSECTOR_FLAG
 from .lumps.playpal import Palette
 
 if TYPE_CHECKING:
@@ -46,6 +47,53 @@ _CATEGORY_COLOUR: dict[ThingCategory, tuple[int, int, int]] = {
 }
 
 
+def _clip_poly(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    polygon: list[tuple[float, float]],
+    nx: float,
+    ny: float,
+    ndx: float,
+    ndy: float,
+    keep_right: bool,
+) -> list[tuple[float, float]]:
+    """Sutherland-Hodgman clip of a convex polygon against a BSP half-plane.
+
+    Half-plane convention (map-coordinate cross product):
+        cross = (P.x - nx)*ndy - (P.y - ny)*ndx
+        keep_right=True  → keep where cross >= 0  (Doom "right child" side)
+        keep_right=False → keep where cross <= 0  (Doom "left child" side)
+    """
+    if len(polygon) < 2:
+        return []
+
+    def _cross(p: tuple[float, float]) -> float:
+        return (p[0] - nx) * ndy - (p[1] - ny) * ndx
+
+    def _intersect(p1: tuple[float, float], p2: tuple[float, float]) -> tuple[float, float]:
+        c1, c2 = _cross(p1), _cross(p2)
+        denom = c1 - c2
+        if denom == 0.0:
+            return p1
+        t = c1 / denom
+        return (p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1]))
+
+    result: list[tuple[float, float]] = []
+    n = len(polygon)
+    for i in range(n):
+        curr = polygon[i]
+        prev = polygon[i - 1]
+        cc = _cross(curr)
+        pc = _cross(prev)
+        curr_in = cc >= 0 if keep_right else cc <= 0
+        prev_in = pc >= 0 if keep_right else pc <= 0
+        if curr_in:
+            if not prev_in:
+                result.append(_intersect(prev, curr))
+            result.append(curr)
+        elif prev_in:
+            result.append(_intersect(prev, curr))
+    return result
+
+
 @dataclass
 class RenderOptions:
     """Controls what the renderer draws and at what scale."""
@@ -65,6 +113,10 @@ class RenderOptions:
 
     thing_scale: float = 1.0
     """Multiplier applied to the base thing-marker radius."""
+
+    alpha: bool = False
+    """Produce an RGBA image with transparent void areas.
+    When False (default) the output is RGB with a dark background."""
 
 
 class MapRenderer:
@@ -108,7 +160,10 @@ class MapRenderer:
 
         img_w = int(map_w * scale) + 2 * _PADDING
         img_h = int(map_h * scale) + 2 * _PADDING
-        self.im = Image.new("RGB", (img_w, img_h), color=(20, 20, 20))
+        if self._opts.alpha:
+            self.im = Image.new("RGBA", (img_w, img_h), color=(0, 0, 0, 0))
+        else:
+            self.im = Image.new("RGB", (img_w, img_h), color=(20, 20, 20))
         self.draw = ImageDraw(self.im)
 
         # Resolve palette once
@@ -127,8 +182,17 @@ class MapRenderer:
         return px, py
 
     # ------------------------------------------------------------------
-    # Floor rendering (subsector polygon fill)
+    # Floor rendering — BSP tree walk with Sutherland-Hodgman clipping
     # ------------------------------------------------------------------
+    # Doom only stores linedef-based segs in the SEGS lump; the partition-
+    # line segments that complete each subsector's convex boundary are
+    # implicit in the BSP node tree.  Building the polygon from seg
+    # start-vertices alone misses those boundary vertices, leaving ~44% of
+    # subsectors with fewer than 3 points.
+    #
+    # The correct approach: walk the NODE tree recursively, clipping a
+    # bounding polygon at each partition plane (Sutherland-Hodgman).  At
+    # each leaf (subsector) the clipped polygon IS the full convex region.
 
     def _build_flat_tile(self, flat_name: str) -> Image.Image | None:
         """Decode and scale a flat for tiling."""
@@ -142,12 +206,14 @@ class MapRenderer:
         return img.resize((tile_px, tile_px), Image.Resampling.NEAREST)
 
     def _tile_canvas(self, tile: Image.Image) -> Image.Image:
-        """Produce a canvas-sized image tiled with *tile*."""
-        tiled = Image.new("RGB", self.im.size)
-        tw, th = tile.size
+        """Produce a canvas-sized image tiled with *tile* (same mode as self.im)."""
+        mode = self.im.mode
+        tiled = Image.new(mode, self.im.size)
+        src = tile.convert(mode)
+        tw, th = src.size
         for ty in range(0, self.im.height, th):
             for tx in range(0, self.im.width, tw):
-                tiled.paste(tile, (tx, ty))
+                tiled.paste(src, (tx, ty))
         return tiled
 
     def _sector_for_seg(self, seg: Any) -> int | None:
@@ -164,39 +230,110 @@ class MapRenderer:
         sd = m.sidedefs.get(sd_idx)
         return sd.sector if sd is not None else None
 
-    def _ssector_polygon(self, ssector: Any) -> tuple[list[tuple[int, int]], int] | None:
-        """Return (pixel-points, sector_idx) for a subsector, or None to skip."""
+    def _sector_from_ssector(self, ssector: Any) -> int | None:
+        """Return the sector index for a subsector (from any of its segs)."""
         m = self.level
-        if ssector.seg_count == 0 or not (m.segs and m.vertices):
+        if not m.segs:
             return None
-        points: list[tuple[int, int]] = []
-        sector_idx: int | None = None
+        for j in range(ssector.seg_count):
+            seg = m.segs.get(ssector.first_seg + j)
+            if seg is None:
+                continue
+            sector_idx = self._sector_for_seg(seg)
+            if sector_idx is not None:
+                return sector_idx
+        return None
+
+    def _ssector_polygon(self, ssector_idx: int, ssector: Any) -> list[tuple[int, int]] | None:
+        """Build the subsector's floor polygon.
+
+        Primary: collect unique (start_vertex, end_vertex) map-coordinates from
+        each seg, project to pixel space.  Works for 3+ seg subsectors.
+
+        Fallback: for degenerate 1-seg subsectors (BSP partition artefacts),
+        walk the NODE tree clipping the map bounding box down to the subsector's
+        convex region (Sutherland-Hodgman).
+        """
+        m = self.level
+        if not (m.segs and m.vertices):
+            return None
+        seen: dict[tuple[int, int], None] = {}
         for j in range(ssector.seg_count):
             seg = m.segs.get(ssector.first_seg + j)
             if seg is None:
                 break
-            v = m.vertices.get(seg.start_vertex)
-            if v is None:
-                break
-            points.append(self._px(v.x, v.y))
-            if sector_idx is None:
-                sector_idx = self._sector_for_seg(seg)
-        if len(points) < 3 or sector_idx is None:
-            return None
-        return points, sector_idx
+            for vid in (seg.start_vertex, seg.end_vertex):
+                v = m.vertices.get(vid)
+                if v is None:
+                    break
+                seen[(v.x, v.y)] = None
+        points = [self._px(x, y) for x, y in seen]
+        if len(points) >= 3:
+            return points
+        # Fallback: BSP walk to get the convex region for this subsector.
+        return self._ssector_polygon_bsp(ssector_idx)
 
-    def _draw_ssector(
+    def _ssector_polygon_bsp(self, target_idx: int) -> list[tuple[int, int]] | None:
+        """BSP-walk fallback: clip map bounding box to the target subsector's region."""
+        m = self.level
+        if not m.nodes:
+            return None
+        # Initial convex polygon = map bounds in map coordinates (float).
+        poly: list[tuple[float, float]] = [
+            (float(self._min_x), float(self._min_y)),
+            (float(self._max_x), float(self._min_y)),
+            (float(self._max_x), float(self._max_y)),
+            (float(self._min_x), float(self._max_y)),
+        ]
+        found = self._bsp_clip(m.nodes.get(len(m.nodes) - 1), target_idx, poly)
+        if found is None or len(found) < 3:
+            return None
+        return [self._px(int(x), int(y)) for x, y in found]
+
+    def _bsp_clip(
         self,
+        node: Any,
+        target_idx: int,
+        poly: list[tuple[float, float]],
+    ) -> list[tuple[float, float]] | None:
+        """Recursively walk BSP tree, clipping *poly* at each partition.
+
+        Returns the clipped polygon when the subsector at *target_idx* is reached.
+        """
+        if node is None:
+            return None
+        nx, ny, ndx, ndy = float(node.x), float(node.y), float(node.dx), float(node.dy)
+        right_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=True)
+        left_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=False)
+        m = self.level
+        for child_idx, child_poly in (
+            (node.right_child, right_poly),
+            (node.left_child, left_poly),
+        ):
+            if len(child_poly) < 3:
+                continue
+            if child_idx & SSECTOR_FLAG:
+                if (child_idx & ~SSECTOR_FLAG) == target_idx:
+                    return child_poly
+            else:
+                child_node = m.nodes.get(child_idx) if m.nodes else None
+                result = self._bsp_clip(child_node, target_idx, child_poly)
+                if result is not None:
+                    return result
+        return None
+
+    def _fill_ssector_polygon(
+        self,
+        ssector_idx: int,
         ssector: Any,
         tile_cache: dict[str, Image.Image | None],
         tiled_canvas_cache: dict[str, Image.Image],
     ) -> None:
-        """Fill one subsector polygon with its floor flat (if available)."""
+        """Render the floor flat for one subsector."""
         m = self.level
-        result = self._ssector_polygon(ssector)
-        if result is None:
+        sector_idx = self._sector_from_ssector(ssector)
+        if sector_idx is None:
             return
-        points, sector_idx = result
         sector = m.sectors.get(sector_idx) if m.sectors else None
         if sector is None:
             return
@@ -211,8 +348,11 @@ class MapRenderer:
         if flat_name not in tiled_canvas_cache:
             tiled_canvas_cache[flat_name] = self._tile_canvas(tile)
         tiled = tiled_canvas_cache[flat_name]
+        points = self._ssector_polygon(ssector_idx, ssector)
+        if points is None:
+            return
         mask = Image.new("L", self.im.size, 0)
-        ImageDraw(mask).polygon(points, fill=255)
+        ImageDraw(mask).polygon(points, fill=255, outline=255)
         self.im.paste(tiled, (0, 0), mask=mask)
 
     def _draw_floors(self) -> None:
@@ -223,28 +363,40 @@ class MapRenderer:
             return
         tile_cache: dict[str, Image.Image | None] = {}
         tiled_canvas_cache: dict[str, Image.Image] = {}
-        for ssector in m.ssectors:
-            self._draw_ssector(ssector, tile_cache, tiled_canvas_cache)
+        for i, ssector in enumerate(m.ssectors):
+            self._fill_ssector_polygon(i, ssector, tile_cache, tiled_canvas_cache)
 
     # ------------------------------------------------------------------
     # Linedef rendering
     # ------------------------------------------------------------------
 
-    def _draw_linedefs(self) -> None:
-        if not self.level.lines or not self.level.vertices:
-            return
-        for line in self.level.lines:
-            v1 = self.level.vertices.get(line.start_vertex)
-            v2 = self.level.vertices.get(
-                getattr(line, "finish_vertex", getattr(line, "end_vertex", -1))
-            )
+    def _iter_linedef_endpoints(
+        self,
+    ) -> list[tuple[tuple[int, int], tuple[int, int], bool]]:
+        """Return [(p1, p2, one_sided)] for all linedefs with valid vertices."""
+        result: list[tuple[tuple[int, int], tuple[int, int], bool]] = []
+        m = self.level
+        if not m.lines or not m.vertices:
+            return result
+        for line in m.lines:
+            v1 = m.vertices.get(line.start_vertex)
+            v2 = m.vertices.get(getattr(line, "finish_vertex", getattr(line, "end_vertex", -1)))
             if v1 is None or v2 is None:
                 continue
-            x1, y1 = self._px(v1.x, v1.y)
-            x2, y2 = self._px(v2.x, v2.y)
             one_sided = line.left_sidedef in (-1, 0xFFFF)
+            result.append((self._px(v1.x, v1.y), self._px(v2.x, v2.y), one_sided))
+        return result
+
+    def _draw_linedefs(self) -> None:
+        lines = self._iter_linedef_endpoints()
+        if self._opts.alpha:
+            # Black outline pass on exterior (one-sided) walls.
+            for p1, p2, one_sided in lines:
+                if one_sided:
+                    self.draw.line([p1, p2], fill=(0, 0, 0, 255), width=5)
+        for p1, p2, one_sided in lines:
             colour = (220, 220, 220) if one_sided else (110, 110, 110)
-            self.draw.line([(x1, y1), (x2, y2)], fill=colour, width=1)
+            self.draw.line([p1, p2], fill=colour, width=1)
 
     # ------------------------------------------------------------------
     # Thing rendering
@@ -254,31 +406,24 @@ class MapRenderer:
         """Return facing angle in degrees (0=East, CCW positive)."""
         return int(getattr(thing, "direction", getattr(thing, "angle", 0)))
 
-    def _draw_arrowhead(
+    def _draw_direction_triangle(
         self,
-        tip: tuple[int, int],
+        centre: tuple[int, int],
         angle_deg: int,
         colour: tuple[int, int, int],
-        head: int,
+        size: int,
     ) -> None:
-        ax, ay = tip
-        for offset in (150, -150):
-            r = math.radians(angle_deg + offset)
-            self.draw.line(
-                [(ax, ay), (ax + int(math.cos(r) * head), ay - int(math.sin(r) * head))],
-                fill=colour,
-                width=1,
-            )
-
-    def _draw_arrow(
-        self, centre: tuple[int, int], angle_deg: int, colour: tuple[int, int, int], length: int
-    ) -> None:
+        """Draw a filled equilateral triangle pointing in *angle_deg* direction."""
         cx, cy = centre
-        rad = math.radians(angle_deg)
-        ax = cx + int(math.cos(rad) * length)
-        ay = cy - int(math.sin(rad) * length)  # flip Y
-        self.draw.line([(cx, cy), (ax, ay)], fill=colour, width=2)
-        self._draw_arrowhead((ax, ay), angle_deg, colour, max(3, length // 3))
+
+        def _pt(deg: float) -> tuple[int, int]:
+            r = math.radians(deg)
+            return (cx + int(math.cos(r) * size), cy - int(math.sin(r) * size))
+
+        tip = _pt(angle_deg)
+        b1 = _pt(angle_deg + 120)
+        b2 = _pt(angle_deg - 120)
+        self.draw.polygon([tip, b1, b2], fill=colour)
 
     def _draw_thing(self, thing: Any) -> None:
         cat = get_category(thing.type)
@@ -287,9 +432,8 @@ class MapRenderer:
         r = max(2, int(5 * self._scale * self._opts.thing_scale))
 
         if cat in (ThingCategory.PLAYER, ThingCategory.MONSTER):
-            # Filled circle + direction arrow
-            self.draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=colour)
-            self._draw_arrow((cx, cy), self._thing_facing(thing), colour, r * 3)
+            # Directional triangle (tip = facing direction)
+            self._draw_direction_triangle((cx, cy), self._thing_facing(thing), colour, r * 2)
 
         elif cat == ThingCategory.KEY:
             # Diamond

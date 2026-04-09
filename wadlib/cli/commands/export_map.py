@@ -27,6 +27,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         metavar="F",
         help="multiplier for thing marker size (default: 1.0)",
     )
+    p.add_argument(
+        "--alpha",
+        action="store_true",
+        help="RGBA output with transparent void areas and black exterior outline",
+    )
     p.set_defaults(func=run)
 
 
@@ -38,6 +43,7 @@ def run(args: argparse.Namespace) -> None:
         show_floors=args.floors,
         palette_index=args.palette,
         thing_scale=args.thing_scale,
+        alpha=args.alpha,
     )
     with WadFile(args.wad) as wad:
         target = next((m for m in wad.maps if str(m) == map_name), None)

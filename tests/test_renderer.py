@@ -23,6 +23,15 @@ def test_renderer_image_is_rgb(doom1_wad: WadFile) -> None:
     assert img.mode == "RGB"
 
 
+def test_renderer_alpha_mode(doom1_wad: WadFile) -> None:
+    opts = RenderOptions(alpha=True)
+    img = MapRenderer(doom1_wad.maps[0], options=opts).render()
+    assert img.mode == "RGBA"
+    # Void areas outside the map should be fully transparent.
+    pixels = img.getpixel((0, 0))
+    assert isinstance(pixels, tuple) and pixels[3] == 0
+
+
 def test_renderer_nontrivial_size(doom1_wad: WadFile) -> None:
     img = MapRenderer(doom1_wad.maps[0]).render()
     w, h = img.size
