@@ -19,6 +19,7 @@ from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.nodes import Nodes
+from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
@@ -128,6 +129,14 @@ class WadFile:
             result.append(map_entry)
 
         return result
+
+    @cached_property
+    def playpal(self) -> PlayPal | None:
+        """Return the PLAYPAL lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "PLAYPAL":
+                return PlayPal(entry)
+        return None
 
     def get_lump(self, name: str) -> BaseLump | None:
         """Return the first directory lump with the given name, or None."""

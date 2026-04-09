@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2026-04-09
+
+### Added
+
+- `PlayPal` lump reader (`pywad.lumps.playpal`) — parses the PLAYPAL lump into up to 14 RGB palettes; supports `get_palette(index)`, iteration, and `len()`
+- `WadFile.playpal` cached property — returns `PlayPal | None` for the first PLAYPAL lump in the directory
+- 11 new tests covering palette count, colour bounds, iteration, and cross-WAD access
+
 ## [0.0.15] - 2026-04-09
 
 ### Changed
