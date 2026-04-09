@@ -2,13 +2,14 @@
 
 from struct import calcsize
 
-from pywad.lumps.hexen import HEXEN_LINEDEF_FORMAT, HEXEN_THING_FORMAT, HexenLineDef, HexenThing
-from pywad.lumps.things import Flags
-from pywad.wad import WadFile
+from wadlib.lumps.hexen import HEXEN_LINEDEF_FORMAT, HEXEN_THING_FORMAT, HexenLineDef, HexenThing
+from wadlib.lumps.things import Flags
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # Struct sizes
 # ---------------------------------------------------------------------------
+
 
 def test_hexen_thing_format_size() -> None:
     assert calcsize(HEXEN_THING_FORMAT) == 20
@@ -22,8 +23,10 @@ def test_hexen_linedef_format_size() -> None:
 # Heretic — Doom-compatible, should parse exactly like Doom
 # ---------------------------------------------------------------------------
 
+
 def test_heretic_wad_type(heretic_wad: WadFile) -> None:
-    from pywad.enums import WadType
+    from wadlib.enums import WadType
+
     assert heretic_wad.wad_type == WadType.IWAD
 
 
@@ -48,7 +51,8 @@ def test_heretic_maps_have_sectors(heretic_wad: WadFile) -> None:
 
 def test_heretic_no_hexen_things(heretic_wad: WadFile) -> None:
     # Heretic uses Doom-format things, NOT HexenThing
-    from pywad.lumps.things import Thing
+    from wadlib.lumps.things import Thing
+
     t = heretic_wad.maps[0].things[0]
     assert isinstance(t, Thing)
     assert not isinstance(t, HexenThing)
@@ -57,6 +61,7 @@ def test_heretic_no_hexen_things(heretic_wad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # Hexen WAD (real file)
 # ---------------------------------------------------------------------------
+
 
 def test_hexen_has_maps(hexen_wad: WadFile) -> None:
     assert len(hexen_wad.maps) > 0
@@ -110,6 +115,7 @@ def test_hexen_linedef_count_is_sane(hexen_wad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # Minimal in-memory Hexen WAD
 # ---------------------------------------------------------------------------
+
 
 def test_minimal_hexen_wad_things(minimal_hexen_wad: WadFile) -> None:
     things = minimal_hexen_wad.maps[0].things

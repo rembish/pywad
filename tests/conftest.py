@@ -1,4 +1,4 @@
-"""Shared fixtures for pywad tests."""
+"""Shared fixtures for wadlib tests."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from pywad.wad import WadFile
+from wadlib.wad import WadFile
 
 WADS_DIR = Path(__file__).parent.parent / "wads"
 DOOM1_WAD = WADS_DIR / "DOOM.WAD"
@@ -20,6 +20,7 @@ HEXEN_WAD = WADS_DIR / "HEXEN.WAD"
 # ---------------------------------------------------------------------------
 # Helpers for building minimal in-memory WADs
 # ---------------------------------------------------------------------------
+
 
 def _build_wad(wad_type: str, lumps: list[tuple[str, bytes]]) -> bytes:
     """Build a minimal IWAD/PWAD in memory from a list of (name, data) pairs."""
@@ -59,10 +60,11 @@ def _wad_from_bytes(data: bytes) -> WadFile:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def doom1_wad() -> Generator[WadFile, None, None]:
     """Open DOOM.WAD for the entire test session."""
-    pytest.importorskip("pywad")  # sanity
+    pytest.importorskip("wadlib")  # sanity
     if not DOOM1_WAD.exists():
         pytest.skip("DOOM.WAD not found in wads/")
     with WadFile(str(DOOM1_WAD)) as w:

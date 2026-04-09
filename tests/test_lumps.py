@@ -2,10 +2,10 @@
 
 from io import SEEK_CUR, SEEK_END, SEEK_SET
 
-from pywad.lumps.lines import LineDefinition
-from pywad.lumps.things import Flags, Thing
-from pywad.lumps.vertices import Vertex
-from pywad.wad import WadFile
+from wadlib.lumps.lines import LineDefinition
+from wadlib.lumps.things import Flags, Thing
+from wadlib.lumps.vertices import Vertex
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # Things

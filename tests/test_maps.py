@@ -2,12 +2,13 @@
 
 import pytest
 
-from pywad.lumps.map import Doom1MapEntry, Doom2MapEntry, MapEntry
-from pywad.wad import WadFile
+from wadlib.lumps.map import Doom1MapEntry, Doom2MapEntry, MapEntry
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # Map list basics
 # ---------------------------------------------------------------------------
+
 
 def test_doom1_has_maps(doom1_wad: WadFile) -> None:
     assert len(doom1_wad.maps) > 0
@@ -31,6 +32,7 @@ def test_doom2_map_count(doom2_wad: WadFile) -> None:
 # Map entry types
 # ---------------------------------------------------------------------------
 
+
 def test_doom1_maps_are_doom1_entries(doom1_wad: WadFile) -> None:
     for m in doom1_wad.maps:
         assert isinstance(m, Doom1MapEntry)
@@ -52,6 +54,7 @@ def test_minimal_pwad_map_type(minimal_pwad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # Map entry attributes
 # ---------------------------------------------------------------------------
+
 
 def test_doom1_map_episode(doom1_wad: WadFile) -> None:
     first = doom1_wad.maps[0]
@@ -79,6 +82,7 @@ def test_map_repr_doom2(doom2_wad: WadFile) -> None:
 # MapEntry factory
 # ---------------------------------------------------------------------------
 
+
 def test_map_entry_factory_invalid_raises() -> None:
     class _FakeEntry:
         name = "INVALID"
@@ -90,6 +94,7 @@ def test_map_entry_factory_invalid_raises() -> None:
 # ---------------------------------------------------------------------------
 # Lump attachment
 # ---------------------------------------------------------------------------
+
 
 def test_doom1_maps_have_things(doom1_wad: WadFile) -> None:
     for m in doom1_wad.maps:

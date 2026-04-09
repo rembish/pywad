@@ -2,8 +2,8 @@
 
 from struct import calcsize
 
-from pywad.lumps.segs import SEG_FORMAT, SSECTOR_FORMAT, Seg, SubSector
-from pywad.wad import WadFile
+from wadlib.lumps.segs import SEG_FORMAT, SSECTOR_FORMAT, Seg, SubSector
+from wadlib.wad import WadFile
 
 
 def test_seg_format_size() -> None:

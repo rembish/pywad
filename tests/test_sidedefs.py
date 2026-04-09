@@ -1,7 +1,7 @@
 """Tests for SIDEDEFS lump."""
 
-from pywad.lumps.sidedefs import SideDef
-from pywad.wad import WadFile
+from wadlib.lumps.sidedefs import SideDef
+from wadlib.wad import WadFile
 
 
 def test_sidedefs_attached(doom1_wad: WadFile) -> None:
@@ -37,5 +37,6 @@ def test_sidedefs_doom2(doom2_wad: WadFile) -> None:
 def test_sidedef_row_size() -> None:
     from struct import calcsize
 
-    from pywad.lumps.sidedefs import SIDEDEF_FORMAT
+    from wadlib.lumps.sidedefs import SIDEDEF_FORMAT
+
     assert calcsize(SIDEDEF_FORMAT) == 30

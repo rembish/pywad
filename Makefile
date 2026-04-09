@@ -14,17 +14,17 @@ install: ## Create .venv and install package with dev dependencies
 	$(BIN)/pip install -e ".[dev]"
 
 format: ## Auto-format with ruff
-	$(BIN)/ruff format pywad tests
-	$(BIN)/ruff check --fix pywad tests
+	$(BIN)/ruff format wadlib tests
+	$(BIN)/ruff check --fix wadlib tests
 
 lint: ## Run ruff linter
-	$(BIN)/ruff check pywad tests
+	$(BIN)/ruff check wadlib tests
 
 typecheck: ## Run mypy strict type checking
-	$(BIN)/mypy pywad
+	$(BIN)/mypy wadlib
 
 pylint: ## Run pylint
-	$(BIN)/pylint pywad
+	$(BIN)/pylint wadlib
 
 test: ## Run pytest with coverage
 	$(BIN)/pytest

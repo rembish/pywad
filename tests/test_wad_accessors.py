@@ -1,8 +1,7 @@
 """Tests for WadFile.get_lump() and WadFile.get_lumps()."""
 
-
-from pywad.lumps.base import BaseLump
-from pywad.wad import WadFile
+from wadlib.lumps.base import BaseLump
+from wadlib.wad import WadFile
 
 
 def test_get_lump_returns_baselump(doom1_wad: WadFile) -> None:

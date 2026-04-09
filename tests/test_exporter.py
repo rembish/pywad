@@ -4,8 +4,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from pywad.exporter import MapExporter
-from pywad.wad import WadFile
+from wadlib.exporter import MapExporter
+from wadlib.wad import WadFile
 
 
 def test_exporter_creates_image(doom1_wad: WadFile) -> None:

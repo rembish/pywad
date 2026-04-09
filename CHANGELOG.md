@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.18] - 2026-04-09
+
+### Changed
+
+- Project renamed from `pywad` to **`wadlib`** — `pywad` was already occupied on PyPI by an unrelated Selenium framework. All imports, package metadata, and tooling updated accordingly.
+
 ## [0.0.17] - 2026-04-09
 
 ### Added
 
-- `PNames` lump reader (`pywad.lumps.textures`) — parses the PNAMES lump; exposes `.names` (list of patch name strings) and `len()`
+- `PNames` lump reader (`wadlib.lumps.textures`) — parses the PNAMES lump; exposes `.names` (list of patch name strings) and `len()`
 - `TextureList` lump reader — parses TEXTURE1/TEXTURE2 composite texture definitions; exposes `.textures` (list of `TextureDef`), `len()`, and `.find(name)` (case-insensitive lookup)
 - `TextureDef` and `PatchDescriptor` dataclasses for structured access to texture/patch data
 - `WadFile.pnames`, `WadFile.texture1`, `WadFile.texture2` cached properties
@@ -19,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `PlayPal` lump reader (`pywad.lumps.playpal`) — parses the PLAYPAL lump into up to 14 RGB palettes; supports `get_palette(index)`, iteration, and `len()`
+- `PlayPal` lump reader (`wadlib.lumps.playpal`) — parses the PLAYPAL lump into up to 14 RGB palettes; supports `get_palette(index)`, iteration, and `len()`
 - `WadFile.playpal` cached property — returns `PlayPal | None` for the first PLAYPAL lump in the directory
 - 11 new tests covering palette count, colour bounds, iteration, and cross-WAD access
 

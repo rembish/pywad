@@ -1,11 +1,12 @@
 """Tests for REJECT and BLOCKMAP lumps."""
 
-from pywad.lumps.blockmap import BlockMap, Reject
-from pywad.wad import WadFile
+from wadlib.lumps.blockmap import BlockMap, Reject
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # REJECT
 # ---------------------------------------------------------------------------
+
 
 def test_reject_attached(doom1_wad: WadFile) -> None:
     assert doom1_wad.maps[0].reject is not None
@@ -23,6 +24,7 @@ def test_reject_data_is_bytes(doom1_wad: WadFile) -> None:
 
 def test_reject_size_matches_sectors(doom1_wad: WadFile) -> None:
     import math
+
     m = doom1_wad.maps[0]
     n = len(m.sectors)
     expected_bytes = math.ceil(n * n / 8)
@@ -43,6 +45,7 @@ def test_reject_repr(doom1_wad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 # BLOCKMAP
 # ---------------------------------------------------------------------------
+
 
 def test_blockmap_attached(doom1_wad: WadFile) -> None:
     assert doom1_wad.maps[0].blockmap is not None

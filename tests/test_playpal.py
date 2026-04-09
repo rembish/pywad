@@ -1,7 +1,7 @@
 """Tests for the PLAYPAL lump reader."""
 
-from pywad.lumps.playpal import _NUM_PALETTES, _PALETTE_SIZE, PlayPal
-from pywad.wad import WadFile
+from wadlib.lumps.playpal import _NUM_PALETTES, _PALETTE_SIZE, PlayPal
+from wadlib.wad import WadFile
 
 
 def test_playpal_not_none(doom1_wad: WadFile) -> None:

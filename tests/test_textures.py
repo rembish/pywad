@@ -1,7 +1,7 @@
 """Tests for PNAMES, TEXTURE1, and TEXTURE2 lump readers."""
 
-from pywad.lumps.textures import PNames, TextureDef, TextureList
-from pywad.wad import WadFile
+from wadlib.lumps.textures import PNames, TextureDef, TextureList
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # PNAMES

@@ -1,7 +1,7 @@
 """Tests for WAD directory / lump listing."""
 
-from pywad.directory import DirectoryEntry
-from pywad.wad import WadFile
+from wadlib.directory import DirectoryEntry
+from wadlib.wad import WadFile
 
 
 def test_directory_returns_list(doom1_wad: WadFile) -> None:

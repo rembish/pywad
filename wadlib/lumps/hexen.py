@@ -18,14 +18,14 @@ HEXEN_LINEDEF_FORMAT = "<HHHBBBBBBhh"
 
 @dataclass
 class HexenThing:
-    tid: int          # thing id (for ACS scripts)
+    tid: int  # thing id (for ACS scripts)
     x: int
     y: int
-    z: int            # height offset above floor
+    z: int  # height offset above floor
     angle: int
     type: int
     flags: Flags
-    action: int       # special action number
+    action: int  # special action number
     arg0: int
     arg1: int
     arg2: int

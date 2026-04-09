@@ -2,8 +2,8 @@
 
 from struct import calcsize
 
-from pywad.lumps.nodes import NODE_FORMAT, SSECTOR_FLAG, BBox, Node
-from pywad.wad import WadFile
+from wadlib.lumps.nodes import NODE_FORMAT, SSECTOR_FLAG, BBox, Node
+from wadlib.wad import WadFile
 
 
 def test_node_format_size() -> None:

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from pywad.enums import WadType
-from pywad.exceptions import BadHeaderWadException
-from pywad.wad import WadFile
+from wadlib.enums import WadType
+from wadlib.exceptions import BadHeaderWadException
+from wadlib.wad import WadFile
 
 
 def test_doom1_wad_type(doom1_wad: WadFile) -> None:
@@ -44,6 +44,7 @@ def test_bad_magic_raises(tmp_path: Path) -> None:
 
 def test_context_manager_closes(tmp_path: Path) -> None:
     import struct as s
+
     # build the tiniest valid IWAD
     data = s.pack("<4sII", b"IWAD", 0, 12)
     p = tmp_path / "tiny.wad"

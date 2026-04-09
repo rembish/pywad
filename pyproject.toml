@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pywad"
-version = "0.0.17"
+name = "wadlib"
+version = "0.0.18"
 description = "Python library to work with id Doom WAD files"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
 license = { text = "BSD-2-Clause" }
@@ -22,7 +22,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pywad*"]
+include = ["wadlib*"]
 
 # ---------------------------------------------------------------------------
 # ruff — linting + formatting (replaces flake8, isort, pyupgrade, etc.)
@@ -45,7 +45,7 @@ select = [
 ignore = ["E501"]  # line length handled by formatter
 
 [tool.ruff.lint.isort]
-known-first-party = ["pywad"]
+known-first-party = ["wadlib"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -86,11 +86,11 @@ max-line-length = 100
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--tb=short -q --cov=pywad --cov-report=term-missing"
+addopts = "--tb=short -q --cov=wadlib --cov-report=term-missing"
 
 [tool.coverage.run]
 branch = true
-source = ["pywad"]
+source = ["wadlib"]
 
 [tool.coverage.report]
 exclude_lines = ["if TYPE_CHECKING:"]
