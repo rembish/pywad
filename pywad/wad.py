@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from functools import cached_property
 from io import SEEK_SET
 from struct import calcsize, unpack
@@ -12,6 +13,7 @@ from .constants import (
 from .directory import DirectoryEntry
 from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
+from .lumps.blockmap import BlockMap, Reject
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.nodes import Nodes
@@ -20,6 +22,20 @@ from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.things import Things
 from .lumps.vertices import Vertices
+
+# Dispatch table: lump name -> attach method name + lump constructor
+_LUMP_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
+    "THINGS": ("attach_things", Things),
+    "VERTEXES": ("attach_vertexes", Vertices),
+    "LINEDEFS": ("attach_linedefs", Lines),
+    "SIDEDEFS": ("attach_sidedefs", SideDefs),
+    "SECTORS": ("attach_sectors", Sectors),
+    "SEGS": ("attach_segs", Segs),
+    "SSECTORS": ("attach_ssectors", SubSectors),
+    "NODES": ("attach_nodes", Nodes),
+    "REJECT": ("attach_reject", Reject),
+    "BLOCKMAP": ("attach_blockmap", BlockMap),
+}
 
 
 class WadFile:
@@ -66,22 +82,10 @@ class WadFile:
                 last = MapEntry(entry)
                 mlist.append(last)
             elif entry.name in MapData.names() and last is not None:
-                if entry.name == "THINGS":
-                    last.attach_things(Things(entry))
-                elif entry.name == "VERTEXES":
-                    last.attach_vertexes(Vertices(entry))
-                elif entry.name == "LINEDEFS":
-                    last.attach_linedefs(Lines(entry))
-                elif entry.name == "SIDEDEFS":
-                    last.attach_sidedefs(SideDefs(entry))
-                elif entry.name == "SECTORS":
-                    last.attach_sectors(Sectors(entry))
-                elif entry.name == "SEGS":
-                    last.attach_segs(Segs(entry))
-                elif entry.name == "SSECTORS":
-                    last.attach_ssectors(SubSectors(entry))
-                elif entry.name == "NODES":
-                    last.attach_nodes(Nodes(entry))
+                dispatch = _LUMP_DISPATCH.get(entry.name)
+                if dispatch:
+                    method_name, constructor = dispatch
+                    getattr(last, method_name)(constructor(entry))
                 else:
                     last.attach(entry)
         return mlist
