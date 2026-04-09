@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.33] - 2026-04-09
+
+### Added
+
+- `WadFile.stcfn` — Doom HUD font glyphs (STCFN033–STCFN127), PWAD-aware, keyed by ASCII ordinal
+- `WadFile.fonta` — Heretic large font (FONTA01–FONTA59 between FONTA_S/FONTA_E), keyed by ASCII ordinal
+- `WadFile.fontb` — Heretic small font (FONTB01–FONTB58 between FONTB_S/FONTB_E), keyed by ASCII ordinal
+- `wadcli info` now shows font summary (name and glyph count for each present font)
+
 ## [0.0.32] - 2026-04-09
 
 ### Added

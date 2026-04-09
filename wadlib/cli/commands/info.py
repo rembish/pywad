@@ -45,3 +45,11 @@ def run(args: argparse.Namespace) -> None:
             print(f"SNDINFO : {len(sndinfo.sounds)} sounds")
         else:
             print("SNDINFO : none")
+        fonts = []
+        if wad.stcfn:
+            fonts.append(f"STCFN ({len(wad.stcfn)} glyphs)")
+        if wad.fonta:
+            fonts.append(f"FONTA ({len(wad.fonta)} glyphs)")
+        if wad.fontb:
+            fonts.append(f"FONTB ({len(wad.fontb)} glyphs)")
+        print(f"Fonts   : {', '.join(fonts) if fonts else 'none'}")

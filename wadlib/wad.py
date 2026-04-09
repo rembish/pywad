@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from functools import cached_property
 from io import SEEK_SET
@@ -39,6 +40,8 @@ from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
+
+_STCFN_RE = re.compile(r"^STCFN(\d{3})$")
 
 # Doom-format lump dispatch: name -> (attach method, constructor)
 _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
@@ -347,4 +350,64 @@ class WadFile:
         """Return the ANIMDEFS lump (PWAD-aware), or None if not present."""
         entry = self._find_lump("ANIMDEFS")
         return AnimDefsLump(entry) if entry else None
+
+    @cached_property
+    def stcfn(self) -> dict[int, Picture]:
+        """Return Doom's STCFN HUD font glyphs (PWAD-aware), keyed by ASCII ordinal.
+
+        STCFN033 → ord('!') = 33, …, STCFN065 → ord('A') = 65, etc.
+        """
+        result: dict[int, Picture] = {}
+        for wad in reversed(self._all_wads):
+            for entry in wad.directory:
+                m = _STCFN_RE.match(entry.name)
+                if m:
+                    result[int(m.group(1))] = Picture(entry)
+        return result
+
+    @cached_property
+    def fonta(self) -> dict[int, Picture]:
+        """Return Heretic FONTA large-font glyphs (PWAD-aware), keyed by ASCII ordinal.
+
+        FONTA01 = '!' (33), FONTA02 = '"' (34), …
+        """
+        result: dict[int, Picture] = {}
+        for wad in reversed(self._all_wads):
+            inside = False
+            index = 0
+            for entry in wad.directory:
+                if entry.name == "FONTA_S":
+                    inside = True
+                    index = 0
+                    continue
+                if entry.name == "FONTA_E":
+                    inside = False
+                    continue
+                if inside:
+                    result[33 + index] = Picture(entry)
+                    index += 1
+        return result
+
+    @cached_property
+    def fontb(self) -> dict[int, Picture]:
+        """Return Heretic FONTB small-font glyphs (PWAD-aware), keyed by ASCII ordinal.
+
+        FONTB01 = '!' (33), FONTB02 = '"' (34), …
+        """
+        result: dict[int, Picture] = {}
+        for wad in reversed(self._all_wads):
+            inside = False
+            index = 0
+            for entry in wad.directory:
+                if entry.name == "FONTB_S":
+                    inside = True
+                    index = 0
+                    continue
+                if entry.name == "FONTB_E":
+                    inside = False
+                    continue
+                if inside:
+                    result[33 + index] = Picture(entry)
+                    index += 1
+        return result
 
