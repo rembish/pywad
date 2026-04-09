@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.11] - 2026-04-09
+
+### Added
+
+- Hexen format support: `HexenThing` (20 bytes — adds `tid`, `z`, `action`, `arg0`-`arg4`) and `HexenLineDef` (16 bytes — replaces `special_type`/`sector_tag` with `special_type` + 5 args)
+- Automatic format detection in `WadFile.maps`: lumps are now grouped per map first; if a `BEHAVIOR` lump is present the Hexen parsers are used for `THINGS` and `LINEDEFS`, otherwise Doom parsers are used
+- Heretic works out of the box (Doom-compatible format, no detection needed)
+- `heretic_wad` and `hexen_wad` session fixtures; `minimal_hexen_wad` unit fixture
+- 21 new tests covering Heretic and Hexen WADs (127 total)
+
 ## [0.0.10] - 2026-04-09
 
 ### Added

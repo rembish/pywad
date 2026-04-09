@@ -13,6 +13,8 @@ from pywad.wad import WadFile
 WADS_DIR = Path(__file__).parent.parent / "wads"
 DOOM1_WAD = WADS_DIR / "DOOM.WAD"
 DOOM2_WAD = WADS_DIR / "DOOM2.WAD"
+HERETIC_WAD = WADS_DIR / "HERETIC.WAD"
+HEXEN_WAD = WADS_DIR / "HEXEN.WAD"
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +78,24 @@ def doom2_wad() -> Generator[WadFile, None, None]:
         yield w
 
 
+@pytest.fixture(scope="session")
+def heretic_wad() -> Generator[WadFile, None, None]:
+    """Open HERETIC.WAD for the entire test session."""
+    if not HERETIC_WAD.exists():
+        pytest.skip("HERETIC.WAD not found in wads/")
+    with WadFile(str(HERETIC_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def hexen_wad() -> Generator[WadFile, None, None]:
+    """Open HEXEN.WAD for the entire test session."""
+    if not HEXEN_WAD.exists():
+        pytest.skip("HEXEN.WAD not found in wads/")
+    with WadFile(str(HEXEN_WAD)) as w:
+        yield w
+
+
 @pytest.fixture
 def minimal_iwad(tmp_path: Path) -> WadFile:
     """A minimal IWAD with a single E1M1 map marker and THINGS/VERTEXES/LINEDEFS."""
@@ -110,5 +130,28 @@ def minimal_pwad(tmp_path: Path) -> WadFile:
     ]
     data = _build_wad("PWAD", lumps)
     wad_path = tmp_path / "patch.wad"
+    wad_path.write_bytes(data)
+    return WadFile(str(wad_path))
+
+
+@pytest.fixture
+def minimal_hexen_wad(tmp_path: Path) -> WadFile:
+    """A minimal IWAD with MAP01, Hexen-format THINGS/LINEDEFS, and a BEHAVIOR lump."""
+    # HexenThing: tid=0, x=0, y=0, z=0, angle=0, type=1, flags=7, action=0, args=0,0,0,0,0
+    hexen_thing = struct.pack("<hhhhHHHBBBBBB", 0, 0, 0, 0, 0, 1, 7, 0, 0, 0, 0, 0, 0)
+    # Two Vertices
+    vertex_data = struct.pack("<hh", 0, 0) + struct.pack("<hh", 64, 0)
+    # HexenLineDef: start=0, end=1, flags=1, special=0, args=0..4, right=0, left=-1
+    hexen_linedef = struct.pack("<HHHBBBBBBhh", 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1)
+
+    lumps: list[tuple[str, bytes]] = [
+        ("MAP01", b""),
+        ("THINGS", hexen_thing),
+        ("LINEDEFS", hexen_linedef),
+        ("VERTEXES", vertex_data),
+        ("BEHAVIOR", b"\x00" * 8),  # marker that triggers Hexen format
+    ]
+    data = _build_wad("IWAD", lumps)
+    wad_path = tmp_path / "hexen_test.wad"
     wad_path.write_bytes(data)
     return WadFile(str(wad_path))

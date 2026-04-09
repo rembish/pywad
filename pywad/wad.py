@@ -14,6 +14,7 @@ from .directory import DirectoryEntry
 from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
 from .lumps.blockmap import BlockMap, Reject
+from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.nodes import Nodes
@@ -23,8 +24,8 @@ from .lumps.sidedefs import SideDefs
 from .lumps.things import Things
 from .lumps.vertices import Vertices
 
-# Dispatch table: lump name -> attach method name + lump constructor
-_LUMP_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
+# Doom-format lump dispatch: name -> (attach method, constructor)
+_DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "THINGS": ("attach_things", Things),
     "VERTEXES": ("attach_vertexes", Vertices),
     "LINEDEFS": ("attach_linedefs", Lines),
@@ -36,6 +37,28 @@ _LUMP_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "REJECT": ("attach_reject", Reject),
     "BLOCKMAP": ("attach_blockmap", BlockMap),
 }
+
+# Hexen overrides only differ for THINGS and LINEDEFS
+_HEXEN_OVERRIDES: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
+    "THINGS": ("attach_things", HexenThings),
+    "LINEDEFS": ("attach_linedefs", HexenLineDefs),
+}
+
+
+def _attach_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen: bool) -> None:
+    dispatch = dict(_DOOM_DISPATCH)
+    if hexen:
+        dispatch.update(_HEXEN_OVERRIDES)
+
+    for entry in lumps:
+        if entry.name not in MapData.names():
+            continue
+        action = dispatch.get(entry.name)
+        if action:
+            method_name, constructor = action
+            getattr(map_entry, method_name)(constructor(entry))
+        else:
+            map_entry.attach(entry)
 
 
 class WadFile:
@@ -75,17 +98,33 @@ class WadFile:
 
     @cached_property
     def maps(self) -> list[BaseMapEntry]:
-        mlist: list[BaseMapEntry] = []
-        last: BaseMapEntry | None = None
+        # Group directory entries into per-map buckets so we can detect
+        # BEHAVIOR (Hexen format marker) before parsing THINGS/LINEDEFS.
+        groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
+        current_lumps: list[DirectoryEntry] = []
+        marker: DirectoryEntry | None = None
+
         for entry in self.directory:
-            if DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name):
-                last = MapEntry(entry)
-                mlist.append(last)
-            elif entry.name in MapData.names() and last is not None:
-                dispatch = _LUMP_DISPATCH.get(entry.name)
-                if dispatch:
-                    method_name, constructor = dispatch
-                    getattr(last, method_name)(constructor(entry))
-                else:
-                    last.attach(entry)
-        return mlist
+            is_marker = bool(
+                DOOM1_MAP_NAME_REGEX.match(entry.name)
+                or DOOM2_MAP_NAME_REGEX.match(entry.name)
+            )
+            if is_marker:
+                if marker is not None:
+                    groups.append((marker, current_lumps))
+                marker = entry
+                current_lumps = []
+            elif marker is not None and entry.name in MapData.names():
+                current_lumps.append(entry)
+
+        if marker is not None:
+            groups.append((marker, current_lumps))
+
+        result: list[BaseMapEntry] = []
+        for map_marker, lumps in groups:
+            map_entry = MapEntry(map_marker)
+            hexen = any(e.name == "BEHAVIOR" for e in lumps)
+            _attach_lumps(map_entry, lumps, hexen)
+            result.append(map_entry)
+
+        return result
