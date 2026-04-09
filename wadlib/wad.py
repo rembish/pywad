@@ -32,6 +32,7 @@ from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
+from .lumps.sndseq import SndSeqLump
 from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
@@ -291,6 +292,14 @@ class WadFile:
         for entry in self.directory:
             if entry.name == "SNDINFO":
                 return SndInfo(entry)
+        return None
+
+    @cached_property
+    def sndseq(self) -> SndSeqLump | None:
+        """Return the SNDSEQ lump, or None if not present."""
+        for entry in self.directory:
+            if entry.name == "SNDSEQ":
+                return SndSeqLump(entry)
         return None
 
     @cached_property
