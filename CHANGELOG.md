@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.25] - 2026-04-09
+
+### Fixed
+
+- `WadFile.sounds` now detects DMX lumps by magic bytes (`format==3`) instead of `DS`/`DP` name prefix — Hexen and Heretic sounds are now found correctly
+- DMX `num_samples` field includes the 16-byte padding in its count; detection size check and `DmxSound.to_wav()` PCM slice corrected accordingly (previously exported WAV files contained 16 extra zero bytes)
+- PC speaker lumps (format 0, `DP*`) are no longer included in `sounds` — they cannot be meaningfully converted to WAV
+
 ## [0.0.24] - 2026-04-09
 
 ### Added
