@@ -1,4 +1,4 @@
-"""wadcli export-texture — render a composite wall texture to PNG."""
+"""wadcli export texture — render a composite wall texture to PNG."""
 
 import argparse
 import sys
@@ -7,8 +7,7 @@ from ...compositor import TextureCompositor
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("export-texture", help="render a wall texture to PNG")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("texture", help="texture name, e.g. STARTAN3")
     p.add_argument("output", help="output PNG path")

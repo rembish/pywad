@@ -1,12 +1,11 @@
-"""wadcli list-flats — list F_START/F_END namespace entries."""
+"""wadcli list flats — list F_START/F_END namespace entries."""
 
 import argparse
 
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("list-flats", help="list floor/ceiling flat names")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("--filter", metavar="NAME", help="only show flats containing NAME")
     p.set_defaults(func=run)

@@ -1,12 +1,11 @@
-"""wadcli list-textures — list TEXTURE1/TEXTURE2 entries."""
+"""wadcli list textures — list TEXTURE1/TEXTURE2 entries."""
 
 import argparse
 
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("list-textures", help="list composite texture names and dimensions")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("--filter", metavar="NAME", help="only show textures containing NAME")
     p.set_defaults(func=run)

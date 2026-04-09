@@ -1,4 +1,4 @@
-"""wadcli extract-lump — dump raw lump bytes to a file."""
+"""wadcli extract lump — dump raw lump bytes to a file."""
 
 import argparse
 import sys
@@ -6,8 +6,7 @@ import sys
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("extract-lump", help="extract raw lump bytes to a file")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("lump", help="lump name, e.g. PLAYPAL")
     p.add_argument("output", help="output file path")

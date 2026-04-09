@@ -1,4 +1,4 @@
-"""wadcli export-map — render a map to a PNG image."""
+"""wadcli export map — render a map to a PNG image."""
 
 import argparse
 import sys
@@ -7,8 +7,7 @@ from ...renderer import MapRenderer, RenderOptions
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("export-map", help="render a map to a PNG image")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("map", help="map name, e.g. E1M1 or MAP01")
     p.add_argument("output", help="output PNG path")

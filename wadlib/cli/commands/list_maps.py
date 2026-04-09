@@ -1,12 +1,11 @@
-"""wadcli list-maps — print maps with thing and linedef counts."""
+"""wadcli list maps — print maps with thing and linedef counts."""
 
 import argparse
 
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("list-maps", help="list maps with thing/linedef counts")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.set_defaults(func=run)
 

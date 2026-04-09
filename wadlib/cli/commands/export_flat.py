@@ -1,4 +1,4 @@
-"""wadcli export-flat — render a floor/ceiling flat to PNG."""
+"""wadcli export flat — render a floor/ceiling flat to PNG."""
 
 import argparse
 import sys
@@ -6,8 +6,7 @@ import sys
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("export-flat", help="render a floor/ceiling flat to PNG")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("flat", help="flat name, e.g. FLOOR0_1")
     p.add_argument("output", help="output PNG path")

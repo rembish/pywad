@@ -1,12 +1,11 @@
-"""wadcli list-lumps — print full WAD directory."""
+"""wadcli list lumps — print full WAD directory."""
 
 import argparse
 
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("list-lumps", help="list all directory entries")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("--filter", metavar="NAME", help="only show lumps whose name contains NAME")
     p.set_defaults(func=run)

@@ -19,6 +19,8 @@ from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
+from .lumps.mus import _HEADER_SIZE as _MUS_MAGIC_SIZE
+from .lumps.mus import Mus
 from .lumps.nodes import Nodes
 from .lumps.picture import Picture
 from .lumps.playpal import PlayPal
@@ -202,3 +204,16 @@ class WadFile:
     def get_lumps(self, name: str) -> list[BaseLump]:
         """Return all directory lumps with the given name."""
         return [BaseLump(e) for e in self.directory if e.name == name]
+
+    @cached_property
+    def music(self) -> dict[str, Mus]:
+        """Return all MUS music lumps by name (D_* for Doom, MUS_* for Heretic)."""
+        result: dict[str, Mus] = {}
+        for entry in self.directory:
+            if entry.name.startswith(("D_", "MUS_")) and entry.size > _MUS_MAGIC_SIZE:
+                result[entry.name] = Mus(entry)
+        return result
+
+    def get_music(self, name: str) -> Mus | None:
+        """Return a named MUS lump, or None if not found."""
+        return self.music.get(name.upper())

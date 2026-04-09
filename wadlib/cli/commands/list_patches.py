@@ -1,12 +1,11 @@
-"""wadcli list-patches — list PNAMES entries."""
+"""wadcli list patches — list PNAMES entries."""
 
 import argparse
 
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("list-patches", help="list patch names from PNAMES")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("--filter", metavar="NAME", help="only show patches containing NAME")
     p.set_defaults(func=run)

@@ -1,4 +1,4 @@
-"""wadcli export-patch — render a patch/sprite graphic to PNG."""
+"""wadcli export patch — render a patch/sprite graphic to PNG."""
 
 import argparse
 import sys
@@ -6,8 +6,7 @@ import sys
 from ...wad import WadFile
 
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser("export-patch", help="render a patch or sprite to PNG")
+def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument("wad", help="path to WAD file")
     p.add_argument("patch", help="patch name, e.g. WALL01_1")
     p.add_argument("output", help="output PNG path")

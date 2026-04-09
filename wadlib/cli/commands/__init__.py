@@ -1,1 +1,1 @@
-# Command modules — each exposes register(subparsers) and run(args).
+# Command modules — each exposes configure(parser) and run(args).
