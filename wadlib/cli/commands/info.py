@@ -25,3 +25,22 @@ def run(args: argparse.Namespace) -> None:
         print(f"Patches : {len(pnames) if pnames else 0}")
         playpal = wad.playpal
         print(f"Palettes: {len(playpal) if playpal else 0}")
+        print(f"Sprites : {len(wad.sprites)}")
+        print(f"Sounds  : {len(wad.sounds)}")
+        print(f"Music   : {len(wad.music)}")
+        print(f"Colormap: {'yes' if wad.colormap is not None else 'no'}")
+        animdefs = wad.animdefs
+        if animdefs is not None:
+            print(f"ANIMDEFS: {len(animdefs.animations)} animations")
+        else:
+            print("ANIMDEFS: none")
+        mapinfo = wad.mapinfo
+        if mapinfo is not None:
+            print(f"MAPINFO : {len(mapinfo.maps)} maps")
+        else:
+            print("MAPINFO : none")
+        sndinfo = wad.sndinfo
+        if sndinfo is not None:
+            print(f"SNDINFO : {len(sndinfo.sounds)} sounds")
+        else:
+            print("SNDINFO : none")

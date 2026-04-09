@@ -150,6 +150,51 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (86, "Short Techno Floor Lamp", ThingCategory.DECORATION),
     (87, "Spawn Spot", ThingCategory.DECORATION),
     (89, "Spawn Shooter", ThingCategory.DECORATION),
+    # ---- Heretic monsters (non-conflicting IDs only) ---------------------------
+    (70, "Iron Lich", ThingCategory.MONSTER),
+    (90, "Golem Boss", ThingCategory.MONSTER),
+    (92, "Nitrogolem Boss", ThingCategory.MONSTER),
+    (254, "D'Sparil (Serpent)", ThingCategory.MONSTER),
+    (255, "D'Sparil (Wizard)", ThingCategory.MONSTER),
+    # ---- Hexen monsters (non-conflicting IDs only) -----------------------------
+    (107, "Centaur", ThingCategory.MONSTER),
+    (115, "Centaur Leader", ThingCategory.MONSTER),
+    (120, "Stalker", ThingCategory.MONSTER),
+    (121, "Stalker Boss", ThingCategory.MONSTER),
+    (124, "Slaughtaur", ThingCategory.MONSTER),
+    (125, "Slaughtaur Leader", ThingCategory.MONSTER),
+    (8020, "Fire Gargoyle", ThingCategory.MONSTER),
+    (8060, "Dragon", ThingCategory.MONSTER),
+    (8080, "Demon Mage (Heresiarch)", ThingCategory.MONSTER),
+    (10000, "Dark Bishop", ThingCategory.MONSTER),
+    (10060, "Serpent Rider", ThingCategory.MONSTER),
+    (10080, "Death Wyvern", ThingCategory.MONSTER),
+    (10225, "Stalker (green)", ThingCategory.MONSTER),
+    (10226, "Stalker (guardian)", ThingCategory.MONSTER),
+    # ---- Hexen weapons (non-conflicting IDs only) ------------------------------
+    (8010, "Flechette", ThingCategory.WEAPON),
+    # ---- Hexen armor (non-conflicting IDs) ------------------------------------
+    (8000, "Amulet of Warding", ThingCategory.ARMOR),
+    (8001, "Platinum Helm", ThingCategory.ARMOR),
+    (8002, "Falcon Shield", ThingCategory.ARMOR),
+    (8003, "Mesh Armor", ThingCategory.ARMOR),
+    # ---- Hexen keys (non-conflicting IDs) -------------------------------------
+    (8030, "Steel Key", ThingCategory.KEY),
+    (8031, "Cave Key", ThingCategory.KEY),
+    (8032, "Axe Key", ThingCategory.KEY),
+    (8033, "Fire Key", ThingCategory.KEY),
+    (8034, "Emerald Key", ThingCategory.KEY),
+    (8035, "Dungeon Key", ThingCategory.KEY),
+    (8036, "Silver Key", ThingCategory.KEY),
+    (8037, "Rusted Key", ThingCategory.KEY),
+    (8038, "Horn Key", ThingCategory.KEY),
+    (8039, "Swamp Key", ThingCategory.KEY),
+    (8040, "Castle Key", ThingCategory.KEY),
+    # ---- Hexen powerups (non-conflicting IDs) ---------------------------------
+    (10040, "Dark Servant Summon", ThingCategory.POWERUP),
+    (10100, "Icon of the Defender", ThingCategory.POWERUP),
+    (10110, "Boots of Speed", ThingCategory.POWERUP),
+    (10120, "Krater of Might", ThingCategory.POWERUP),
 ]
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}

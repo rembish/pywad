@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.29] - 2026-04-09
+
+### Added
+
+- `wadcli info` now shows Sprites, Sounds, Music, Colormap, ANIMDEFS, MAPINFO, and SNDINFO counts
+- Hexen thing catalog entries in `doom_types.py`: Centaur, Slaughtaur, Dragon, Heresiarch, Dark Bishop, Death Wyvern, all 11 Hexen keys, Hexen armor pieces, powerups, Flechette (44 new entries total)
+
+### Changed
+
+- Heretic low-ID things (monsters, weapons, ammo) are skipped in the catalog — IDs overlap with Doom; the lookup is game-agnostic so Doom entries take precedence for conflicting IDs
+
 ## [0.0.28] - 2026-04-09
 
 ### Added
