@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.31] - 2026-04-09
+
+### Added
+
+- `ZMapInfoLump` / `ZMapInfoEntry` (`wadlib.lumps.zmapinfo`) — parses the ZDoom `ZMAPINFO` lump (brace-delimited format, `//` comments); extracts map name, title, music, next/secretnext, sky1, levelnum, cluster, titlepatch per map
+- `WadFile.zmapinfo` cached property
+- `wadcli info` now shows ZMAPINFO map count
+- `wadcli list maps` uses ZMAPINFO (priority over MAPINFO) for title and direct music lump name; SIGIL and other ZDoom PWADs now show correct per-map music
+
+### Fixed
+
+- `wadcli info` MAPINFO/ZMAPINFO shows `none` instead of `0 maps` when lump is empty or absent
+
 ## [0.0.30] - 2026-04-09
 
 ### Added

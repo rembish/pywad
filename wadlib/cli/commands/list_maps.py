@@ -20,29 +20,49 @@ _DOOM2_MUSIC = [
 ]
 
 
-def _music_for_map(map_name: str, music: dict, mapinfo_entry: object = None) -> str:
+def _resolve_mi(map_name: str, mapinfo: object, zmapinfo: object) -> object:
+    """Return the MAPINFO or ZMAPINFO entry for map_name, or None."""
+    # ZMAPINFO (ZDoom) takes priority when present — it has richer data
+    if zmapinfo is not None:
+        entry = zmapinfo.get(map_name)  # type: ignore[union-attr]
+        if entry is not None:
+            return entry
+    if mapinfo is not None:
+        try:
+            num = int(map_name.lstrip("MAPmapEe"))
+        except ValueError:
+            return None
+        return mapinfo.get(num)  # type: ignore[union-attr]
+    return None
+
+
+def _music_for_map(map_name: str, music: dict, mi_entry: object) -> str:
     """Return the music lump name (or cdtrack label) for this map."""
+    # ZMAPINFO/MAPINFO may carry a direct music lump name
+    if mi_entry is not None:
+        direct = getattr(mi_entry, "music", None)
+        if direct and direct in music:
+            return direct
+        cdtrack = getattr(mi_entry, "cdtrack", None)
+        if cdtrack is not None:
+            return f"cd:{cdtrack}"
+
     m1 = _DOOM1_MAP_RE.match(map_name)
     if m1:
         e, m = m1.group(1), m1.group(2)
-        # Doom 1 convention: D_E1M1; Heretic convention: MUS_E1M1
         for lump in (f"D_E{e}M{m}", f"MUS_E{e}M{m}"):
             if lump in music:
                 return lump
         return ""
+
     m2 = _DOOM2_MAP_RE.match(map_name)
     if m2:
         idx = int(m2.group(1)) - 1
-        # Doom 2 conventional lump names
         if 0 <= idx < len(_DOOM2_MUSIC):
             lump = _DOOM2_MUSIC[idx]
             if lump in music:
                 return lump
-        # Hexen (and PWADs): fall back to cdtrack from MAPINFO
-        if mapinfo_entry is not None:
-            cdtrack = getattr(mapinfo_entry, "cdtrack", None)
-            if cdtrack is not None:
-                return f"cd:{cdtrack}"
+
     return ""
 
 
@@ -58,10 +78,10 @@ def run(args: argparse.Namespace) -> None:
             return
 
         mapinfo = wad.mapinfo
+        zmapinfo = wad.zmapinfo
         music = wad.music
 
-        # Determine if any map has a title or music to show
-        has_title = mapinfo is not None
+        has_title = mapinfo is not None or zmapinfo is not None
         has_music = bool(music)
 
         hdr_map = f"{'MAP':<10}"
@@ -81,19 +101,12 @@ def run(args: argparse.Namespace) -> None:
             verts = len(m.vertices) if m.vertices else 0
             sectors = len(m.sectors) if m.sectors else 0
 
-            # Resolve MAPINFO entry once for both title and music
-            mi_entry = None
-            if mapinfo is not None:
-                try:
-                    num = int(map_name.lstrip("MAPmap"))
-                except ValueError:
-                    num = -1
-                mi_entry = mapinfo.get(num) if num >= 0 else None
+            mi_entry = _resolve_mi(map_name, mapinfo, zmapinfo)
 
             row = f"{map_name:<10}"
 
             if has_title:
-                title = mi_entry.title if mi_entry else ""
+                title = getattr(mi_entry, "title", "") or ""
                 row += f"  {title:<28}"
 
             if has_music:

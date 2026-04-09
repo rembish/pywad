@@ -33,6 +33,7 @@ from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
 from .lumps.sndseq import SndSeqLump
+from .lumps.zmapinfo import ZMapInfoLump
 from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
@@ -304,10 +305,18 @@ class WadFile:
 
     @cached_property
     def mapinfo(self) -> MapInfoLump | None:
-        """Return the MAPINFO lump, or None if not present."""
+        """Return the MAPINFO lump (Hexen format), or None if not present."""
         for entry in self.directory:
             if entry.name == "MAPINFO":
                 return MapInfoLump(entry)
+        return None
+
+    @cached_property
+    def zmapinfo(self) -> ZMapInfoLump | None:
+        """Return the ZMAPINFO lump (ZDoom format), or None if not present."""
+        for entry in self.directory:
+            if entry.name == "ZMAPINFO":
+                return ZMapInfoLump(entry)
         return None
 
     @cached_property

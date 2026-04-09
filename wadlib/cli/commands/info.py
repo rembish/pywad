@@ -35,10 +35,11 @@ def run(args: argparse.Namespace) -> None:
         else:
             print("ANIMDEFS: none")
         mapinfo = wad.mapinfo
-        if mapinfo is not None:
-            print(f"MAPINFO : {len(mapinfo.maps)} maps")
-        else:
-            print("MAPINFO : none")
+        mi_count = len(mapinfo.maps) if mapinfo is not None else 0
+        print(f"MAPINFO : {mi_count} maps" if mi_count else "MAPINFO : none")
+        zmapinfo = wad.zmapinfo
+        zmi_count = len(zmapinfo.maps) if zmapinfo is not None else 0
+        print(f"ZMAPINFO: {zmi_count} maps" if zmi_count else "ZMAPINFO: none")
         sndinfo = wad.sndinfo
         if sndinfo is not None:
             print(f"SNDINFO : {len(sndinfo.sounds)} sounds")
