@@ -48,7 +48,7 @@ class BaseLump:
             raise StopIteration
         assert self._rposition is not None
         assert self._size is not None
-        if self._rposition > self._size:
+        if self._rposition >= self._size:
             raise StopIteration
         return self.read_item()
 

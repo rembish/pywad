@@ -27,6 +27,9 @@ class Thing:
     type: int
     flags: Flags
 
+    def __post_init__(self) -> None:
+        self.flags = Flags(self.flags)
+
 
 class Things(BaseLump):
     _row_format: ClassVar[str] = DOOM_FORMAT

@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-04-09
+
+### Added
+
+- pytest test suite: 60 tests covering header parsing, directory entries, map detection, lump attachment, Things/Vertices/LineDefs data, `BaseLump` seek/tell, and map boundaries; 88% branch coverage
+
+### Fixed
+
+- `BaseLump.__next__`: off-by-one — iterator stopped at `> _size` allowing one spurious read past EOF; corrected to `>= _size`
+- `Thing.__post_init__`: struct unpacking produced a raw `int` for `flags`; coerce to `Flags` enum on construction
+
+## [0.0.4] - 2026-04-09
+
+### Added
+
+- Modern project scaffolding: PEP 621 `pyproject.toml`, `Makefile` (`install`/`format`/`lint`/`typecheck`/`pylint`/`test`/`check`)
+- ruff 0.4+ for linting and formatting
+- mypy strict — passes with zero errors across all source files
+- pylint 3.2+ — 10.00/10
+- Full type annotations on all source files
+- `.python-version` pinned to 3.12
+
+## [0.0.3] - 2026-04-09
+
+### Added
+
+- `CHANGELOG.md`
+
 ## [0.0.2] - 2026-04-09
 
 ### Fixed
