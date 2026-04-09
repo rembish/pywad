@@ -245,36 +245,47 @@ class MapRenderer:
         return None
 
     def _ssector_polygon(self, ssector_idx: int, ssector: Any) -> list[tuple[int, int]] | None:
-        """Build the subsector's floor polygon.
+        """Build the subsector's floor polygon via BSP tree walk (Sutherland-Hodgman).
 
-        Primary: collect unique (start_vertex, end_vertex) map-coordinates from
-        each seg, project to pixel space.  Works for 3+ seg subsectors.
+        Clips the map bounding box through each BSP partition plane from root to
+        the target subsector leaf.  This is the only correct method: the SEGS lump
+        only stores linedef segs; the BSP partition edges that complete each
+        subsector's convex boundary are implicit in the node tree.
+        """
+        return self._ssector_polygon_bsp(ssector_idx, ssector)
 
-        Fallback: for degenerate 1-seg subsectors (BSP partition artefacts),
-        walk the NODE tree clipping the map bounding box down to the subsector's
-        convex region (Sutherland-Hodgman).
+    def _clip_by_segs(
+        self, poly: list[tuple[float, float]], ssector: Any
+    ) -> list[tuple[float, float]]:
+        """Clip *poly* against each seg's half-plane to remove bleeding outside walls.
+
+        The subsector always lies to the RIGHT of each seg's start→end direction
+        (cross >= 0), so we keep the right side of every seg's half-plane.
         """
         m = self.level
         if not (m.segs and m.vertices):
-            return None
-        seen: dict[tuple[int, int], None] = {}
+            return poly
         for j in range(ssector.seg_count):
             seg = m.segs.get(ssector.first_seg + j)
             if seg is None:
                 break
-            for vid in (seg.start_vertex, seg.end_vertex):
-                v = m.vertices.get(vid)
-                if v is None:
-                    break
-                seen[(v.x, v.y)] = None
-        points = [self._px(x, y) for x, y in seen]
-        if len(points) >= 3:
-            return points
-        # Fallback: BSP walk to get the convex region for this subsector.
-        return self._ssector_polygon_bsp(ssector_idx)
+            v1 = m.vertices.get(seg.start_vertex)
+            v2 = m.vertices.get(seg.end_vertex)
+            if v1 is None or v2 is None:
+                continue
+            dx, dy = float(v2.x - v1.x), float(v2.y - v1.y)
+            if dx == 0.0 and dy == 0.0:
+                continue
+            poly = _clip_poly(poly, float(v1.x), float(v1.y), dx, dy, keep_right=True)
+            if len(poly) < 3:
+                return []
+        return poly
 
-    def _ssector_polygon_bsp(self, target_idx: int) -> list[tuple[int, int]] | None:
-        """BSP-walk fallback: clip map bounding box to the target subsector's region."""
+    def _ssector_polygon_bsp(
+        self, target_idx: int, ssector: Any | None = None
+    ) -> list[tuple[int, int]] | None:
+        """Clip map bounding box to the target subsector's region via BSP walk,
+        then refine by clipping against the subsector's own segs to stop bleeding."""
         m = self.level
         if not m.nodes:
             return None
@@ -287,6 +298,11 @@ class MapRenderer:
         ]
         found = self._bsp_clip(m.nodes.get(len(m.nodes) - 1), target_idx, poly)
         if found is None or len(found) < 3:
+            return None
+        # Clip by the subsector's own segs to prevent bleeding outside walls.
+        if ssector is not None:
+            found = self._clip_by_segs(found, ssector)
+        if len(found) < 3:
             return None
         return [self._px(int(x), int(y)) for x, y in found]
 
