@@ -14,6 +14,7 @@ from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
+from .lumps.nodes import Nodes
 from .lumps.sectors import Sectors
 from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
@@ -79,6 +80,8 @@ class WadFile:
                     last.attach_segs(Segs(entry))
                 elif entry.name == "SSECTORS":
                     last.attach_ssectors(SubSectors(entry))
+                elif entry.name == "NODES":
+                    last.attach_nodes(Nodes(entry))
                 else:
                     last.attach(entry)
         return mlist

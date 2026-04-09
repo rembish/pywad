@@ -33,6 +33,7 @@ class BaseMapEntry(BaseLump):
         self.sectors: Any = None
         self.segs: Any = None
         self.ssectors: Any = None
+        self.nodes: Any = None
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -80,6 +81,9 @@ class BaseMapEntry(BaseLump):
 
     def attach_ssectors(self, ssectors: Any) -> None:
         self.ssectors = ssectors
+
+    def attach_nodes(self, nodes: Any) -> None:
+        self.nodes = nodes
 
 
 class Doom1MapEntry(BaseMapEntry):
