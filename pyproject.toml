@@ -1,17 +1,93 @@
-[tool.poetry]
-name = "pywad"
-version = "0.0.3"
-description = "Python Library to work with id Doom WAD files"
-authors = ["Alex Rembish <alex@rembish.org>"]
-license = "BSD 2-Clause License"
-
-[tool.poetry.dependencies]
-python = "^3.8"
-Pillow = "^9.2.0"
-
-[tool.poetry.dev-dependencies]
-ipython = "^8.5.0"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pywad"
+version = "0.0.4"
+description = "Python library to work with id Doom WAD files"
+authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
+license = { text = "BSD-2-Clause" }
+requires-python = ">=3.12"
+dependencies = ["Pillow>=9.2"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pylint>=3.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pywad*"]
+
+# ---------------------------------------------------------------------------
+# ruff — linting + formatting (replaces flake8, isort, pyupgrade, etc.)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "UP",       # pyupgrade
+    "B",        # flake8-bugbear
+    "C4",       # flake8-comprehensions
+    "SIM",      # flake8-simplify
+    "RUF",      # ruff-specific
+]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["pywad"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ---------------------------------------------------------------------------
+# mypy — strict type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+exclude = ["tests/"]
+
+# ---------------------------------------------------------------------------
+# pylint
+# ---------------------------------------------------------------------------
+[tool.pylint.main]
+py-version = "3.12"
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "R0903",  # too-few-public-methods
+    "W0511",  # fixme — TODO comments are intentional
+    "C0414",  # useless-import-alias — used for explicit re-exports (mypy)
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q --cov=pywad --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = true
+source = ["pywad"]
+
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:"]

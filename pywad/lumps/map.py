@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import cached_property
 from itertools import chain
+from re import Pattern
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from .base import BaseLump
 from ..constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+from .base import BaseLump
+
+if TYPE_CHECKING:
+    from ..directory import DirectoryEntry
 
 
 @dataclass
@@ -13,25 +20,26 @@ class Point:
 
 
 class BaseMapEntry(BaseLump):
-    _regex = None
+    _regex: ClassVar[Pattern[str]]
 
-    def __init__(self, entry):
+    def __init__(self, entry: DirectoryEntry) -> None:
         super().__init__(entry)
         self._match = self._regex.match(self.name)
 
-        self.things = None
-        self.vertices = None
-        self.lines = None
+        self.things: Any = None
+        self.vertices: Any = None
+        self.lines: Any = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
 
     @property
-    def number(self):
+    def number(self) -> int:
+        assert self._match is not None
         return int(self._match.group("number").lstrip("0"))
 
     @cached_property
-    def boundaries(self):
+    def boundaries(self) -> tuple[Point, Point]:
         entries = list(chain(self.things or [], self.vertices or []))
         if not entries:
             return (Point(0, 0), Point(0, 0))
@@ -45,16 +53,16 @@ class BaseMapEntry(BaseLump):
 
         return (Point(min_x, min_y), Point(max_x, max_y))
 
-    def attach(self, lump: BaseLump):
+    def attach(self, lump: Any) -> None:
         pass
 
-    def attach_things(self, things):
+    def attach_things(self, things: Any) -> None:
         self.things = things
 
-    def attach_vertexes(self, vertices):
+    def attach_vertexes(self, vertices: Any) -> None:
         self.vertices = vertices
 
-    def attach_linedefs(self, lines):
+    def attach_linedefs(self, lines: Any) -> None:
         self.lines = lines
 
 
@@ -62,26 +70,26 @@ class Doom1MapEntry(BaseMapEntry):
     _regex = DOOM1_MAP_NAME_REGEX
 
     @property
-    def episode(self):
+    def episode(self) -> int:
+        assert self._match is not None
         return int(self._match.group("episode"))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__} Episode {self.episode} Map {self.number}>'
 
 
 class Doom2MapEntry(BaseMapEntry):
     _regex = DOOM2_MAP_NAME_REGEX
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__} Map {self.number}>'
 
 
-class MapEntry(BaseLump):
-    def __new__(cls, entry):
-        if DOOM1_MAP_NAME_REGEX.match(entry.name):
-            return Doom1MapEntry(entry)
+def MapEntry(entry: DirectoryEntry) -> BaseMapEntry:  # pylint: disable=invalid-name
+    if DOOM1_MAP_NAME_REGEX.match(entry.name):
+        return Doom1MapEntry(entry)
 
-        if DOOM2_MAP_NAME_REGEX.match(entry.name):
-            return Doom2MapEntry(entry)
+    if DOOM2_MAP_NAME_REGEX.match(entry.name):
+        return Doom2MapEntry(entry)
 
-        raise ValueError(f"Unknown map name format: {entry.name!r}")
+    raise ValueError(f"Unknown map name format: {entry.name!r}")

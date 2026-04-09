@@ -1,1 +1,1 @@
-from .wad import WadFile
+from .wad import WadFile as WadFile

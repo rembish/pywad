@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import IntFlag
+from typing import ClassVar
 
 from .base import BaseLump
 
@@ -28,5 +29,5 @@ class Thing:
 
 
 class Things(BaseLump):
-    _row_format = DOOM_FORMAT
-    _row_item = Thing
+    _row_format: ClassVar[str] = DOOM_FORMAT
+    _row_item: ClassVar[type[Thing]] = Thing

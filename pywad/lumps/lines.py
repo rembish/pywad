@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 from .base import BaseLump
 
@@ -15,5 +16,5 @@ class LineDefinition:
 
 
 class Lines(BaseLump):
-    _row_format = "<HHHHHhh"
-    _row_item = LineDefinition
+    _row_format: ClassVar[str] = "<HHHHHhh"
+    _row_item: ClassVar[type[LineDefinition]] = LineDefinition

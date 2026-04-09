@@ -3,8 +3,8 @@ from enum import Enum
 
 class ExtendedEnum(Enum):
     @classmethod
-    def names(cls):
-        return cls._member_names_
+    def names(cls) -> list[str]:
+        return cls._member_names_  # pylint: disable=no-member
 
 
 class WadType(ExtendedEnum):
