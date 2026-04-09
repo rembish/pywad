@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pywad"
-version = "0.0.7"
+version = "0.0.8"
 description = "Python library to work with id Doom WAD files"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
 license = { text = "BSD-2-Clause" }
@@ -64,6 +64,9 @@ exclude = ["tests/"]
 # ---------------------------------------------------------------------------
 [tool.pylint.main]
 py-version = "3.12"
+
+[tool.pylint.design]
+max-attributes = 12
 
 [tool.pylint.messages_control]
 disable = [
