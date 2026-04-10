@@ -571,16 +571,19 @@ class MapRenderer:
             self._draw.point((cx, cy), fill=colour)
 
     _FLAG_NOT_SINGLEPLAYER = 0x0010
+    # Player 2/3/4 starts are always present in the WAD but unused in singleplayer.
+    # They carry no NOT_SINGLEPLAYER flag, so must be filtered by type.
+    _COOP_PLAYER_STARTS = frozenset({2, 3, 4})
 
     def _draw_things(self) -> None:
         if not self.level.things:
             return
         for thing in self.level.things:
-            if (
-                not self._opts.multiplayer
-                and getattr(thing, "flags", 0) & self._FLAG_NOT_SINGLEPLAYER
-            ):
-                continue
+            if not self._opts.multiplayer:
+                if getattr(thing, "flags", 0) & self._FLAG_NOT_SINGLEPLAYER:
+                    continue
+                if getattr(thing, "type", None) in self._COOP_PLAYER_STARTS:
+                    continue
             self._draw_thing(thing)
 
     # ------------------------------------------------------------------
