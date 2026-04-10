@@ -199,6 +199,101 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}
 
+# Maps thing type ID to the 4-char WAD sprite lump prefix (first frame = "A0" or "A1").
+# Only Doom 1/2 things are listed; Heretic/Hexen entries are omitted (different WADs).
+_SPRITE_PREFIXES: dict[int, str] = {
+    # Player spawns
+    1: "PLAY",
+    2: "PLAY",
+    3: "PLAY",
+    4: "PLAY",
+    # Monsters
+    3004: "POSS",  # Zombieman
+    9: "SPOS",  # Shotgun Guy
+    65: "CPOS",  # Chaingunner
+    3001: "TROO",  # Imp
+    3002: "SARG",  # Demon
+    58: "SARG",  # Spectre (invisible, uses same sprite)
+    3003: "BOSS",  # Baron of Hell
+    3005: "HEAD",  # Cacodemon
+    3006: "SKUL",  # Lost Soul
+    7: "SPID",  # Spider Mastermind
+    16: "CYBR",  # Cyberdemon
+    64: "VILE",  # Arch-Vile
+    66: "SKEL",  # Revenant
+    67: "FATT",  # Mancubus
+    68: "BSPI",  # Arachnotron
+    69: "BOS2",  # Hell Knight
+    71: "PAIN",  # Pain Elemental
+    72: "KEEN",  # Commander Keen
+    84: "SSWV",  # Wolfenstein SS
+    88: "BBRN",  # Boss Brain
+    # Keys
+    5: "BKEY",
+    6: "YKEY",
+    13: "RKEY",
+    38: "RSKU",
+    39: "YSKU",
+    40: "BSKU",
+    # Weapons
+    82: "SGN2",
+    2001: "SHOT",
+    2002: "MGUN",
+    2003: "LAUN",
+    2004: "PLAS",
+    2005: "CSAW",
+    2006: "BFUG",
+    # Ammo
+    2007: "CLIP",
+    2008: "SHEL",
+    2010: "ROCK",
+    17: "CELL",
+    8: "BPAK",
+    2046: "BROK",
+    2047: "CELP",
+    2048: "AMMO",
+    2049: "SBOX",
+    # Health
+    2011: "STIM",
+    2012: "MEDI",
+    2014: "BON1",
+    # Armor
+    2015: "BON2",
+    2018: "ARM1",
+    2019: "ARM2",
+    # Powerups
+    83: "MEGA",
+    2022: "PINV",
+    2023: "PSTR",
+    2024: "PINS",
+    2025: "SUIT",
+    2026: "PMAP",
+    2045: "PVIS",
+    # Decorations
+    10: "PLAY",  # Bloody Mess (dead player)
+    34: "CAND",  # Candle
+    35: "CBRA",  # Candelabra
+    76: "FCAN",  # Burning Barrel
+    48: "ELEC",  # Techno Column
+    30: "COL1",
+    31: "COL2",
+    32: "COL3",
+    33: "COL4",
+    36: "COL5",
+    37: "COL6",
+    43: "TRE1",
+    54: "TRE2",
+    44: "TBLU",
+    45: "TGRN",
+    46: "TRED",
+    55: "SMBT",
+    56: "SMGT",
+    57: "SMRT",
+    47: "SMIT",  # Stalagmite
+    85: "TLMP",
+    86: "TLP2",
+}
+
 
 def get_name(type_id: int) -> str:
     """Return the display name for a thing type, or 'Unknown (#id)'."""
@@ -210,3 +305,8 @@ def get_category(type_id: int) -> ThingCategory:
     """Return the ThingCategory for a thing type, or UNKNOWN."""
     entry = THING_TYPES.get(type_id)
     return entry[1] if entry else ThingCategory.UNKNOWN
+
+
+def get_sprite_prefix(type_id: int) -> str | None:
+    """Return the 4-char WAD sprite lump prefix for *type_id*, or None if unknown."""
+    return _SPRITE_PREFIXES.get(type_id)

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.51] - 2026-04-10
+
+### Added
+
+- `RenderOptions.show_sprites` flag: when `True`, `MapRenderer` renders the
+  actual WAD sprite at each thing's map position instead of the coloured
+  category shape; falls back to shape if the sprite lump is missing or no
+  WadFile/palette is available; sprite images are cached per lump so each
+  unique sprite is decoded only once per render call
+- `get_sprite_prefix(type_id)` in `doom_types` — maps Doom 1/2 thing type IDs
+  to their 4-char WAD sprite lump prefix (covers players, all monsters, keys,
+  weapons, ammo, health, armour, powerups, and common decorations)
+
 ## [0.0.50] - 2026-04-10
 
 ### Added

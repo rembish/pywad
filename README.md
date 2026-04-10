@@ -122,7 +122,8 @@ from wadlib.renderer import MapRenderer, RenderOptions
 
 with WadFile.open("DOOM2.WAD", "SIGIL_II.WAD") as wad:
     m = next(m for m in wad.maps if str(m) == "E6M1")
-    opts = RenderOptions(show_floors=True, alpha=True)
+    # Floor textures + transparent void + WAD sprites at thing positions
+    opts = RenderOptions(show_floors=True, alpha=True, show_sprites=True)
     r = MapRenderer(m, wad=wad, options=opts)
     r.render()
     r.save("e6m1.png")

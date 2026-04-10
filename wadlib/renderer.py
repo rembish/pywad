@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
-from .doom_types import ThingCategory, get_category
+from .doom_types import ThingCategory, get_category, get_sprite_prefix
 from .lumps.colormap import ColormapLump
 from .lumps.map import BaseMapEntry
 from .lumps.nodes import SSECTOR_FLAG
@@ -119,6 +119,11 @@ class RenderOptions:
     """Produce an RGBA image with transparent void areas.
     When False (default) the output is RGB with a dark background."""
 
+    show_sprites: bool = False
+    """Draw thing sprites from the WAD instead of (or on top of) category shapes.
+    Falls back to the category shape if the sprite is not found.
+    Requires a WadFile with PLAYPAL to be passed to MapRenderer."""
+
 
 class MapRenderer:
     """Renders a parsed map to a PIL RGB image.
@@ -174,6 +179,9 @@ class MapRenderer:
             self._palette = wad.playpal.get_palette(self._opts.palette_index)
         if wad is not None:
             self._colormap = wad.colormap
+
+        # Sprite image cache: lump name → scaled PIL image (or None = not found)
+        self._sprite_cache: dict[str, Image.Image | None] = {}
 
     # ------------------------------------------------------------------
     # Coordinate helpers
@@ -458,11 +466,47 @@ class MapRenderer:
         b2 = _pt(angle_deg - 120)
         self.draw.polygon([tip, b1, b2], fill=colour)
 
+    def _get_sprite_image(self, type_id: int) -> Image.Image | None:
+        """Return a scaled sprite image for *type_id*, or None if unavailable.
+
+        Tries lump ``{prefix}A0`` first (rotation-free), then ``{prefix}A1``
+        (front-facing 8-way sprite).  Result is cached by lump name so each
+        unique sprite is decoded and scaled at most once per render.
+        """
+        if self._wad is None or self._palette is None:
+            return None
+        prefix = get_sprite_prefix(type_id)
+        if prefix is None:
+            return None
+        for suffix in ("A0", "A1"):
+            lump_name = prefix + suffix
+            if lump_name in self._sprite_cache:
+                return self._sprite_cache[lump_name]
+            sprite = self._wad.get_sprite(lump_name)
+            if sprite is None:
+                self._sprite_cache[lump_name] = None
+                continue
+            img = sprite.decode(self._palette)  # RGBA
+            # Scale to map scale; minimum 8px so tiny sprites stay visible.
+            w = max(8, int(img.width * self._scale))
+            h = max(8, int(img.height * self._scale))
+            scaled = img.resize((w, h), Image.Resampling.NEAREST)
+            self._sprite_cache[lump_name] = scaled
+            return scaled
+        return None
+
     def _draw_thing(self, thing: Any) -> None:
         cat = get_category(thing.type)
         colour = _CATEGORY_COLOUR[cat]
         cx, cy = self._px(thing.x, thing.y)
         r = max(2, int(5 * self._scale * self._opts.thing_scale))
+
+        if self._opts.show_sprites:
+            sprite_img = self._get_sprite_image(thing.type)
+            if sprite_img is not None:
+                sw, sh = sprite_img.size
+                self.im.paste(sprite_img, (cx - sw // 2, cy - sh // 2), mask=sprite_img)
+                return
 
         if cat in (ThingCategory.PLAYER, ThingCategory.MONSTER):
             # Directional triangle (tip = facing direction)

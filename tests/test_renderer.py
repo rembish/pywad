@@ -111,3 +111,30 @@ def test_renderer_hexen(hexen_wad: WadFile) -> None:
 def test_renderer_heretic(blasphemer_wad: WadFile) -> None:
     img = MapRenderer(blasphemer_wad.maps[0]).render()
     assert isinstance(img, Image.Image)
+
+
+# ---------------------------------------------------------------------------
+# show_sprites flag
+# ---------------------------------------------------------------------------
+
+
+def test_renderer_show_sprites_no_crash(freedoom1_wad: WadFile) -> None:
+    """show_sprites=True with a WAD should produce a valid image."""
+    opts = RenderOptions(show_sprites=True)
+    img = MapRenderer(freedoom1_wad.maps[0], wad=freedoom1_wad, options=opts).render()
+    assert isinstance(img, Image.Image)
+
+
+def test_renderer_show_sprites_without_wad_falls_back(freedoom1_wad: WadFile) -> None:
+    """show_sprites=True without a WadFile falls back to shape rendering."""
+    opts = RenderOptions(show_sprites=True)
+    img = MapRenderer(freedoom1_wad.maps[0], options=opts).render()
+    assert isinstance(img, Image.Image)
+
+
+def test_renderer_show_sprites_not_blank(freedoom1_wad: WadFile) -> None:
+    """Sprites-on-map image should have more colours than the background."""
+    opts = RenderOptions(show_sprites=True)
+    img = MapRenderer(freedoom1_wad.maps[0], wad=freedoom1_wad, options=opts).render()
+    colours = set(img.get_flattened_data())
+    assert len(colours) > 1
