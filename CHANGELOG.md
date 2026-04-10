@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.61] - 2026-04-10
+
+### Added
+
+- `wadcli export sprite --all [DIR]` — batch-export every sprite lump to PNG
+  files in a directory (default: `./`).  The positional `name` argument is now
+  optional; omitting it without `--all` exits with a clear error message.
+
 ## [0.0.60] - 2026-04-10
 
 ### Changed

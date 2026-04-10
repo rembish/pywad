@@ -508,7 +508,7 @@ def test_export_sprite(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> No
     from wadlib.cli.commands import export_sprite
 
     out = str(tmp_path / "s.png")
-    export_sprite.run(_ns(name="AMMOA0", output=out, palette=0))
+    export_sprite.run(_ns(name="AMMOA0", output=out, all=False, palette=0))
     assert Path(out).exists()
 
 
@@ -516,7 +516,26 @@ def test_export_sprite_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[s
     from wadlib.cli.commands import export_sprite
 
     with pytest.raises(SystemExit) as exc:
-        export_sprite.run(_ns(name="NOTASPRITE", output=str(tmp_path / "nope.png"), palette=0))
+        export_sprite.run(
+            _ns(name="NOTASPRITE", output=str(tmp_path / "nope.png"), all=False, palette=0)
+        )
+    assert exc.value.code == 1
+
+
+def test_export_sprite_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from wadlib.cli.commands import export_sprite
+
+    export_sprite.run(_ns(name=None, output=str(tmp_path), all=True, palette=0))
+    pngs = list(tmp_path.glob("*.png"))
+    assert len(pngs) > 0
+    assert "Exported" in capsys.readouterr().out
+
+
+def test_export_sprite_no_name_no_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from wadlib.cli.commands import export_sprite
+
+    with pytest.raises(SystemExit) as exc:
+        export_sprite.run(_ns(name=None, output=None, all=False, palette=0))
     assert exc.value.code == 1
 
 
