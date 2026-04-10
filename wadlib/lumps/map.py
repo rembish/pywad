@@ -17,7 +17,7 @@ from .segs import Segs, SubSectors
 from .sidedefs import SideDefs
 from .things import Things
 from .vertices import Vertices
-from .znodes import ZNodesLump, ZNodList, ZNodVertex
+from .znodes import ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNodVertex, ZNodesLump
 
 if TYPE_CHECKING:
     from ..directory import DirectoryEntry
@@ -37,13 +37,13 @@ class BaseMapEntry(BaseLump):
         self._match = self._regex.match(self.name)
 
         self.things: Things | HexenThings | None = None
-        self.vertices: Vertices | None = None
+        self.vertices: Vertices | ZNodList[ZNodVertex] | None = None
         self.lines: Lines | HexenLineDefs | None = None
         self.sidedefs: SideDefs | None = None
         self.sectors: Sectors | None = None
-        self.segs: Segs | None = None
-        self.ssectors: SubSectors | None = None
-        self.nodes: Nodes | None = None
+        self.segs: Segs | ZNodList[ZNodSeg] | None = None
+        self.ssectors: SubSectors | ZNodList[ZNodSubSector] | None = None
+        self.nodes: Nodes | ZNodList[ZNodNode] | None = None
         self.reject: Reject | None = None
         self.blockmap: BlockMap | None = None
 
@@ -116,10 +116,10 @@ class BaseMapEntry(BaseLump):
             [ZNodVertex(v.x, v.y) for v in self.vertices] if self.vertices else []
         )
         combined: list[ZNodVertex] = orig + list(p.extra_vertices)
-        self.vertices = ZNodList(combined)  # type: ignore[assignment]
-        self.segs = p.segs  # type: ignore[assignment]
-        self.ssectors = p.subsectors  # type: ignore[assignment]
-        self.nodes = p.nodes  # type: ignore[assignment]
+        self.vertices = ZNodList(combined)
+        self.segs = p.segs
+        self.ssectors = p.subsectors
+        self.nodes = p.nodes
 
 
 class Doom1MapEntry(BaseMapEntry):

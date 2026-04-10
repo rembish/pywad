@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.49] - 2026-04-10
+
+### Fixed
+
+- Eliminated four `type: ignore[assignment]` suppressions in `attach_znodes`:
+  `BaseMapEntry.vertices/segs/ssectors/nodes` now declare union types that
+  include both vanilla (`Vertices`, `Segs`, `SubSectors`, `Nodes`) and
+  ZNOD (`ZNodList[ZNodVertex/Seg/SubSector/Node]`) variants; mypy accepts
+  `attach_znodes` assignments without any suppression comments
+
+### Changed
+
+- `TODO.md` updated — marked ZNODES, light-shaded floors, `load_pwad`,
+  `list stats`, `wadcli diff`, export palette/font, `--json`,
+  OGG/MP3/MIDI music, `BaseLump` fd hazard, and cached-property
+  invalidation as done
+
 ## [0.0.48] - 2026-04-10
 
 ### Added
