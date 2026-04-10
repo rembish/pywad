@@ -44,6 +44,11 @@ def configure(p: argparse.ArgumentParser) -> None:
         action="store_true",
         help="RGBA output with transparent void areas and black exterior outline",
     )
+    p.add_argument(
+        "--sprites",
+        action="store_true",
+        help="draw WAD sprites at thing positions instead of category shapes",
+    )
     p.set_defaults(func=run)
 
 
@@ -65,6 +70,7 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-branches
         palette_index=args.palette,
         thing_scale=args.thing_scale,
         alpha=args.alpha,
+        show_sprites=args.sprites,
     )
 
     if args.all:

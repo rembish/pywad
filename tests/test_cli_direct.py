@@ -367,6 +367,7 @@ def test_export_map(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
             palette=0,
             thing_scale=1.0,
             alpha=False,
+            sprites=False,
         )
     )
     assert Path(out).exists()
@@ -388,6 +389,7 @@ def test_export_map_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]
                 palette=0,
                 thing_scale=1.0,
                 alpha=False,
+                sprites=False,
             )
         )
     assert exc.value.code == 1
@@ -407,6 +409,7 @@ def test_export_map_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
             palette=0,
             thing_scale=1.0,
             alpha=False,
+            sprites=False,
         )
     )
     pngs = list(tmp_path.glob("*.png"))
@@ -430,6 +433,7 @@ def test_export_map_all_no_map_arg(tmp_path: Path) -> None:
             palette=0,
             thing_scale=1.0,
             alpha=False,
+            sprites=False,
         )
     )
     assert any(tmp_path.glob("MAP*.png"))
@@ -451,6 +455,7 @@ def test_export_map_no_name_no_all(tmp_path: Path, capsys: pytest.CaptureFixture
                 palette=0,
                 thing_scale=1.0,
                 alpha=False,
+                sprites=False,
             )
         )
     assert exc.value.code == 1
@@ -897,6 +902,7 @@ def test_export_map_with_floors(tmp_path: Path, capsys: pytest.CaptureFixture[st
             palette=0,
             thing_scale=1.0,
             alpha=False,
+            sprites=False,
         )
     )
     assert Path(out).exists()
@@ -918,8 +924,31 @@ def test_export_map_alpha(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
             palette=0,
             thing_scale=1.0,
             alpha=True,
+            sprites=False,
         )
     )
+
+
+def test_export_map_sprites(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test export_map with --sprites to cover sprite rendering path."""
+    from wadlib.cli.commands import export_map
+
+    out = str(tmp_path / "m_sprites.png")
+    export_map.run(
+        _ns(
+            map="MAP01",
+            output=out,
+            all=False,
+            scale=0.05,
+            no_things=False,
+            floors=False,
+            palette=0,
+            thing_scale=1.0,
+            alpha=False,
+            sprites=True,
+        )
+    )
+    assert Path(out).exists()
 
 
 # ---------------------------------------------------------------------------
