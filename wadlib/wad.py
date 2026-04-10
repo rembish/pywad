@@ -29,6 +29,15 @@ from .lumps.mapinfo import MapInfoLump
 from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
 from .lumps.mus import _MUS_MAGIC, Mus
 from .lumps.nodes import Nodes
+from .lumps.ogg import (
+    MP3_ID3_MAGIC,
+    MP3_SYNC_MAGIC,
+    MP3_SYNC_MAGIC2,
+    MP3_SYNC_MAGIC3,
+    OGG_MAGIC,
+    Mp3Lump,
+    OggLump,
+)
 from .lumps.picture import Picture
 from .lumps.playpal import PlayPal
 from .lumps.sectors import Sectors
@@ -159,8 +168,7 @@ class WadFile:
 
             for entry in wad.directory:
                 is_marker = bool(
-                    DOOM1_MAP_NAME_REGEX.match(entry.name)
-                    or DOOM2_MAP_NAME_REGEX.match(entry.name)
+                    DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name)
                 )
                 if is_marker:
                     if marker is not None:
@@ -270,28 +278,37 @@ class WadFile:
     def get_lumps(self, name: str) -> list[BaseLump]:
         """Return all directory lumps with the given name across all loaded WADs."""
         upper = name.upper()
-        return [
-            BaseLump(e)
-            for wad in self._all_wads
-            for e in wad.directory
-            if e.name == upper
-        ]
+        return [BaseLump(e) for wad in self._all_wads for e in wad.directory if e.name == upper]
 
     @cached_property
-    def music(self) -> dict[str, Mus]:
-        """Return all MUS music lumps by name (PWAD-aware), detected by magic bytes."""
-        result: dict[str, Mus] = {}
+    def music(self) -> dict[str, Mus | OggLump | Mp3Lump]:
+        """Return all music lumps by name (PWAD-aware), detected by magic bytes.
+
+        Supports MUS (Doom native), OGG Vorbis, and MP3 formats.
+        """
+        result: dict[str, Mus | OggLump | Mp3Lump] = {}
         for wad in reversed(self._all_wads):
             for entry in wad.directory:
-                if entry.size < _MUS_MIN_SIZE:
+                if entry.size < 4:
                     continue
                 wad.fd.seek(entry.offset)
-                if wad.fd.read(4) == _MUS_MAGIC:
+                magic = wad.fd.read(4)
+                if len(magic) < 4:
+                    continue
+                if magic == _MUS_MAGIC and entry.size >= _MUS_MIN_SIZE:
                     result[entry.name] = Mus(entry)
+                elif magic[:4] == OGG_MAGIC:
+                    result[entry.name] = OggLump(entry)
+                elif magic[:3] == MP3_ID3_MAGIC or magic[:2] in (
+                    MP3_SYNC_MAGIC,
+                    MP3_SYNC_MAGIC2,
+                    MP3_SYNC_MAGIC3,
+                ):
+                    result[entry.name] = Mp3Lump(entry)
         return result
 
-    def get_music(self, name: str) -> Mus | None:
-        """Return a named MUS lump, or None if not found."""
+    def get_music(self, name: str) -> Mus | OggLump | Mp3Lump | None:
+        """Return a named music lump (MUS/OGG/MP3), or None if not found."""
         return self.music.get(name.upper())
 
     @cached_property
@@ -455,4 +472,3 @@ class WadFile:
         # cached_property stores its value in __dict__ under the property name;
         # setting it directly bypasses the descriptor and acts as an override.
         self.__dict__["dehacked"] = DehackedFile(path)
-

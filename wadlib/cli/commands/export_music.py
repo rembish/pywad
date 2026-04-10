@@ -1,8 +1,10 @@
-"""wadcli export music — export a MUS lump as MIDI or raw MUS bytes."""
+"""wadcli export music -- export a MUS lump as MIDI, OGG, MP3, or raw bytes."""
 
 import argparse
 import sys
 
+from ...lumps.mus import Mus
+from ...lumps.ogg import Mp3Lump, OggLump
 from .._wad_args import add_wad_args, open_wad
 
 
@@ -13,7 +15,7 @@ def configure(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--raw",
         action="store_true",
-        help="write raw MUS bytes instead of converting to MIDI",
+        help="write raw MUS bytes instead of converting to MIDI (MUS lumps only)",
     )
     p.set_defaults(func=run)
 
@@ -21,8 +23,8 @@ def configure(p: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> None:
     lump_name = args.name.upper()
     with open_wad(args) as wad:
-        mus = wad.get_music(lump_name)
-        if mus is None:
+        lump = wad.get_music(lump_name)
+        if lump is None:
             available = ", ".join(sorted(wad.music))
             print(
                 f"Music lump '{lump_name}' not found.\nAvailable: {available}",
@@ -30,9 +32,18 @@ def run(args: argparse.Namespace) -> None:
             )
             sys.exit(1)
 
-        data = mus.raw() if args.raw else mus.to_midi()
+        if isinstance(lump, Mus):
+            data = lump.raw() if args.raw else lump.to_midi()
+            fmt = "MUS" if args.raw else "MIDI"
+        elif isinstance(lump, OggLump):
+            data = lump.raw()
+            fmt = "OGG"
+        else:
+            assert isinstance(lump, Mp3Lump)
+            data = lump.raw()
+            fmt = "MP3"
+
         with open(args.output, "wb") as f:
             f.write(data)
 
-        fmt = "MUS" if args.raw else "MIDI"
         print(f"Saved {len(data)} bytes ({fmt}) to {args.output}")

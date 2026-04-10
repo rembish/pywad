@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.40] - 2026-04-09
+
+### Added
+
+- `OggLump` and `Mp3Lump` lump types (`wadlib.lumps.ogg`) for OGG Vorbis and MP3 audio; each exposes `.save(path)` for extracting the raw audio
+- `WadFile.music` now detects OGG (`OggS` magic) and MP3 (`ID3` tag or `\xff\xfb`/`\xff\xf3`/`\xff\xf2` sync bytes) alongside the existing MUS format; return type is `dict[str, Mus | OggLump | Mp3Lump]`
+- `wadcli export music` handles all three formats: MUS lumps convert to MIDI (or raw with `--raw`), OGG/MP3 lumps write raw bytes directly
+
 ## [0.0.39] - 2026-04-10
 
 ### Fixed
