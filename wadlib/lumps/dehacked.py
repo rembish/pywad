@@ -8,6 +8,11 @@ Thing blocks with an ``ID # = N`` field define new in-game DoomEd type IDs
 that extend the stock type table.  Custom WADs like REKKR and Eviternity use
 this mechanism to add monsters, decorations, and ambient-sound objects beyond
 the 137 standard Doom 2 things.
+
+# Done:  Thing block parsing — name, bits (category), initial_frame, ID#.
+# TODO:  Full frame-table cross-reference to resolve ``Initial frame = N`` →
+#        sprite 4-letter prefix.  Requires parsing Frame + Sprite name sections
+#        plus the stock Doom mobjinfo/states/sprnames arrays as reference data.
 """
 
 from __future__ import annotations
@@ -32,37 +37,37 @@ _THING_RE = re.compile(r"^Thing\s+(\d+)\s*(?:\(([^)]*)\))?", re.IGNORECASE)
 _PROP_RE = re.compile(r"^([A-Za-z][A-Za-z0-9 #]*?)\s*=\s*(.+)$")
 
 # Doom mobj flag bit values (from p_mobj.h)
-_MF_COUNTKILL: int = 0x00400000   # counts toward kill percentage
-_MF_COUNTITEM: int = 0x00800000   # counts toward item percentage
+_MF_COUNTKILL: int = 0x00400000  # counts toward kill percentage
+_MF_COUNTITEM: int = 0x00800000  # counts toward item percentage
 
 # BEX text → numeric bit mapping (subset; enough for category detection)
 _BEX_BITS: dict[str, int] = {
-    "SPECIAL":      0x00000001,
-    "SOLID":        0x00000002,
-    "SHOOTABLE":    0x00000004,
-    "NOSECTOR":     0x00000008,
-    "NOBLOCKMAP":   0x00000010,
-    "AMBUSH":       0x00000020,
-    "JUSTHIT":      0x00000040,
+    "SPECIAL": 0x00000001,
+    "SOLID": 0x00000002,
+    "SHOOTABLE": 0x00000004,
+    "NOSECTOR": 0x00000008,
+    "NOBLOCKMAP": 0x00000010,
+    "AMBUSH": 0x00000020,
+    "JUSTHIT": 0x00000040,
     "JUSTATTACKED": 0x00000080,
     "SPAWNCEILING": 0x00000100,
-    "NOGRAVITY":    0x00000200,
-    "DROPOFF":      0x00000400,
-    "PICKUP":       0x00000800,
-    "NOCLIP":       0x00001000,
-    "SLIDE":        0x00002000,
-    "FLOAT":        0x00004000,
-    "TELEPORT":     0x00008000,
-    "MISSILE":      0x00010000,
-    "DROPPED":      0x00020000,
-    "SHADOW":       0x00040000,
-    "NOBLOOD":      0x00080000,
-    "CORPSE":       0x00100000,
-    "INFLOAT":      0x00200000,
-    "COUNTKILL":    _MF_COUNTKILL,
-    "COUNTITEM":    _MF_COUNTITEM,
-    "SKULLFLY":     0x01000000,
-    "NOTDMATCH":    0x02000000,
+    "NOGRAVITY": 0x00000200,
+    "DROPOFF": 0x00000400,
+    "PICKUP": 0x00000800,
+    "NOCLIP": 0x00001000,
+    "SLIDE": 0x00002000,
+    "FLOAT": 0x00004000,
+    "TELEPORT": 0x00008000,
+    "MISSILE": 0x00010000,
+    "DROPPED": 0x00020000,
+    "SHADOW": 0x00040000,
+    "NOBLOOD": 0x00080000,
+    "CORPSE": 0x00100000,
+    "INFLOAT": 0x00200000,
+    "COUNTKILL": _MF_COUNTKILL,
+    "COUNTITEM": _MF_COUNTITEM,
+    "SKULLFLY": 0x01000000,
+    "NOTDMATCH": 0x02000000,
 }
 
 
@@ -88,9 +93,9 @@ class DehackedThing:
     game type tables.
     """
 
-    type_id: int          # DoomEd editor type number (from "ID # = N")
-    name: str             # human-readable name from the block header
-    bits: int             # raw mobj flags
+    type_id: int  # DoomEd editor type number (from "ID # = N")
+    name: str  # human-readable name from the block header
+    bits: int  # raw mobj flags
     initial_frame: int | None = field(default=None)
 
     @property
@@ -235,7 +240,8 @@ class DehackedLump(BaseLump[Any]):
             # also ends the block
             if _SECTION_RE.match(stripped) or re.match(
                 r"^(Frame|Weapon|Sound|Sprite|Ammo|Misc|Text|Cheat|Pointer)\s+\d+",
-                stripped, re.IGNORECASE,
+                stripped,
+                re.IGNORECASE,
             ):
                 _flush()
                 in_block = False

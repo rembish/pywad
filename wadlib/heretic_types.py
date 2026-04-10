@@ -3,7 +3,7 @@
 Type IDs are INCOMPATIBLE with Doom: e.g. type 5 = Fire Gargoyle (Heretic)
 but type 5 = Blue Keycard (Doom).  Never mix with doom_types tables.
 
-# TODO: support DECORATE/ZScript lumps so GZDoom PWADs can define new types.
+# TODO: DECORATE/ZScript lumps — GZDoom PWADs can define actors with new DoomEdNums.
 """
 
 from .doom_types import ThingCategory
@@ -119,25 +119,38 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}
 
-INVISIBLE_TYPES: frozenset[int] = frozenset({
-    11,   # Deathmatch Start
-    14,   # Teleport Landing
-    41,   # Waterfall ambient emitter
-    42,   # Wind ambient emitter
-    43,   # Pod generator spawner
-    56,   # D'Sparil teleport spot
-    1200, 1201, 1202, 1203, 1204,  # Ambient sounds
-    1205, 1206, 1207, 1208, 1209,
-})
+INVISIBLE_TYPES: frozenset[int] = frozenset(
+    {
+        11,  # Deathmatch Start
+        14,  # Teleport Landing
+        41,  # Waterfall ambient emitter
+        42,  # Wind ambient emitter
+        43,  # Pod generator spawner
+        56,  # D'Sparil teleport spot
+        1200,
+        1201,
+        1202,
+        1203,
+        1204,  # Ambient sounds
+        1205,
+        1206,
+        1207,
+        1208,
+        1209,
+    }
+)
 
 _SPRITE_PREFIXES: dict[int, str] = {
     # Player spawns
-    1: "PLAY", 2: "PLAY", 3: "PLAY", 4: "PLAY",
+    1: "PLAY",
+    2: "PLAY",
+    3: "PLAY",
+    4: "PLAY",
     # Monsters
-    5: "IMPX",   # Fire Gargoyle
-    6: "HEAD",   # Iron Lich
-    7: "SRCR",   # D'Sparil (Chaos Serpent form)
-    9: "MNTR",   # Maulotaur
+    5: "IMPX",  # Fire Gargoyle
+    6: "HEAD",  # Iron Lich
+    7: "SRCR",  # D'Sparil (Chaos Serpent form)
+    9: "MNTR",  # Maulotaur
     15: "WZRD",  # Disciple of D'Sparil
     45: "MUMM",  # Nitrogolem
     46: "MUMM",  # Nitrogolem Ghost
@@ -222,7 +235,7 @@ _SPRITE_PREFIXES: dict[int, str] = {
 _DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
 
 
-def get_sprite_suffixes(type_id: int) -> tuple[str, ...]:
+def get_sprite_suffixes(_type_id: int) -> tuple[str, ...]:
     return _DEFAULT_SPRITE_SUFFIXES
 
 

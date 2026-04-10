@@ -4,8 +4,9 @@ Covers Doom 1, Ultimate Doom, and Doom 2 thing types only.  Heretic and Hexen
 share numeric ranges but map IDs to completely different entities; they are
 handled by heretic_types.py and hexen_types.py respectively.
 
-# TODO: support DECORATE/ZScript lumps so GZDoom PWADs can define new types
-#       directly in the WAD without requiring a hardcoded table here.
+# Done:    DEHACKED "ID # = N" custom types parsed by DehackedLump.things.
+# TODO:    DECORATE/ZScript lumps — GZDoom PWADs can define actors with new
+#          DoomEdNums directly in the WAD; parsing these would complete coverage.
 """
 
 from enum import Enum
@@ -166,13 +167,15 @@ THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) fo
 # Thing type IDs that have no in-game visual representation (invisible game-mechanics
 # markers such as deathmatch spawns, teleport destinations, and boss brain targets).
 # The renderer skips these by default.
-INVISIBLE_TYPES: frozenset[int] = frozenset({
-    0,   # Null/corrupt editor placeholder — not a real thing
-    11,  # Deathmatch Start
-    14,  # Teleport Landing
-    87,  # Spawn Spot (boss brain target)
-    89,  # Spawn Shooter
-})
+INVISIBLE_TYPES: frozenset[int] = frozenset(
+    {
+        0,  # Null/corrupt editor placeholder — not a real thing
+        11,  # Deathmatch Start
+        14,  # Teleport Landing
+        87,  # Spawn Spot (boss brain target)
+        89,  # Spawn Shooter
+    }
+)
 
 # Maps thing type ID to the 4-char WAD sprite lump prefix (first frame = "A0" or "A1").
 # Only Doom 1/2 things are listed; Heretic/Hexen entries are omitted (different WADs).

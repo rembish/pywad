@@ -4,7 +4,7 @@ Type IDs are INCOMPATIBLE with Doom and Heretic: e.g. type 5 = Winged statue
 (Hexen) but type 5 = Fire Gargoyle (Heretic) / Blue Keycard (Doom).
 Never mix with doom_types or heretic_types tables.
 
-# TODO: support DECORATE/ZScript lumps so GZDoom PWADs can define new types.
+# TODO: DECORATE/ZScript lumps — GZDoom PWADs can define actors with new DoomEdNums.
 """
 
 from .doom_types import ThingCategory
@@ -266,41 +266,61 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}
 
-INVISIBLE_TYPES: frozenset[int] = frozenset({
-    11,   # Deathmatch Start
-    14,   # Teleport Landing
-    113,  # Leaf spawner
-    1400, 1401, 1402, 1403, 1404,  # Ambient sounds
-    1405, 1406, 1407, 1408, 1409, 1410,
-    3000, 3001, 3002,   # Polyobject markers
-    9001, 9013,         # Map spots
-    10000,              # Fog spawner
-    10225,              # Bat spawner
-})
+INVISIBLE_TYPES: frozenset[int] = frozenset(
+    {
+        11,  # Deathmatch Start
+        14,  # Teleport Landing
+        113,  # Leaf spawner
+        1400,
+        1401,
+        1402,
+        1403,
+        1404,  # Ambient sounds
+        1405,
+        1406,
+        1407,
+        1408,
+        1409,
+        1410,
+        3000,
+        3001,
+        3002,  # Polyobject markers
+        9001,
+        9013,  # Map spots
+        10000,  # Fog spawner
+        10225,  # Bat spawner
+    }
+)
 
 _SPRITE_PREFIXES: dict[int, str] = {
     # Player spawns
-    1: "PLAY", 2: "PLAY", 3: "PLAY", 4: "PLAY",
-    9100: "PLAY", 9101: "PLAY", 9102: "PLAY", 9103: "PLAY",
+    1: "PLAY",
+    2: "PLAY",
+    3: "PLAY",
+    4: "PLAY",
+    9100: "PLAY",
+    9101: "PLAY",
+    9102: "PLAY",
+    9103: "PLAY",
     # Monsters
-    31: "DEMN",   # Green Chaos Serpent
-    34: "WRTH",   # Reiver
+    31: "DEMN",  # Green Chaos Serpent
+    34: "WRTH",  # Reiver
     107: "CENT",  # Centaur
     114: "BISH",  # Dark Bishop
     115: "CENT",  # Slaughtaur
     120: "SSPT",  # Stalker Boss
     121: "SSPT",  # Stalker
     254: "DRAG",  # Death Wyvern
-    8020: "ICEY", # Wendigo
-    8080: "DEM2", # Brown Chaos Serpent
-    10011: "WRTH",# Reiver (buried)
-    10030: "ETTN",# Ettin
-    10060: "FDMN",# Afrit
-    10080: "SORC",# Heresiarch
-    10100: "PLAY",# Zedek
-    10101: "CLER",# Traductus
-    10102: "MAGE",# Menelkir
-    10200: "KORX",# Korax
+    8020: "ICEY",  # Wendigo
+    8080: "DEM2",  # Brown Chaos Serpent
+    10011: "WRTH",  # Reiver (buried)
+    10030: "ETTN",  # Ettin
+    10060: "FDMN",  # Afrit
+    10080: "SORC",  # Heresiarch
+    10100: "PLAY",  # Zedek
+    10101: "CLER",  # Traductus
+    10102: "MAGE",  # Menelkir
+    10200: "KORX",  # Korax
     # Weapons
     10: "WCSS",
     12: "WFR1",
@@ -507,7 +527,7 @@ _SPRITE_PREFIXES: dict[int, str] = {
 _DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
 
 
-def get_sprite_suffixes(type_id: int) -> tuple[str, ...]:
+def get_sprite_suffixes(_type_id: int) -> tuple[str, ...]:
     return _DEFAULT_SPRITE_SUFFIXES
 
 

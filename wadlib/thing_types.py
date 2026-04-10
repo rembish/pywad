@@ -20,7 +20,7 @@ Game detection heuristics (in priority order):
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from . import doom_types, heretic_types, hexen_types, strife_types
 from .doom_types import ThingCategory
@@ -28,6 +28,18 @@ from .lumps.dehacked import DehackedThing
 
 if TYPE_CHECKING:
     from .wad import WadFile
+
+
+class _GameModule(Protocol):
+    """Structural interface that every per-game type module must satisfy."""
+
+    INVISIBLE_TYPES: frozenset[int]
+
+    def get_name(self, type_id: int) -> str: ...
+    def get_category(self, type_id: int) -> ThingCategory: ...
+    def get_sprite_prefix(self, type_id: int) -> str | None: ...
+    def get_sprite_suffixes(self, type_id: int) -> tuple[str, ...]: ...
+
 
 __all__ = [
     "DehackedThing",
@@ -49,7 +61,7 @@ class GameType(Enum):
     STRIFE = "strife"
 
 
-_MODULES = {
+_MODULES: dict[GameType, _GameModule] = {
     GameType.DOOM: doom_types,
     GameType.HERETIC: heretic_types,
     GameType.HEXEN: hexen_types,
@@ -124,7 +136,7 @@ def get_category(
 def get_sprite_prefix(
     type_id: int,
     game: GameType = GameType.DOOM,
-    deh: _DehOverlay = None,
+    _deh: _DehOverlay = None,
 ) -> str | None:
     # DEHACKED doesn't give us a 4-letter sprite name without full frame-table
     # cross-reference; fall through to the standard table so we at least get
@@ -135,7 +147,7 @@ def get_sprite_prefix(
 def get_sprite_suffixes(
     type_id: int,
     game: GameType = GameType.DOOM,
-    deh: _DehOverlay = None,
+    _deh: _DehOverlay = None,
 ) -> tuple[str, ...]:
     return _MODULES[game].get_sprite_suffixes(type_id)
 

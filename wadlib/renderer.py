@@ -21,7 +21,11 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
+from .lumps.colormap import ColormapLump
 from .lumps.dehacked import DehackedThing
+from .lumps.map import BaseMapEntry
+from .lumps.nodes import SSECTOR_FLAG
+from .lumps.playpal import Palette
 from .thing_types import (
     GameType,
     ThingCategory,
@@ -31,10 +35,6 @@ from .thing_types import (
     get_sprite_prefix,
     get_sprite_suffixes,
 )
-from .lumps.colormap import ColormapLump
-from .lumps.map import BaseMapEntry
-from .lumps.nodes import SSECTOR_FLAG
-from .lumps.playpal import Palette
 
 if TYPE_CHECKING:
     from .wad import WadFile

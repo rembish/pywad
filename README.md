@@ -3,7 +3,7 @@
 ![CI](https://github.com/arembish/pywad/actions/workflows/ci.yml/badge.svg)
 
 Python 3.12+ library and CLI toolkit for reading and analysing id Software
-WAD files (Doom, Doom II, Heretic, Hexen, and derivative source-port mods).
+WAD files (Doom, Doom II, Heretic, Hexen, Strife, and derivative source-port mods).
 
 ---
 
@@ -69,7 +69,7 @@ with WadFile.open("DOOM2.WAD", "SIGIL_II.WAD") as wad:
 | `wad.mapinfo` | `MapInfoLump` — Hexen MAPINFO (numeric map IDs, titles) |
 | `wad.zmapinfo` | `ZMapInfoLump` — ZDoom ZMAPINFO (string map names, music, sky) |
 | `wad.animdefs` | `AnimDefsLump` — Hexen/ZDoom flat/texture animation sequences |
-| `wad.dehacked` | `DehackedLump` — embedded DeHackEd patch (PAR times, version) |
+| `wad.dehacked` | `DehackedLump` — embedded DeHackEd patch (PAR times, custom thing types) |
 | `wad.get_flat(name)` | Look up a flat by name (PWAD-aware) |
 | `wad.get_picture(name)` | Decode any lump as a Doom picture |
 | `wad.get_lump(name)` | Raw lump bytes by name |
@@ -216,7 +216,23 @@ wadcli --wad HEXEN.WAD export animation FLTWAWA1
 | Doom II | `DOOM2.WAD` | MAP01–MAP32 |
 | Heretic | `HERETIC.WAD` | FONTA/FONTB fonts, Heretic thing types |
 | Hexen | `HEXEN.WAD` | Hexen map/things format, SNDSEQ, MAPINFO, ANIMDEFS |
-| Source-port PWADs | `.wad` | ZDoom ZMAPINFO, ANIMDEFS, DEHACKED PAR times |
+| Strife | `STRIFE1.WAD` | All 230 thing types, Strife-specific keys/monsters/NPCs |
+| Source-port PWADs | `.wad` | ZDoom ZMAPINFO, ANIMDEFS, DEHACKED PAR times + custom things |
+
+### PWAD custom types (DEHEXTRA / MBF21)
+
+PWADs that add new monsters or decorations beyond the base game's 137 types embed
+their definitions in a `DEHACKED` lump using the `ID # = N` extension.  wadlib
+reads these automatically — custom things render with the correct colour on map
+exports rather than appearing as blank grey dots.
+
+| PWAD | Custom types detected |
+|---|---|
+| REKKR | 633, 654, 666, 668, 699, 750, … (15 types) |
+| Eviternity | 140–144, 4901–4902 (7 types) |
+
+MBF-standard type 888 (Helper Dog, sprite `DOGS`) is also recognised without
+requiring a DEHACKED declaration.
 
 ---
 
