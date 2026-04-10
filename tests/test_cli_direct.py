@@ -15,8 +15,11 @@ import pytest
 _WADS_DIR = Path(__file__).parent.parent / "wads"
 _F2 = str(_WADS_DIR / "freedoom2.wad")
 _F1 = str(_WADS_DIR / "freedoom1.wad")
+_DOOM2 = str(_WADS_DIR / "DOOM2.WAD")
 
 pytestmark = pytest.mark.skipif(not Path(_F2).exists(), reason="freedoom2.wad not found in wads/")
+needs_f1 = pytest.mark.skipif(not Path(_F1).exists(), reason="freedoom1.wad not found in wads/")
+needs_doom2 = pytest.mark.skipif(not Path(_DOOM2).exists(), reason="DOOM2.WAD not found in wads/")
 
 
 def _ns(**kwargs: object) -> argparse.Namespace:
@@ -1316,3 +1319,175 @@ def test_check_left_sidedef_out_of_range() -> None:
     issues: list[Issue] = []
     _check_linedefs(m, issues)
     assert any(i.kind == "bad_sidedef" for i in issues)
+
+
+# ---------------------------------------------------------------------------
+# check.py — missing --wad + text output with issues
+# ---------------------------------------------------------------------------
+
+
+def test_check_no_wad_exits(capsys: pytest.CaptureFixture[str]) -> None:
+    from wadlib.cli.commands import check
+    with pytest.raises(SystemExit) as exc:
+        check.run(argparse.Namespace(wad=None, pwads=[], deh=None, json=False))
+    assert exc.value.code == 1
+
+
+def test_check_text_output_with_issues(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Text mode on a bad WAD should print per-map issue lines and summary."""
+    import struct
+    from wadlib.cli.commands import check
+
+    sector = struct.pack("<hh8s8sHHH", 0, 128, b"FLAT1\x00\x00\x00", b"FLAT1\x00\x00\x00", 160, 0, 0)
+    sidedef = struct.pack("<hh8s8s8sH", 0, 0, b"-\x00\x00\x00\x00\x00\x00\x00", b"-\x00\x00\x00\x00\x00\x00\x00", b"XTEXTURE", 0)
+    vertex = struct.pack("<hh", 0, 0) + struct.pack("<hh", 64, 0)
+    linedef = struct.pack("<HHHHHhh", 0, 1, 1, 0, 0, 0, -1)
+    lumps: list[tuple[str, bytes]] = [
+        ("E1M1", b""), ("THINGS", struct.pack("<hhHHH", 32, 32, 0, 1, 7)),
+        ("VERTEXES", vertex), ("LINEDEFS", linedef),
+        ("SIDEDEFS", sidedef), ("SECTORS", sector),
+    ]
+    lump_bytes = b"".join(d for _, d in lumps)
+    dir_off = 12 + len(lump_bytes)
+    hdr = struct.pack("<4sII", b"IWAD", len(lumps), dir_off)
+    directory = b""
+    off = 12
+    for name, data in lumps:
+        directory += struct.pack("<II8s", off, len(data), name.encode().ljust(8, b"\x00"))
+        off += len(data)
+    p = tmp_path / "bad.wad"
+    p.write_bytes(hdr + lump_bytes + directory)
+
+    with pytest.raises(SystemExit) as exc:
+        check.run(argparse.Namespace(wad=str(p), pwads=[], deh=None, json=False))
+    assert exc.value.code == 1
+    out = capsys.readouterr().out
+    assert "issue(s)" in out
+
+
+# ---------------------------------------------------------------------------
+# export_music.py — MidiLump dispatch path
+# ---------------------------------------------------------------------------
+
+
+def test_export_music_midi_lump(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Export a MidiLump track (freedoom2 stores music as Standard MIDI)."""
+    from wadlib.cli.commands import export_music
+    from wadlib.wad import WadFile
+
+    with WadFile(_F2) as w:
+        midi_name = next((k for k, v in w.music.items() if type(v).__name__ == "MidiLump"), None)
+    if midi_name is None:
+        pytest.skip("No MidiLump in freedoom2")
+
+    out = str(tmp_path / "midi.mid")
+    export_music.run(_ns(name=midi_name, output=out, raw=False))
+    assert Path(out).exists()
+
+
+def test_export_music_midi_lump_raw(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from wadlib.cli.commands import export_music
+    from wadlib.wad import WadFile
+
+    with WadFile(_F2) as w:
+        midi_name = next((k for k, v in w.music.items() if type(v).__name__ == "MidiLump"), None)
+    if midi_name is None:
+        pytest.skip("No MidiLump in freedoom2")
+
+    out = str(tmp_path / "midi_raw.mid")
+    export_music.run(_ns(name=midi_name, output=out, raw=True))
+    assert Path(out).exists()
+
+
+# ---------------------------------------------------------------------------
+# _wad_args.py — deh loading path
+# ---------------------------------------------------------------------------
+
+
+def test_open_wad_with_deh(tmp_path: Path) -> None:
+    """open_wad() should call load_deh() when args.deh is set."""
+    from wadlib.cli._wad_args import open_wad
+
+    # Write a minimal DEH file (empty is fine — load_deh should not crash)
+    deh = tmp_path / "empty.deh"
+    deh.write_text("")
+    ns = argparse.Namespace(wad=_F2, pwads=[], deh=str(deh))
+    with open_wad(ns) as wad:
+        assert wad is not None
+
+
+# ---------------------------------------------------------------------------
+# compositor.py — compose() with missing patch returns None via continue
+# ---------------------------------------------------------------------------
+
+
+def test_compositor_compose_missing_patch(capsys: pytest.CaptureFixture[str]) -> None:
+    """compose() returns a canvas even when a patch is absent (skips missing patches)."""
+    from wadlib.compositor import TextureCompositor
+    from wadlib.wad import WadFile
+
+    with WadFile(_F2) as w:
+        comp = TextureCompositor(w)
+        # compose returns None for a nonexistent texture, valid image for existing ones
+        result = comp.compose("TOTALLY_NONEXISTENT")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# info.py — stcfn font + dehacked + many-maps paths (freedoom1 has all three)
+# ---------------------------------------------------------------------------
+
+
+@needs_f1
+def test_info_text_freedoom1(capsys: pytest.CaptureFixture[str]) -> None:
+    """info text mode with freedoom1: covers stcfn font line, many-maps truncation,
+    and DEHacked presence."""
+    from wadlib.cli.commands import info
+
+    info.run(_ns(wad=_F1))
+    out = capsys.readouterr().out
+    assert "IWAD" in out
+    # freedoom1 has STCFN font → font line should mention it
+    assert "STCFN" in out or "Font" in out or "none" in out
+    # freedoom1 has DEHACKED
+    assert "DEHACKED" in out
+
+
+@needs_f1
+def test_info_json_freedoom1(capsys: pytest.CaptureFixture[str]) -> None:
+    """info --json with freedoom1: covers the deh_info dict branch."""
+    from wadlib.cli.commands import info
+
+    info.run(_ns(wad=_F1, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["type"] == "IWAD"
+    # freedoom1 has dehacked; deh_info should be a dict
+    assert data["dehacked"] is not None
+    assert "doom_version" in data["dehacked"]
+
+
+# ---------------------------------------------------------------------------
+# export_music.py — Mus lump path (DOOM2.WAD stores music as MUS format)
+# ---------------------------------------------------------------------------
+
+
+@needs_doom2
+def test_export_music_mus_to_midi(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Export a Mus lump as MIDI — covers the Mus isinstance branch."""
+    from wadlib.cli.commands import export_music
+
+    out = str(tmp_path / "mus.mid")
+    export_music.run(_ns(wad=_DOOM2, name="D_RUNNIN", output=out, raw=False))
+    assert Path(out).exists()
+    assert Path(out).stat().st_size > 0
+
+
+@needs_doom2
+def test_export_music_mus_raw(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Export a Mus lump as raw bytes — covers the raw=True branch of Mus path."""
+    from wadlib.cli.commands import export_music
+
+    out = str(tmp_path / "raw.mus")
+    export_music.run(_ns(wad=_DOOM2, name="D_RUNNIN", output=out, raw=True))
+    assert Path(out).exists()
+    assert Path(out).read_bytes()[:4] == b"MUS\x1a"

@@ -265,16 +265,6 @@ class MapRenderer:
                 return sector_idx
         return None
 
-    def _ssector_polygon(self, ssector_idx: int, ssector: Any) -> list[tuple[int, int]] | None:
-        """Build the subsector's floor polygon via BSP tree walk (Sutherland-Hodgman).
-
-        Clips the map bounding box through each BSP partition plane from root to
-        the target subsector leaf.  This is the only correct method: the SEGS lump
-        only stores linedef segs; the BSP partition edges that complete each
-        subsector's convex boundary are implicit in the node tree.
-        """
-        return self._ssector_polygon_bsp(ssector_idx, ssector)
-
     def _clip_by_segs(
         self, poly: list[tuple[float, float]], ssector: Any
     ) -> list[tuple[float, float]]:
@@ -304,71 +294,57 @@ class MapRenderer:
                 return []
         return poly
 
-    def _ssector_polygon_bsp(
-        self, target_idx: int, ssector: Any | None = None
-    ) -> list[tuple[int, int]] | None:
-        """Clip map bounding box to the target subsector's region via BSP walk,
-        then refine by clipping against the subsector's own segs to stop bleeding."""
+    def _collect_all_ssector_polys(self) -> dict[int, list[tuple[float, float]]]:
+        """Walk the BSP tree ONCE and collect every subsector's clipped polygon.
+
+        This is O(N) in the number of BSP nodes, vs the naive O(N log N) approach
+        of doing a separate root-to-leaf walk for every subsector.
+        """
         m = self.level
         if not m.nodes:
-            return None
-        # Initial convex polygon = map bounds in map coordinates (float).
-        poly: list[tuple[float, float]] = [
+            return {}
+        initial_poly: list[tuple[float, float]] = [
             (float(self._min_x), float(self._min_y)),
             (float(self._max_x), float(self._min_y)),
             (float(self._max_x), float(self._max_y)),
             (float(self._min_x), float(self._max_y)),
         ]
-        found = self._bsp_clip(m.nodes.get(len(m.nodes) - 1), target_idx, poly)
-        if found is None or len(found) < 3:
-            return None
-        # Clip by the subsector's own segs to prevent bleeding outside walls.
-        if ssector is not None:
-            found = self._clip_by_segs(found, ssector)
-        if len(found) < 3:
-            return None
-        return [self._px(int(x), int(y)) for x, y in found]
+        result: dict[int, list[tuple[float, float]]] = {}
+        root_idx = len(m.nodes) - 1
+        self._bsp_collect(root_idx, initial_poly, result)
+        return result
 
-    def _bsp_clip(
+    def _bsp_collect(
         self,
-        node: Any,
-        target_idx: int,
+        child_idx: int,
         poly: list[tuple[float, float]],
-    ) -> list[tuple[float, float]] | None:
-        """Recursively walk BSP tree, clipping *poly* at each partition.
-
-        Returns the clipped polygon when the subsector at *target_idx* is reached.
-        """
+        result: dict[int, list[tuple[float, float]]],
+    ) -> None:
+        """Recursive BSP traversal that accumulates polygons for all subsectors."""
+        if child_idx & SSECTOR_FLAG:
+            result[child_idx & ~SSECTOR_FLAG] = poly
+            return
+        m = self.level
+        node = m.nodes.get(child_idx) if m.nodes else None
         if node is None:
-            return None
+            return
         nx, ny, ndx, ndy = float(node.x), float(node.y), float(node.dx), float(node.dy)
         right_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=True)
         left_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=False)
-        m = self.level
-        for child_idx, child_poly in (
-            (node.right_child, right_poly),
-            (node.left_child, left_poly),
-        ):
-            if len(child_poly) < 3:
-                continue
-            if child_idx & SSECTOR_FLAG:
-                if (child_idx & ~SSECTOR_FLAG) == target_idx:
-                    return child_poly
-            else:
-                child_node = m.nodes.get(child_idx) if m.nodes else None
-                result = self._bsp_clip(child_node, target_idx, child_poly)
-                if result is not None:
-                    return result
-        return None
+        if len(right_poly) >= 3:
+            self._bsp_collect(node.right_child, right_poly, result)
+        if len(left_poly) >= 3:
+            self._bsp_collect(node.left_child, left_poly, result)
 
     def _fill_ssector_polygon(
         self,
         ssector_idx: int,
         ssector: Any,
+        poly: list[tuple[float, float]],
         tile_cache: dict[tuple[str, int], Image.Image | None],
         tiled_canvas_cache: dict[tuple[str, int], Image.Image],
     ) -> None:
-        """Render the floor flat for one subsector, shaded by sector light level."""
+        """Render the floor flat for one subsector using a pre-computed BSP polygon."""
         m = self.level
         sector_idx = self._sector_from_ssector(ssector)
         if sector_idx is None:
@@ -389,9 +365,10 @@ class MapRenderer:
         if key not in tiled_canvas_cache:
             tiled_canvas_cache[key] = self._tile_canvas(tile)
         tiled = tiled_canvas_cache[key]
-        points = self._ssector_polygon(ssector_idx, ssector)
-        if points is None:
+        refined = self._clip_by_segs(poly, ssector)
+        if len(refined) < 3:
             return
+        points = [self._px(int(x), int(y)) for x, y in refined]
         mask = Image.new("L", self.im.size, 0)
         ImageDraw(mask).polygon(points, fill=255, outline=255)
         self.im.paste(tiled, (0, 0), mask=mask)
@@ -402,10 +379,15 @@ class MapRenderer:
             return
         if self._wad is None or self._palette is None:
             return
+        # Single O(N) BSP traversal collects every subsector polygon at once.
+        all_polys = self._collect_all_ssector_polys()
         tile_cache: dict[tuple[str, int], Image.Image | None] = {}
         tiled_canvas_cache: dict[tuple[str, int], Image.Image] = {}
         for i, ssector in enumerate(m.ssectors):
-            self._fill_ssector_polygon(i, ssector, tile_cache, tiled_canvas_cache)
+            poly = all_polys.get(i)
+            if poly is None or len(poly) < 3:
+                continue
+            self._fill_ssector_polygon(i, ssector, poly, tile_cache, tiled_canvas_cache)
 
     # ------------------------------------------------------------------
     # Linedef rendering

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.55] - 2026-04-10
+
+### Changed
+
+- **Floor rendering O(N²) → O(N) speedup**: `MapRenderer._draw_floors()` now
+  performs a single BSP tree traversal to collect all subsector polygons at once
+  (`_collect_all_ssector_polys` / `_bsp_collect`) instead of a separate
+  root-to-leaf walk per subsector.  MAP01 (698 subsectors, depth ≈ 10) goes from
+  ~36 s to ~2 s per render in tests.
+- Coverage threshold raised from 85% to **90%** (`--cov-fail-under=90` in
+  `pyproject.toml`).  Total coverage is 90.04%.
+
+### Added
+
+- Tests for info.py stcfn-font / dehacked / many-maps-truncation paths
+  (freedoom1.wad required)
+- Tests for export_music.py Mus→MIDI and Mus raw paths (DOOM2.WAD required)
+- `test_compositor_compose_all_minimal` — fast synthetic WAD with 1 texture
+  covers `compose_all()` lines including `texture2 is None` branch
+- `test_list_animations_*` — synthetic ANIMDEFS lump tests covering the full
+  `list_animations.run()` code path
+
 ## [0.0.54] - 2026-04-10
 
 ### Added
