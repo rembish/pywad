@@ -27,7 +27,7 @@ Format: 4-byte magic (`XNOD` uncompressed, `ZNOD` zlib-compressed) followed by
 extended vertex list, subsector array, seg array, node array with 32-bit child
 indices.  Needed for correct rendering of GZDoom-compiled maps.
 
-### OGG/MP3 music
+### OGG/MP3 music ✓ done (v0.0.40)
 Source-port PWADs often ship `D_*` lumps as OGG or MP3 instead of MUS.
 Add content-based detection (OGG `OggS` magic, MP3 `ID3` / `\xff\xfb`) and
 expose via `wad.music` alongside existing MUS lumps.
@@ -88,11 +88,11 @@ highlighting, keyed doors, etc.
 Compare two WADs (or a WAD+PWAD pair) and report added/removed/changed lumps,
 useful for understanding what a PWAD actually modifies.
 
-### `wadcli export font`
+### `wadcli export font` ✓ done (v0.0.42)
 Export a font (STCFN, FONTA, FONTB) as a sprite sheet PNG — one glyph per
 cell, labeled with the character, suitable for previewing HUD fonts.
 
-### `wadcli export palette`
+### `wadcli export palette` ✓ done (v0.0.42)
 Export PLAYPAL as a visual swatch PNG (14 palettes × 256 colours).
 
 ### `wadcli stats`
@@ -103,7 +103,7 @@ area distribution, thing type breakdown, secret count, etc.
 Sanity-check a WAD for common authoring errors: missing textures, missing
 flats, unreachable sectors, duplicate map names, etc.
 
-### `--json` output flag
+### `--json` output flag ✓ done (v0.0.42)
 Add `--json` to `info`, `list maps`, `list lumps`, etc. so wadlib can be
 used in shell pipelines and scripts.
 
