@@ -21,10 +21,12 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
-from .doom_types import (
-    INVISIBLE_TYPES,
+from .thing_types import (
+    GameType,
     ThingCategory,
+    detect_game,
     get_category,
+    get_invisible_types,
     get_sprite_prefix,
     get_sprite_suffixes,
 )
@@ -190,6 +192,10 @@ class MapRenderer:
             self._palette = wad.playpal.get_palette(self._opts.palette_index)
         if wad is not None:
             self._colormap = wad.colormap
+
+        # Detect which game this WAD belongs to so the right type table is used
+        self._game: GameType = detect_game(wad) if wad is not None else GameType.DOOM
+        self._invisible_types: frozenset[int] = get_invisible_types(self._game)
 
         # Sprite image cache: 4-char prefix → scaled PIL image (or None = not found)
         self._sprite_cache: dict[str, Image.Image | None] = {}
@@ -512,10 +518,10 @@ class MapRenderer:
         """
         if self._wad is None or self._palette is None:
             return None
-        prefix = get_sprite_prefix(type_id)
+        prefix = get_sprite_prefix(type_id, self._game)
         if prefix is None:
             return None
-        suffixes = get_sprite_suffixes(type_id)
+        suffixes = get_sprite_suffixes(type_id, self._game)
         cache_key = prefix + "|" + ",".join(suffixes)
         if cache_key in self._sprite_cache:
             return self._sprite_cache[cache_key]
@@ -535,9 +541,9 @@ class MapRenderer:
         return result
 
     def _draw_thing(self, thing: Any) -> None:
-        if thing.type in INVISIBLE_TYPES:
+        if thing.type in self._invisible_types:
             return
-        cat = get_category(thing.type)
+        cat = get_category(thing.type, self._game)
         colour = _CATEGORY_COLOUR[cat]
         cx, cy = self._px(thing.x, thing.y)
         r = max(2, int(5 * self._scale * self._opts.thing_scale))

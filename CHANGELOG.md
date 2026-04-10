@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.69] - 2026-04-10
+
+### Added
+
+- **Per-game thing type tables**: `heretic_types.py` and `hexen_types.py` now
+  cover their respective games completely, eliminating the collision where
+  e.g. Doom type 5 (Blue Keycard) and Heretic type 5 (Fire Gargoyle) shared
+  the same flat table.
+- **`thing_types.py` dispatch layer** with a `GameType` enum (DOOM / HERETIC /
+  HEXEN), `detect_game(wad)` auto-detection, and game-aware wrappers for
+  `get_category`, `get_sprite_prefix`, `get_sprite_suffixes`, and
+  `get_invisible_types`.  Game detection uses two fast heuristics: Hexen things
+  have extra fields (`arg0`/`tid`/`z`); Heretic WADs contain the `IMPX` sprite
+  prefix unique to that game.
+- Heretic table covers all 107 thing types from the shipped IWAD: 15 monsters,
+  6 weapons, 12 ammo types, 2 health, 2 armor, 3 keys, 11 powerups, 23
+  decorations, and all 1200-series ambient-sound markers.
+- Hexen table covers 250+ thing types across the full ID range including the
+  8000-series items/armor, 9000-series puzzle items, and 10000-series monsters
+  and effects.
+- Per-game `INVISIBLE_TYPES` so Heretic ambient sounds (1200–1209) and Hexen
+  polyobject/map-spot markers never render as dots.
+
+### Changed
+
+- `renderer.py` now calls `detect_game()` once at construction and routes all
+  type lookups through `thing_types` instead of `doom_types` directly.
+- `doom_types.py` cleaned up: removed the incorrect Hexen stubs that were
+  mixed into the Doom table.
+
 ## [0.0.68] - 2026-04-10
 
 ### Fixed
