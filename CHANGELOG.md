@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.63] - 2026-04-10
+
+### Fixed
+
+- **`--sprites` cache bug**: sprite lookup was keyed per-lump-name, so a miss
+  on `{PREFIX}A0` was cached as `None` and returned immediately on all
+  subsequent things of the same type — preventing the `A1` fallback from ever
+  being tried.  Cache is now keyed by 4-char prefix so each type is resolved
+  once correctly.
+- **Deathmatch Start / Teleport Landing** (types 11 and 14) re-categorised
+  from `PLAYER` to `DECORATION`.  They have no sprite and are map-editor
+  markers, not renderable entities, so they were producing spurious blue
+  direction triangles on every map.
+
 ## [0.0.62] - 2026-04-10
 
 ### Added

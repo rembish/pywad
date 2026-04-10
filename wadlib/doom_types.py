@@ -27,8 +27,8 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (2, "Player 2 Start", ThingCategory.PLAYER),
     (3, "Player 3 Start", ThingCategory.PLAYER),
     (4, "Player 4 Start", ThingCategory.PLAYER),
-    (11, "Deathmatch Start", ThingCategory.PLAYER),
-    (14, "Teleport Landing", ThingCategory.PLAYER),
+    (11, "Deathmatch Start", ThingCategory.DECORATION),
+    (14, "Teleport Landing", ThingCategory.DECORATION),
     # ---- Monsters (Doom 1 + 2) -------------------------------------------------
     (3004, "Zombieman", ThingCategory.MONSTER),
     (9, "Shotgun Guy", ThingCategory.MONSTER),

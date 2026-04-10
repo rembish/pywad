@@ -180,7 +180,7 @@ class MapRenderer:
         if wad is not None:
             self._colormap = wad.colormap
 
-        # Sprite image cache: lump name → scaled PIL image (or None = not found)
+        # Sprite image cache: 4-char prefix → scaled PIL image (or None = not found)
         self._sprite_cache: dict[str, Image.Image | None] = {}
 
     # ------------------------------------------------------------------
@@ -503,22 +503,25 @@ class MapRenderer:
         prefix = get_sprite_prefix(type_id)
         if prefix is None:
             return None
+        # Cache key is the prefix, not per-suffix, so that a miss on A0 does not
+        # short-circuit the A1 lookup on subsequent calls for the same type.
+        cache_key = prefix
+        if cache_key in self._sprite_cache:
+            return self._sprite_cache[cache_key]
+        result: Image.Image | None = None
         for suffix in ("A0", "A1"):
             lump_name = prefix + suffix
-            if lump_name in self._sprite_cache:
-                return self._sprite_cache[lump_name]
             sprite = self._wad.get_sprite(lump_name)
             if sprite is None:
-                self._sprite_cache[lump_name] = None
                 continue
             img = sprite.decode(self._palette)  # RGBA
             # Scale to map scale; minimum 8px so tiny sprites stay visible.
             w = max(8, int(img.width * self._scale))
             h = max(8, int(img.height * self._scale))
-            scaled = img.resize((w, h), Image.Resampling.NEAREST)
-            self._sprite_cache[lump_name] = scaled
-            return scaled
-        return None
+            result = img.resize((w, h), Image.Resampling.NEAREST)
+            break
+        self._sprite_cache[cache_key] = result
+        return result
 
     def _draw_thing(self, thing: Any) -> None:
         cat = get_category(thing.type)
