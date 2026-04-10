@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from itertools import chain
 from re import Pattern
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
 from .base import BaseLump
@@ -29,7 +29,7 @@ class Point:
     y: int
 
 
-class BaseMapEntry(BaseLump):
+class BaseMapEntry(BaseLump[Any]):
     _regex: ClassVar[Pattern[str]]
 
     def __init__(self, entry: DirectoryEntry) -> None:
@@ -57,7 +57,7 @@ class BaseMapEntry(BaseLump):
 
     @cached_property
     def boundaries(self) -> tuple[Point, Point]:
-        entries = list(chain(self.things or [], self.vertices or []))
+        entries: list[Any] = list(chain(self.things or [], self.vertices or []))
         if not entries:
             return (Point(0, 0), Point(0, 0))
 

@@ -3,7 +3,7 @@ from collections.abc import Callable
 from functools import cached_property
 from io import SEEK_SET
 from struct import calcsize, unpack
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from .constants import (
     DIRECTORY_ENTRY_FORMAT,
@@ -280,12 +280,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
         entry = self._find_lump(name.upper())
         return Picture(entry) if entry else None
 
-    def get_lump(self, name: str) -> BaseLump | None:
+    def get_lump(self, name: str) -> BaseLump[Any] | None:
         """Return the first directory lump with the given name (PWAD-aware), or None."""
         entry = self._find_lump(name.upper())
         return BaseLump(entry) if entry else None
 
-    def get_lumps(self, name: str) -> list[BaseLump]:
+    def get_lumps(self, name: str) -> list[BaseLump[Any]]:
         """Return all directory lumps with the given name across all loaded WADs."""
         upper = name.upper()
         return [BaseLump(e) for wad in self._all_wads for e in wad.directory if e.name == upper]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import struct
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from .base import BaseLump
 
@@ -13,7 +13,7 @@ _HEADER_SIZE: int = struct.calcsize(_HEADER_FMT)  # 8 bytes
 _PADDING: int = 16
 
 
-class DmxSound(BaseLump):
+class DmxSound(BaseLump[Any]):
     """A Doom digitized sound effect stored in DMX format.
 
     DMX layout: fmt(2) + rate(2) + num_samples(4) + padding(16) + PCM bytes.

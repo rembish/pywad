@@ -23,6 +23,6 @@ class Sector:
             self.ceiling_texture = self.ceiling_texture.decode("ascii").rstrip("\x00")
 
 
-class Sectors(BaseLump):
+class Sectors(BaseLump[Sector]):
     _row_format: ClassVar[str] = SECTOR_FORMAT
     _row_item: ClassVar[type[Sector]] = Sector

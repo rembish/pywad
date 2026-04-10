@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from functools import cached_property
+from typing import Any
 
 from .base import BaseLump
 
@@ -52,7 +53,7 @@ class ZMapInfoEntry:
         return self.title
 
 
-class ZMapInfoLump(BaseLump):
+class ZMapInfoLump(BaseLump[Any]):
     """ZMAPINFO lump: ZDoom-format map metadata with brace-delimited blocks."""
 
     @cached_property
@@ -135,7 +136,7 @@ class ZMapInfoLump(BaseLump):
 
         return entries
 
-    def get(self, map_name: str) -> ZMapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ
+    def get(self, map_name: str) -> ZMapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
         """Return the entry for the given map name (case-insensitive), or None."""
         return next(
             (e for e in self.maps if e.map_name == map_name.upper()),

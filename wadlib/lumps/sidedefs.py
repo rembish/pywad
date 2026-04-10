@@ -24,6 +24,6 @@ class SideDef:
             self.middle_texture = self.middle_texture.decode("ascii").rstrip("\x00")
 
 
-class SideDefs(BaseLump):
+class SideDefs(BaseLump[SideDef]):
     _row_format: ClassVar[str] = SIDEDEF_FORMAT
     _row_item: ClassVar[type[SideDef]] = SideDef

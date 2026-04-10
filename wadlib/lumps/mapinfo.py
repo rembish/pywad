@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from functools import cached_property
+from typing import Any
 
 from .base import BaseLump
 
@@ -26,7 +27,7 @@ class MapInfoEntry:
     fadetable: str | None = None
 
 
-class MapInfoLump(BaseLump):
+class MapInfoLump(BaseLump[Any]):
     """MAPINFO lump: per-map metadata for Hexen WADs."""
 
     @cached_property
@@ -79,6 +80,6 @@ class MapInfoLump(BaseLump):
 
         return entries
 
-    def get(self, map_num: int) -> MapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ
+    def get(self, map_num: int) -> MapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
         """Return the MapInfoEntry for the given map number, or None."""
         return next((m for m in self.maps if m.map_num == map_num), None)

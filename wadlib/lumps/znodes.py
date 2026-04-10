@@ -29,6 +29,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import cached_property
 from struct import calcsize, unpack_from
+from typing import Any
 
 from .base import BaseLump
 from .nodes import SSECTOR_FLAG
@@ -150,7 +151,7 @@ def _normalize_child(raw: int) -> int:
     return raw & 0xFFFF
 
 
-class ZNodesLump(BaseLump):
+class ZNodesLump(BaseLump[Any]):
     """Parser for the ZNODES lump (XNOD/ZNOD extended BSP format)."""
 
     @cached_property

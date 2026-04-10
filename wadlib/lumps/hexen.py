@@ -51,11 +51,11 @@ class HexenLineDef:
     left_sidedef: int
 
 
-class HexenThings(BaseLump):
+class HexenThings(BaseLump[HexenThing]):
     _row_format: ClassVar[str] = HEXEN_THING_FORMAT
     _row_item: ClassVar[type[HexenThing]] = HexenThing
 
 
-class HexenLineDefs(BaseLump):
+class HexenLineDefs(BaseLump[HexenLineDef]):
     _row_format: ClassVar[str] = HEXEN_LINEDEF_FORMAT
     _row_item: ClassVar[type[HexenLineDef]] = HexenLineDef

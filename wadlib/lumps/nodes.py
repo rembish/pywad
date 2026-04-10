@@ -55,6 +55,6 @@ class Node:
         return bool(self.left_child & SSECTOR_FLAG)
 
 
-class Nodes(BaseLump):
+class Nodes(BaseLump[Node]):
     _row_format: ClassVar[str] = NODE_FORMAT
     _row_item: ClassVar[type[Node]] = Node

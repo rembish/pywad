@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import cached_property
+from typing import Any
 
 from .base import BaseLump
 
@@ -13,7 +14,7 @@ _ENTRY_RE = re.compile(r"^\s*(\w+)\s*=\s*\"((?:[^\"\\]|\\.)*)\"\s*;?\s*$")
 _SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]")
 
 
-class LanguageLump(BaseLump):
+class LanguageLump(BaseLump[Any]):
     """LANGUAGE lump: ZDoom localisation strings.
 
     Parses all ``[enu default]`` / ``[enu]`` / ``[default]`` sections and

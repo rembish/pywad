@@ -31,6 +31,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import cached_property
 from struct import calcsize, unpack
+from typing import Any
 
 from .base import BaseLump
 
@@ -60,7 +61,7 @@ class TextureDef:
     patches: list[PatchDescriptor]
 
 
-class PNames(BaseLump):
+class PNames(BaseLump[Any]):
     """PNAMES lump — ordered list of patch names."""
 
     @cached_property
@@ -91,7 +92,7 @@ class PNames(BaseLump):
         return int(count)
 
 
-class TextureList(BaseLump):
+class TextureList(BaseLump[Any]):
     """TEXTURE1 or TEXTURE2 lump — list of composite texture definitions."""
 
     def _read_texture_at(self, offset: int) -> TextureDef:  # pylint: disable=too-many-locals

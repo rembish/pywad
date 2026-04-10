@@ -23,11 +23,11 @@ class SubSector:
     first_seg: int  # index into SEGS
 
 
-class Segs(BaseLump):
+class Segs(BaseLump[Seg]):
     _row_format: ClassVar[str] = SEG_FORMAT
     _row_item: ClassVar[type[Seg]] = Seg
 
 
-class SubSectors(BaseLump):
+class SubSectors(BaseLump[SubSector]):
     _row_format: ClassVar[str] = SSECTOR_FORMAT
     _row_item: ClassVar[type[SubSector]] = SubSector

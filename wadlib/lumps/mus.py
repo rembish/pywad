@@ -14,7 +14,7 @@ References:
 from __future__ import annotations
 
 import struct
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from .base import BaseLump
 
@@ -76,7 +76,7 @@ def _vlq(n: int) -> bytes:
     return bytes(buf)
 
 
-class Mus(BaseLump):
+class Mus(BaseLump[Any]):
     """MUS music lump."""
 
     _CHAN_COUNT: ClassVar[int] = 16

@@ -2,14 +2,12 @@ from collections.abc import Iterator
 from functools import cached_property
 from io import SEEK_CUR, SEEK_END, SEEK_SET, BytesIO
 from struct import calcsize, unpack
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, cast, overload
 
 from ..directory import DirectoryEntry
 
-T = TypeVar("T")
 
-
-class BaseLump(Generic[T]):
+class BaseLump[T]:
     """Base class for all WAD lump types.
 
     Each instance buffers its raw bytes from the WAD file descriptor on
@@ -144,7 +142,7 @@ class BaseLump(Generic[T]):
         assert self._row_item is not None
         row = self.read_row(index)
         assert row is not None
-        return self._row_item(*row)  # pylint: disable=not-callable
+        return cast(T, self._row_item(*row))  # pylint: disable=not-callable
 
     def raw(self) -> bytes:
         """Return the entire lump as raw bytes."""
@@ -161,6 +159,13 @@ class BaseLump(Generic[T]):
 
     def readable(self) -> bool:
         return self._rposition is not None
+
+    @overload
+    def get(self, index: int) -> T | None: ...
+    @overload
+    def get(self, index: int, default: T) -> T: ...
+    @overload
+    def get(self, index: int, default: None) -> T | None: ...
 
     def get(self, index: int, default: T | None = None) -> T | None:
         if 0 <= index < len(self):

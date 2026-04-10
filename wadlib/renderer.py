@@ -1,6 +1,6 @@
 """MapRenderer — produces a PIL Image from a parsed map entry.
 
-Supersedes the old MapExporter.  Key improvements:
+Key features:
   - Thing categories: players/monsters draw a direction arrow; pickups,
     keys, powerups, armor, health each use a distinct colour and shape.
   - Optional floor-texture rendering: fills each BSP subsector polygon
@@ -336,9 +336,9 @@ class MapRenderer:
         if len(left_poly) >= 3:
             self._bsp_collect(node.left_child, left_poly, result)
 
-    def _fill_ssector_polygon(
+    def _fill_ssector_polygon(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         self,
-        ssector_idx: int,
+        ssector_idx: int,  # pylint: disable=unused-argument
         ssector: Any,
         poly: list[tuple[float, float]],
         tile_cache: dict[tuple[str, int], Image.Image | None],

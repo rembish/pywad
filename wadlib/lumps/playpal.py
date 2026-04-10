@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ..directory import DirectoryEntry
 from .base import BaseLump
 
@@ -13,7 +15,7 @@ _NUM_PALETTES = 14
 Palette = list[tuple[int, int, int]]
 
 
-class PlayPal(BaseLump):
+class PlayPal(BaseLump[Any]):
     """PLAYPAL lump — up to 14 RGB palettes used by the game engine.
 
     Palette 0 is the standard game palette.  Palettes 1-8 are pain / pickup

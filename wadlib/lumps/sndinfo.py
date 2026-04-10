@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from .base import BaseLump
 
 
-class SndInfo(BaseLump):
+class SndInfo(BaseLump[Any]):
     """SNDINFO lump: logical-name → lump-name sound mapping."""
 
     @property

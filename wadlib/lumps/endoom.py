@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from .base import BaseLump
 
@@ -14,7 +14,7 @@ _ENDOOM_SIZE: int = _COLS * _ROWS * _CELL_SIZE
 _CGA_TO_ANSI: list[int] = [0, 4, 2, 6, 1, 5, 3, 7]
 
 
-class Endoom(BaseLump):
+class Endoom(BaseLump[Any]):
     """The ENDOOM lump — a 80x25 CGA text screen."""
 
     _CGA_TO_ANSI: ClassVar[list[int]] = _CGA_TO_ANSI

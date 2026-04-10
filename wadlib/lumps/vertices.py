@@ -10,6 +10,6 @@ class Vertex:
     y: int
 
 
-class Vertices(BaseLump):
+class Vertices(BaseLump[Vertex]):
     _row_format: ClassVar[str] = "<hh"
     _row_item: ClassVar[type[Vertex]] = Vertex

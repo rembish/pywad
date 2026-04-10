@@ -1046,7 +1046,6 @@ def test_list_stats_no_maps(capsys: pytest.CaptureFixture[str], tmp_path: Path) 
     """Test list_stats on a WAD with no maps (exercise the 'no maps' branch)."""
     import struct
 
-
     # Build a minimal WAD with only PLAYPAL (no maps)
     playpal_data = bytes(256 * 3 * 14)
     num_lumps = 1
@@ -1327,6 +1326,7 @@ def test_check_left_sidedef_out_of_range() -> None:
 
 def test_check_no_wad_exits(capsys: pytest.CaptureFixture[str]) -> None:
     from wadlib.cli.commands import check
+
     with pytest.raises(SystemExit) as exc:
         check.run(argparse.Namespace(wad=None, pwads=[], deh=None, json=False))
     assert exc.value.code == 1
@@ -1335,16 +1335,30 @@ def test_check_no_wad_exits(capsys: pytest.CaptureFixture[str]) -> None:
 def test_check_text_output_with_issues(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Text mode on a bad WAD should print per-map issue lines and summary."""
     import struct
+
     from wadlib.cli.commands import check
 
-    sector = struct.pack("<hh8s8sHHH", 0, 128, b"FLAT1\x00\x00\x00", b"FLAT1\x00\x00\x00", 160, 0, 0)
-    sidedef = struct.pack("<hh8s8s8sH", 0, 0, b"-\x00\x00\x00\x00\x00\x00\x00", b"-\x00\x00\x00\x00\x00\x00\x00", b"XTEXTURE", 0)
+    sector = struct.pack(
+        "<hh8s8sHHH", 0, 128, b"FLAT1\x00\x00\x00", b"FLAT1\x00\x00\x00", 160, 0, 0
+    )
+    sidedef = struct.pack(
+        "<hh8s8s8sH",
+        0,
+        0,
+        b"-\x00\x00\x00\x00\x00\x00\x00",
+        b"-\x00\x00\x00\x00\x00\x00\x00",
+        b"XTEXTURE",
+        0,
+    )
     vertex = struct.pack("<hh", 0, 0) + struct.pack("<hh", 64, 0)
     linedef = struct.pack("<HHHHHhh", 0, 1, 1, 0, 0, 0, -1)
     lumps: list[tuple[str, bytes]] = [
-        ("E1M1", b""), ("THINGS", struct.pack("<hhHHH", 32, 32, 0, 1, 7)),
-        ("VERTEXES", vertex), ("LINEDEFS", linedef),
-        ("SIDEDEFS", sidedef), ("SECTORS", sector),
+        ("E1M1", b""),
+        ("THINGS", struct.pack("<hhHHH", 32, 32, 0, 1, 7)),
+        ("VERTEXES", vertex),
+        ("LINEDEFS", linedef),
+        ("SIDEDEFS", sidedef),
+        ("SECTORS", sector),
     ]
     lump_bytes = b"".join(d for _, d in lumps)
     dir_off = 12 + len(lump_bytes)

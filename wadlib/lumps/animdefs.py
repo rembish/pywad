@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Literal
+from typing import Any, Literal
 
 from .base import BaseLump
 
@@ -27,7 +27,7 @@ class AnimDef:
         return any(f.max_tics != f.min_tics for f in self.frames)
 
 
-class AnimDefsLump(BaseLump):
+class AnimDefsLump(BaseLump[Any]):
     """ANIMDEFS lump: flat and texture animation sequences."""
 
     @cached_property

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 from .base import BaseLump
 
@@ -16,7 +17,7 @@ _PAR2_RE = re.compile(r"^\s*par\s+(\d+)\s+(\d+)\s*$", re.IGNORECASE)
 _SECTION_RE = re.compile(r"^\s*\[(\w+)\]")
 
 
-class DehackedLump(BaseLump):
+class DehackedLump(BaseLump[Any]):
     """DEHACKED lump: DeHackEd patch embedded in a WAD.
 
     Currently exposes only PAR times.  The full DEHACKED format covers

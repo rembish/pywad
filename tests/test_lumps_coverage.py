@@ -616,7 +616,6 @@ def test_midi_lump_save(tmp_path: Path) -> None:
 
 def test_ogg_lump_save(tmp_path: Path) -> None:
     from wadlib.lumps.ogg import OggLump
-    from wadlib.wad import WadFile
 
     # Build a minimal WAD with a fake OGG lump (just needs OggS magic).
     ogg_bytes = b"OggS" + b"\x00" * 60
@@ -631,7 +630,6 @@ def test_ogg_lump_save(tmp_path: Path) -> None:
 
 def test_mp3_lump_save(tmp_path: Path) -> None:
     from wadlib.lumps.ogg import Mp3Lump
-    from wadlib.wad import WadFile
 
     mp3_bytes = b"ID3" + b"\x00" * 60
     wad_bytes = _build_wad("IWAD", [("D_FAKE", mp3_bytes)])
@@ -693,22 +691,21 @@ def test_list_animations_json_output(tmp_path: Path, capsys: pytest.CaptureFixtu
     )
     wad_bytes = _build_wad("IWAD", [("ANIMDEFS", animdefs_text)])
     with _wad_from_bytes(wad_bytes) as w:
-        with _wad_from_bytes(wad_bytes) as w2:
-            import json
+        import json
 
-            ns = argparse.Namespace(wad=None, pwads=[], deh=None, json=True)
-            # Monkey-patch open_wad context to use our WadFile
-            from unittest.mock import patch as mpatch
+        ns = argparse.Namespace(wad=None, pwads=[], deh=None, json=True)
+        # Monkey-patch open_wad context to use our WadFile
+        from unittest.mock import patch as mpatch
 
-            with mpatch("wadlib.cli.commands.list_animations.open_wad") as mock_ow:
-                mock_ow.return_value.__enter__ = lambda s: w
-                mock_ow.return_value.__exit__ = lambda s, *a: False
-                list_animations.run(ns)
-            out = capsys.readouterr().out
-            data = json.loads(out)
-            assert isinstance(data, list)
-            assert len(data) >= 1
-            assert "name" in data[0]
+        with mpatch("wadlib.cli.commands.list_animations.open_wad") as mock_ow:
+            mock_ow.return_value.__enter__ = lambda s: w
+            mock_ow.return_value.__exit__ = lambda s, *a: False
+            list_animations.run(ns)
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        assert "name" in data[0]
 
 
 def test_list_animations_text_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -717,11 +714,7 @@ def test_list_animations_text_output(tmp_path: Path, capsys: pytest.CaptureFixtu
 
     from wadlib.cli.commands import list_animations
 
-    animdefs_text = (
-        b"flat NUKAGE1\n"
-        b"  pic 1 tics 8\n"
-        b"  pic 2 rand 4 12\n"
-    )
+    animdefs_text = b"flat NUKAGE1\n  pic 1 tics 8\n  pic 2 rand 4 12\n"
     wad_bytes = _build_wad("IWAD", [("ANIMDEFS", animdefs_text)])
     with _wad_from_bytes(wad_bytes) as w:
         ns = argparse.Namespace(wad=None, pwads=[], deh=None, json=False)
@@ -738,7 +731,6 @@ def test_list_animations_text_output(tmp_path: Path, capsys: pytest.CaptureFixtu
 def test_list_animations_no_animdefs(capsys: pytest.CaptureFixture[str]) -> None:
     """list animations exits 1 when no ANIMDEFS lump present."""
     import argparse
-    import sys
 
     from wadlib.cli.commands import list_animations
 
@@ -769,18 +761,18 @@ def test_compositor_compose_all_minimal(tmp_path: Path) -> None:
     # Build PNAMES: 1 patch named "FAKEPAT1"
     pnames_data = struct.pack("<I", 1) + b"FAKEPAT1"
 
-    # Build TEXTURE1: 1 texture "MYTEX" (64×64) using patch_index=0
+    # Build TEXTURE1: 1 texture "MYTEX" (64x64) using patch_index=0
     # Also include a patch with out-of-range index=99 to cover line 60
     TEX_HDR_FMT = "<8sIHHIH"
     PATCH_FMT = "<hhHhh"
     tex_hdr = struct.pack(TEX_HDR_FMT, b"MYTEX\x00\x00\x00", 0, 64, 64, 0, 2)
-    patch1 = struct.pack(PATCH_FMT, 0, 0, 0, 0, 0)   # valid index 0
+    patch1 = struct.pack(PATCH_FMT, 0, 0, 0, 0, 0)  # valid index 0
     patch2 = struct.pack(PATCH_FMT, 0, 0, 99, 0, 0)  # out-of-range index 99 → covers line 60
     tex_def = tex_hdr + patch1 + patch2
     # TEXTURE1 layout: count(4) + offset(4) + tex_def
     tex1_data = struct.pack("<I", 1) + struct.pack("<I", 8) + tex_def
 
-    # Minimal PLAYPAL: 1 palette = 256 × 3 bytes of zeros
+    # Minimal PLAYPAL: 1 palette = 256 x 3 bytes of zeros
     playpal_data = b"\x00" * (256 * 3)
 
     # No picture lump named FAKEPAT1 → wad.get_picture() returns None → covers line 64
@@ -802,12 +794,11 @@ def test_compositor_compose_all_minimal(tmp_path: Path) -> None:
 
 def test_renderer_show(tmp_path: Path) -> None:
     """show() should call im.show() without crashing (mock PIL show)."""
-    from unittest.mock import patch
-    from wadlib.lumps.map import Doom2MapEntry
-    from wadlib.renderer import MapRenderer
-
     # Re-use the minimal IWAD helper to get a map entry
     import struct
+    from unittest.mock import patch
+
+    from wadlib.renderer import MapRenderer
 
     vertex_data = struct.pack("<hh", 0, 0) + struct.pack("<hh", 64, 0)
     linedef_data = struct.pack("<HHHHHhh", 0, 1, 1, 0, 0, 0, -1)

@@ -5,7 +5,7 @@ from typing import ClassVar
 from .base import BaseLump
 
 DOOM_FORMAT = "<hhHHH"
-# TODO How to understand that we are reading Hexen Wad?
+# Hexen detection happens at map-assembly time in wad.py via BEHAVIOR lump presence.
 
 
 class Flags(IntFlag):
@@ -31,6 +31,6 @@ class Thing:
         self.flags = Flags(self.flags)
 
 
-class Things(BaseLump):
+class Things(BaseLump[Thing]):
     _row_format: ClassVar[str] = DOOM_FORMAT
     _row_item: ClassVar[type[Thing]] = Thing

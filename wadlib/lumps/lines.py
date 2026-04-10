@@ -15,6 +15,6 @@ class LineDefinition:
     left_sidedef: int
 
 
-class Lines(BaseLump):
+class Lines(BaseLump[LineDefinition]):
     _row_format: ClassVar[str] = "<HHHHHhh"
     _row_item: ClassVar[type[LineDefinition]] = LineDefinition

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from .base import BaseLump
 
 # Magic bytes for content-based detection
@@ -13,7 +15,7 @@ MP3_SYNC_MAGIC3 = b"\xff\xf2"
 MIDI_MAGIC = b"MThd"
 
 
-class OggLump(BaseLump):
+class OggLump(BaseLump[Any]):
     """A WAD lump containing OGG Vorbis audio."""
 
     def save(self, path: str) -> None:
@@ -22,7 +24,7 @@ class OggLump(BaseLump):
             f.write(self.raw())
 
 
-class Mp3Lump(BaseLump):
+class Mp3Lump(BaseLump[Any]):
     """A WAD lump containing MP3 audio."""
 
     def save(self, path: str) -> None:
@@ -31,7 +33,7 @@ class Mp3Lump(BaseLump):
             f.write(self.raw())
 
 
-class MidiLump(BaseLump):
+class MidiLump(BaseLump[Any]):
     """A WAD lump containing a raw MIDI file (Standard MIDI Format)."""
 
     def save(self, path: str) -> None:

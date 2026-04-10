@@ -7,6 +7,8 @@ FF_START/FF_END for PWAD patches) marker lumps in the directory.
 
 from __future__ import annotations
 
+from typing import Any
+
 from PIL import Image
 
 from ..lumps.base import BaseLump
@@ -16,7 +18,7 @@ FLAT_SIZE = 64
 FLAT_BYTES = FLAT_SIZE * FLAT_SIZE
 
 
-class Flat(BaseLump):
+class Flat(BaseLump[Any]):
     """A single 64x64 floor/ceiling texture."""
 
     def decode(self, palette: Palette) -> Image.Image:

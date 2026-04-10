@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import Any
 
 from .base import BaseLump
 
@@ -26,7 +27,7 @@ class SndSeq:
     commands: list[SndSeqCommand] = field(default_factory=list)
 
 
-class SndSeqLump(BaseLump):
+class SndSeqLump(BaseLump[Any]):
     """SNDSEQ lump: scripted ambient/door/platform sound sequences."""
 
     @cached_property
@@ -65,6 +66,6 @@ class SndSeqLump(BaseLump):
 
         return result
 
-    def get(self, name: str) -> SndSeq | None:  # type: ignore[override]  # pylint: disable=arguments-differ
+    def get(self, name: str) -> SndSeq | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
         """Return the sequence with the given name, or None."""
         return next((s for s in self.sequences if s.name.lower() == name.lower()), None)

@@ -33,7 +33,7 @@ _HEADER_FMT = "<HHhh"
 _HEADER_SIZE = calcsize(_HEADER_FMT)
 
 
-class Picture(BaseLump):
+class Picture(BaseLump[Any]):
     """A single Doom-format picture (patch, sprite, or weapon graphic)."""
 
     @cached_property
