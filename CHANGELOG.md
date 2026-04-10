@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.37] - 2026-04-10
+
+### Added
+
+- `LanguageLump` (`wadlib.lumps.language`) — parses ZDoom LANGUAGE lumps; `.strings` returns a `dict[str, str]` of all English-section entries keyed by uppercase ID; `.lookup(key)` resolves a single key with a fallback default
+- `WadFile.language` cached property (PWAD-aware)
+- `ZMapInfoEntry.title_lookup` — stores the LANGUAGE key when a map uses `lookup "KEY"` title syntax instead of a literal string
+- `ZMapInfoEntry.par` — PAR time (seconds) parsed from the `par = N` block property
+- `ZMapInfoEntry.resolved_title(language)` — convenience method that resolves lookup titles via a language strings dict
+- `wadcli list maps` now resolves `lookup "KEY"` map titles via the LANGUAGE lump (e.g. BTSX E1 shows real track names instead of `lookup "HUSTR_N"`)
+
+### Fixed
+
+- ZMAPINFO title parsing: `lookup "KEY"` syntax no longer leaks into the displayed title
+
 ## [0.0.36] - 2026-04-10
 
 ### Added

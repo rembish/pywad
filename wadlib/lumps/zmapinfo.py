@@ -8,6 +8,8 @@ from functools import cached_property
 from .base import BaseLump
 
 _MAP_RE = re.compile(r"^map\s+(\S+)\s*(.*)", re.IGNORECASE)
+# lookup "KEY" title syntax
+_LOOKUP_RE = re.compile(r'^lookup\s+"([^"]+)"', re.IGNORECASE)
 _BLOCK_START_RE = re.compile(r"^(gameinfo|episode|defaultmap|cluster|map)\b", re.IGNORECASE)
 
 
@@ -31,7 +33,8 @@ class ZMapInfoEntry:
     """A single map block from ZMAPINFO."""
 
     map_name: str           # e.g. "E5M1", "MAP01"
-    title: str              # display title (may start with $ for a language ref)
+    title: str              # display title (may be empty if resolved via lookup)
+    title_lookup: str | None = None  # LANGUAGE key when title uses lookup "KEY"
     levelnum: int | None = None
     next: str | None = None
     secretnext: str | None = None
@@ -39,6 +42,13 @@ class ZMapInfoEntry:
     music: str | None = None
     titlepatch: str | None = None
     cluster: int | None = None
+    par: int | None = None  # par time in seconds
+
+    def resolved_title(self, language: dict[str, str] | None = None) -> str:
+        """Return the display title, resolving lookup keys via *language* if provided."""
+        if self.title_lookup and language:
+            return language.get(self.title_lookup.upper(), self.title)
+        return self.title
 
 
 class ZMapInfoLump(BaseLump):
@@ -58,12 +68,25 @@ class ZMapInfoLump(BaseLump):
                 continue
 
             map_name = m.group(1).upper()
-            raw_title = m.group(2).strip().strip('"').strip("'")
-            entry = ZMapInfoEntry(map_name=map_name, title=raw_title)
+            raw_after = m.group(2).strip()
 
-            # Consume the { ... } block
-            # The opening brace may be on the same line or the next
-            block_text = raw_title  # might contain '{' if title is empty
+            # Detect  lookup "KEY"  vs  "Direct title"  vs  bare title
+            lookup_m = _LOOKUP_RE.match(raw_after)
+            if lookup_m:
+                title_lookup: str | None = lookup_m.group(1)
+                raw_title = ""
+            else:
+                title_lookup = None
+                raw_title = raw_after.strip('"').strip("'")
+
+            entry = ZMapInfoEntry(
+                map_name=map_name,
+                title=raw_title,
+                title_lookup=title_lookup,
+            )
+
+            # Consume the { ... } block (opening brace may follow on same line or next)
+            block_text = raw_after
             if "{" not in block_text:
                 for inner in lines:
                     block_text = inner
@@ -103,6 +126,9 @@ class ZMapInfoLump(BaseLump):
                 elif key == "cluster":
                     with __import__("contextlib").suppress(ValueError):
                         entry.cluster = int(val)
+                elif key == "par":
+                    with __import__("contextlib").suppress(ValueError):
+                        entry.par = int(val)
 
             entries.append(entry)
 

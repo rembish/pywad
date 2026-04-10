@@ -80,6 +80,7 @@ def run(args: argparse.Namespace) -> None:
         mapinfo = wad.mapinfo
         zmapinfo = wad.zmapinfo
         music = wad.music
+        language = wad.language.strings if wad.language is not None else None
 
         has_title = mapinfo is not None or zmapinfo is not None
         has_music = bool(music)
@@ -106,7 +107,12 @@ def run(args: argparse.Namespace) -> None:
             row = f"{map_name:<10}"
 
             if has_title:
-                title = getattr(mi_entry, "title", "") or ""
+                raw_title: str = getattr(mi_entry, "title", "") or ""
+                lookup_key: str | None = getattr(mi_entry, "title_lookup", None)
+                if lookup_key and language:
+                    title = language.get(lookup_key.upper(), raw_title)
+                else:
+                    title = raw_title
                 row += f"  {title:<28}"
 
             if has_music:

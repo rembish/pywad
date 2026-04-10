@@ -22,6 +22,7 @@ from .lumps.dehacked import DehackedFile, DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
+from .lumps.language import LanguageLump
 from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.mapinfo import MapInfoLump
@@ -353,6 +354,12 @@ class WadFile:
         """Return the ZMAPINFO lump (ZDoom format, PWAD-aware), or None if not present."""
         entry = self._find_lump("ZMAPINFO")
         return ZMapInfoLump(entry) if entry else None
+
+    @cached_property
+    def language(self) -> LanguageLump | None:
+        """Return the LANGUAGE lump (ZDoom localisation, PWAD-aware), or None if not present."""
+        entry = self._find_lump("LANGUAGE")
+        return LanguageLump(entry) if entry else None
 
     @cached_property
     def animdefs(self) -> AnimDefsLump | None:
