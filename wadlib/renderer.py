@@ -22,6 +22,7 @@ from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
 from .doom_types import ThingCategory, get_category
+from .lumps.colormap import ColormapLump
 from .lumps.map import BaseMapEntry
 from .lumps.nodes import SSECTOR_FLAG
 from .lumps.playpal import Palette
@@ -166,10 +167,13 @@ class MapRenderer:
             self.im = Image.new("RGB", (img_w, img_h), color=(20, 20, 20))
         self.draw = ImageDraw(self.im)
 
-        # Resolve palette once
+        # Resolve palette and colormap once
         self._palette: Palette | None = None
+        self._colormap: ColormapLump | None = None
         if wad is not None and wad.playpal is not None:
             self._palette = wad.playpal.get_palette(self._opts.palette_index)
+        if wad is not None:
+            self._colormap = wad.colormap
 
     # ------------------------------------------------------------------
     # Coordinate helpers
@@ -194,14 +198,23 @@ class MapRenderer:
     # bounding polygon at each partition plane (Sutherland-Hodgman).  At
     # each leaf (subsector) the clipped polygon IS the full convex region.
 
-    def _build_flat_tile(self, flat_name: str) -> Image.Image | None:
-        """Decode and scale a flat for tiling."""
+    def _shaded_palette(self, light_level: int) -> Palette:
+        """Return a palette remapped through the colormap for *light_level*."""
+        assert self._palette is not None
+        if self._colormap is None:
+            return self._palette
+        colormap_idx = max(0, min(31, (255 - light_level) // 8))
+        cmap = self._colormap.get(colormap_idx)
+        return [self._palette[cmap[i]] for i in range(256)]
+
+    def _build_flat_tile(self, flat_name: str, light_level: int) -> Image.Image | None:
+        """Decode and scale a flat for tiling, shaded by *light_level*."""
         if self._wad is None or self._palette is None:
             return None
         flat = self._wad.get_flat(flat_name)
         if flat is None:
             return None
-        img = flat.decode(self._palette)
+        img = flat.decode(self._shaded_palette(light_level))
         tile_px = max(1, int(64 * self._scale))
         return img.resize((tile_px, tile_px), Image.Resampling.NEAREST)
 
@@ -342,10 +355,10 @@ class MapRenderer:
         self,
         ssector_idx: int,
         ssector: Any,
-        tile_cache: dict[str, Image.Image | None],
-        tiled_canvas_cache: dict[str, Image.Image],
+        tile_cache: dict[tuple[str, int], Image.Image | None],
+        tiled_canvas_cache: dict[tuple[str, int], Image.Image],
     ) -> None:
-        """Render the floor flat for one subsector."""
+        """Render the floor flat for one subsector, shaded by sector light level."""
         m = self.level
         sector_idx = self._sector_from_ssector(ssector)
         if sector_idx is None:
@@ -356,14 +369,16 @@ class MapRenderer:
         flat_name = sector.floor_texture.strip("\x00").rstrip().upper()
         if not flat_name or flat_name == "-":
             return
-        if flat_name not in tile_cache:
-            tile_cache[flat_name] = self._build_flat_tile(flat_name)
-        tile = tile_cache[flat_name]
+        light_level = getattr(sector, "light_level", 255)
+        key = (flat_name, light_level)
+        if key not in tile_cache:
+            tile_cache[key] = self._build_flat_tile(flat_name, light_level)
+        tile = tile_cache[key]
         if tile is None:
             return
-        if flat_name not in tiled_canvas_cache:
-            tiled_canvas_cache[flat_name] = self._tile_canvas(tile)
-        tiled = tiled_canvas_cache[flat_name]
+        if key not in tiled_canvas_cache:
+            tiled_canvas_cache[key] = self._tile_canvas(tile)
+        tiled = tiled_canvas_cache[key]
         points = self._ssector_polygon(ssector_idx, ssector)
         if points is None:
             return
@@ -377,8 +392,8 @@ class MapRenderer:
             return
         if self._wad is None or self._palette is None:
             return
-        tile_cache: dict[str, Image.Image | None] = {}
-        tiled_canvas_cache: dict[str, Image.Image] = {}
+        tile_cache: dict[tuple[str, int], Image.Image | None] = {}
+        tiled_canvas_cache: dict[tuple[str, int], Image.Image] = {}
         for i, ssector in enumerate(m.ssectors):
             self._fill_ssector_polygon(i, ssector, tile_cache, tiled_canvas_cache)
 
