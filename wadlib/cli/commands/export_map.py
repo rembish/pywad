@@ -49,6 +49,11 @@ def configure(p: argparse.ArgumentParser) -> None:
         action="store_true",
         help="draw WAD sprites at thing positions instead of category shapes",
     )
+    p.add_argument(
+        "--multiplayer",
+        action="store_true",
+        help="include multiplayer-only things (NOT_SINGLEPLAYER flag, extra player starts)",
+    )
     p.set_defaults(func=run)
 
 
@@ -71,6 +76,7 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-branches
         thing_scale=args.thing_scale,
         alpha=args.alpha,
         show_sprites=args.sprites,
+        multiplayer=args.multiplayer,
     )
 
     if args.all:

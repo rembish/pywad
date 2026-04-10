@@ -124,6 +124,11 @@ class RenderOptions:
     Falls back to the category shape if the sprite is not found.
     Requires a WadFile with PLAYPAL to be passed to MapRenderer."""
 
+    multiplayer: bool = False
+    """Include multiplayer-only things (NOT_SINGLEPLAYER flag, types 2-4 player
+    starts, deathmatch starts).  When False (default) those things are omitted,
+    matching what a solo player sees in-game."""
+
 
 class MapRenderer:
     """Renders a parsed map to a PIL RGB image.
@@ -565,10 +570,17 @@ class MapRenderer:
             # UNKNOWN — single pixel dot
             self._draw.point((cx, cy), fill=colour)
 
+    _FLAG_NOT_SINGLEPLAYER = 0x0010
+
     def _draw_things(self) -> None:
         if not self.level.things:
             return
         for thing in self.level.things:
+            if (
+                not self._opts.multiplayer
+                and getattr(thing, "flags", 0) & self._FLAG_NOT_SINGLEPLAYER
+            ):
+                continue
             self._draw_thing(thing)
 
     # ------------------------------------------------------------------

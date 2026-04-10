@@ -368,6 +368,7 @@ def test_export_map(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
             thing_scale=1.0,
             alpha=False,
             sprites=False,
+            multiplayer=False,
         )
     )
     assert Path(out).exists()
@@ -390,6 +391,7 @@ def test_export_map_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]
                 thing_scale=1.0,
                 alpha=False,
                 sprites=False,
+                multiplayer=False,
             )
         )
     assert exc.value.code == 1
@@ -410,6 +412,7 @@ def test_export_map_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
             thing_scale=1.0,
             alpha=False,
             sprites=False,
+            multiplayer=False,
         )
     )
     pngs = list(tmp_path.glob("*.png"))
@@ -434,6 +437,7 @@ def test_export_map_all_no_map_arg(tmp_path: Path) -> None:
             thing_scale=1.0,
             alpha=False,
             sprites=False,
+            multiplayer=False,
         )
     )
     assert any(tmp_path.glob("MAP*.png"))
@@ -456,6 +460,7 @@ def test_export_map_no_name_no_all(tmp_path: Path, capsys: pytest.CaptureFixture
                 thing_scale=1.0,
                 alpha=False,
                 sprites=False,
+                multiplayer=False,
             )
         )
     assert exc.value.code == 1
@@ -903,6 +908,7 @@ def test_export_map_with_floors(tmp_path: Path, capsys: pytest.CaptureFixture[st
             thing_scale=1.0,
             alpha=False,
             sprites=False,
+            multiplayer=False,
         )
     )
     assert Path(out).exists()
@@ -925,6 +931,7 @@ def test_export_map_alpha(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
             thing_scale=1.0,
             alpha=True,
             sprites=False,
+            multiplayer=False,
         )
     )
 
@@ -946,6 +953,7 @@ def test_export_map_sprites(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
             thing_scale=1.0,
             alpha=False,
             sprites=True,
+            multiplayer=False,
         )
     )
     assert Path(out).exists()
