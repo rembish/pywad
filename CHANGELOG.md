@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.54] - 2026-04-10
+
+### Added
+
+- `test_cli_direct.py` — direct-call CLI tests (no subprocess) covering every
+  `run()` function in all `wadcli` command modules; brings CLI coverage from
+  ~10% to >80%
+- `test_lumps_coverage.py` — targeted tests for previously uncovered library
+  code: `language.py`, `sndseq.py`, `zmapinfo.py`, `dehacked.py`, `renderer.py`
+  floor paths, `compositor.py` edge cases, and `wad.py` None-path accessors
+- `--cov-fail-under=70` enforced in `pyproject.toml` — CI now fails below 70%
+
+### Changed
+
+- Overall test coverage raised from 55% to 85%
+- Slow floor-rendering and compose-all tests in the new files marked
+  `@pytest.mark.slow` so the default fast suite stays under 15 s
+
 ## [0.0.53] - 2026-04-10
 
 ### Added
