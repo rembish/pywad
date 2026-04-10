@@ -360,6 +360,7 @@ def test_export_map(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         _ns(
             map="MAP01",
             output=out,
+            all=False,
             scale=0.0,
             no_things=False,
             floors=False,
@@ -380,6 +381,70 @@ def test_export_map_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]
             _ns(
                 map="NOTAMAP",
                 output=str(tmp_path / "nope.png"),
+                all=False,
+                scale=0.0,
+                no_things=False,
+                floors=False,
+                palette=0,
+                thing_scale=1.0,
+                alpha=False,
+            )
+        )
+    assert exc.value.code == 1
+
+
+def test_export_map_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from wadlib.cli.commands import export_map
+
+    export_map.run(
+        _ns(
+            map=None,
+            output=str(tmp_path),
+            all=True,
+            scale=0.0,
+            no_things=False,
+            floors=False,
+            palette=0,
+            thing_scale=1.0,
+            alpha=False,
+        )
+    )
+    pngs = list(tmp_path.glob("*.png"))
+    assert len(pngs) > 0
+    out = capsys.readouterr().out
+    assert "Exported" in out
+
+
+def test_export_map_all_no_map_arg(tmp_path: Path) -> None:
+    """--all with no positional args uses cwd-equivalent (output arg)."""
+    from wadlib.cli.commands import export_map
+
+    export_map.run(
+        _ns(
+            map=None,
+            output=str(tmp_path),
+            all=True,
+            scale=0.0,
+            no_things=False,
+            floors=False,
+            palette=0,
+            thing_scale=1.0,
+            alpha=False,
+        )
+    )
+    assert any(tmp_path.glob("MAP*.png"))
+
+
+def test_export_map_no_name_no_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Omitting map name without --all exits 1."""
+    from wadlib.cli.commands import export_map
+
+    with pytest.raises(SystemExit) as exc:
+        export_map.run(
+            _ns(
+                map=None,
+                output=None,
+                all=False,
                 scale=0.0,
                 no_things=False,
                 floors=False,
@@ -806,6 +871,7 @@ def test_export_map_with_floors(tmp_path: Path, capsys: pytest.CaptureFixture[st
         _ns(
             map="MAP01",
             output=out,
+            all=False,
             scale=0.05,  # tiny scale = fast
             no_things=True,
             floors=True,
@@ -826,6 +892,7 @@ def test_export_map_alpha(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
         _ns(
             map="MAP01",
             output=out,
+            all=False,
             scale=0.05,
             no_things=False,
             floors=False,

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.59] - 2026-04-10
+
+### Added
+
+- `wadcli export map --all [DIR]` — batch-export every map in a WAD to PNG
+  files in a directory (default: `./`).  The positional `map` argument is now
+  optional; omitting it without `--all` exits with a clear error message.
+
 ## [0.0.57] - 2026-04-10
 
 ### Changed
