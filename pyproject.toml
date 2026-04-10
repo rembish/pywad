@@ -90,7 +90,10 @@ max-line-length = 100
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--tb=short -q --cov=wadlib --cov-report=term-missing"
+addopts = "--tb=short -q --cov=wadlib --cov-report=term-missing -m 'not slow'"
+markers = [
+    "slow: marks tests as slow (deselected by default; run with -m slow or -m '')",
+]
 
 [tool.coverage.run]
 branch = true

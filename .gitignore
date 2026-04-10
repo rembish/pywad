@@ -128,8 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Testing WADs to be excluded
-wads/
+# Testing WADs — proprietary files excluded; freedoom (GPL) committed
+wads/*
+!wads/.gitkeep
+!wads/freedoom1.wad
+!wads/freedoom2.wad
 
 # OMC (oh-my-claudecode) orchestration state
 .omc/

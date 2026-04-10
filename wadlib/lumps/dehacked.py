@@ -1,4 +1,5 @@
 """DEHACKED lump parser — extracts PAR times from DeHackEd patches."""
+
 from __future__ import annotations
 
 import re

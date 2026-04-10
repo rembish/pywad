@@ -1,4 +1,5 @@
 """MAPINFO lump parser (Hexen format)."""
+
 from __future__ import annotations
 
 import re

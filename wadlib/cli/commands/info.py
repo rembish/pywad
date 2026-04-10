@@ -58,6 +58,8 @@ def run(args: argparse.Namespace) -> None:
             par_count = len(deh.par_times)
             ver = deh.doom_version
             ver_str = f" (Doom v{ver})" if ver else ""
-            print(f"DEHACKED: yes{ver_str}{', ' + str(par_count) + ' par times' if par_count else ''}")
+            print(
+                f"DEHACKED: yes{ver_str}{', ' + str(par_count) + ' par times' if par_count else ''}"
+            )
         else:
             print("DEHACKED: none")

@@ -1,4 +1,5 @@
 """Tests for AnimDefsLump — ANIMDEFS lump parser."""
+
 from __future__ import annotations
 
 from wadlib.lumps.animdefs import AnimDef, AnimDefsLump
@@ -48,9 +49,7 @@ def test_all_animations_have_frames(hexen_wad: WadFile) -> None:
 
 def test_x_001_flat_fixed_timing(hexen_wad: WadFile) -> None:
     assert hexen_wad.animdefs is not None
-    flat = next(
-        (a for a in hexen_wad.animdefs.flats if a.name.lower() == "x_001"), None
-    )
+    flat = next((a for a in hexen_wad.animdefs.flats if a.name.lower() == "x_001"), None)
     assert flat is not None, "x_001 flat not found"
     assert len(flat.frames) == 4
     for frame in flat.frames:
@@ -60,9 +59,7 @@ def test_x_001_flat_fixed_timing(hexen_wad: WadFile) -> None:
 
 def test_x_005_flat_random_timing(hexen_wad: WadFile) -> None:
     assert hexen_wad.animdefs is not None
-    flat = next(
-        (a for a in hexen_wad.animdefs.flats if a.name.lower() == "x_005"), None
-    )
+    flat = next((a for a in hexen_wad.animdefs.flats if a.name.lower() == "x_005"), None)
     assert flat is not None, "x_005 flat not found"
     assert flat.is_random
 

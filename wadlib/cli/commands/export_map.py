@@ -8,7 +8,9 @@ from .._wad_args import add_wad_args, open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p, pwad_help="PWAD to layer on top of base WAD (e.g. 'DOOM2.WAD --pwad SIGIL_II.WAD')")
+    add_wad_args(
+        p, pwad_help="PWAD to layer on top of base WAD (e.g. 'DOOM2.WAD --pwad SIGIL_II.WAD')"
+    )
     p.add_argument("map", help="map name, e.g. E1M1 or MAP01")
     p.add_argument("output", help="output PNG path")
     p.add_argument(

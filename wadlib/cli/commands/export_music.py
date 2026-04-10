@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from ...lumps.mus import Mus
-from ...lumps.ogg import Mp3Lump, OggLump
+from ...lumps.ogg import MidiLump, Mp3Lump, OggLump
 from .._wad_args import add_wad_args, open_wad
 
 
@@ -35,6 +35,9 @@ def run(args: argparse.Namespace) -> None:
         if isinstance(lump, Mus):
             data = lump.raw() if args.raw else lump.to_midi()
             fmt = "MUS" if args.raw else "MIDI"
+        elif isinstance(lump, MidiLump):
+            data = lump.raw()
+            fmt = "MIDI"
         elif isinstance(lump, OggLump):
             data = lump.raw()
             fmt = "OGG"

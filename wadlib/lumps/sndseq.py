@@ -1,4 +1,5 @@
 """SNDSEQ lump parser (Hexen) — named sound sequence scripts."""
+
 from __future__ import annotations
 
 import contextlib
@@ -12,9 +13,9 @@ from .base import BaseLump
 class SndSeqCommand:
     """A single command line within a sound sequence."""
 
-    command: str          # e.g. "playrepeat", "playuntildone", "stopsound"
-    sound: str | None     # logical sound name argument, if any
-    tics: int | None      # optional numeric argument (e.g. playtime delay)
+    command: str  # e.g. "playrepeat", "playuntildone", "stopsound"
+    sound: str | None  # logical sound name argument, if any
+    tics: int | None  # optional numeric argument (e.g. playtime delay)
 
 
 @dataclass

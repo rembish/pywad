@@ -1,4 +1,5 @@
 """SNDINFO lump parser — maps logical sound names to WAD lump names."""
+
 from __future__ import annotations
 
 from .base import BaseLump

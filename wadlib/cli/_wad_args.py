@@ -1,4 +1,5 @@
 """Shared helpers for WAD path CLI arguments."""
+
 from __future__ import annotations
 
 import argparse
@@ -6,7 +7,9 @@ import argparse
 from ..wad import WadFile
 
 
-def add_wad_args(p: argparse.ArgumentParser, *, pwad_help: str = "additional PWAD to layer on top") -> None:
+def add_wad_args(
+    p: argparse.ArgumentParser, *, pwad_help: str = "additional PWAD to layer on top"
+) -> None:
     """Add the standard ``wad`` positional and optional ``--pwad``/``--deh`` arguments."""
     p.add_argument("wad", help="path to base WAD file (IWAD or PWAD)")
     p.add_argument(

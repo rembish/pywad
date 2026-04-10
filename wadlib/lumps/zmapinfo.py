@@ -1,4 +1,5 @@
 """ZMAPINFO lump parser (ZDoom format) — brace-delimited map metadata."""
+
 from __future__ import annotations
 
 import re
@@ -32,8 +33,8 @@ def _unquote(s: str) -> str:
 class ZMapInfoEntry:
     """A single map block from ZMAPINFO."""
 
-    map_name: str           # e.g. "E5M1", "MAP01"
-    title: str              # display title (may be empty if resolved via lookup)
+    map_name: str  # e.g. "E5M1", "MAP01"
+    title: str  # display title (may be empty if resolved via lookup)
     title_lookup: str | None = None  # LANGUAGE key when title uses lookup "KEY"
     levelnum: int | None = None
     next: str | None = None

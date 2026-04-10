@@ -1,4 +1,5 @@
 """LANGUAGE lump parser — ZDoom localisation string table."""
+
 from __future__ import annotations
 
 import re

@@ -1,4 +1,5 @@
 """wadcli list animations — list ANIMDEFS flat/texture sequences."""
+
 import argparse
 import sys
 

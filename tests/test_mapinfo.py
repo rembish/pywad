@@ -1,4 +1,5 @@
 """Tests for the MAPINFO lump parser."""
+
 from __future__ import annotations
 
 from wadlib.lumps.mapinfo import MapInfoEntry, MapInfoLump

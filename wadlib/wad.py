@@ -30,11 +30,13 @@ from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
 from .lumps.mus import _MUS_MAGIC, Mus
 from .lumps.nodes import Nodes
 from .lumps.ogg import (
+    MIDI_MAGIC,
     MP3_ID3_MAGIC,
     MP3_SYNC_MAGIC,
     MP3_SYNC_MAGIC2,
     MP3_SYNC_MAGIC3,
     OGG_MAGIC,
+    MidiLump,
     Mp3Lump,
     OggLump,
 )
@@ -281,12 +283,12 @@ class WadFile:
         return [BaseLump(e) for wad in self._all_wads for e in wad.directory if e.name == upper]
 
     @cached_property
-    def music(self) -> dict[str, Mus | OggLump | Mp3Lump]:
+    def music(self) -> dict[str, Mus | MidiLump | OggLump | Mp3Lump]:
         """Return all music lumps by name (PWAD-aware), detected by magic bytes.
 
-        Supports MUS (Doom native), OGG Vorbis, and MP3 formats.
+        Supports MUS (Doom native), MIDI (Standard MIDI Format), OGG Vorbis, and MP3.
         """
-        result: dict[str, Mus | OggLump | Mp3Lump] = {}
+        result: dict[str, Mus | MidiLump | OggLump | Mp3Lump] = {}
         for wad in reversed(self._all_wads):
             for entry in wad.directory:
                 if entry.size < 4:
@@ -297,6 +299,8 @@ class WadFile:
                     continue
                 if magic == _MUS_MAGIC and entry.size >= _MUS_MIN_SIZE:
                     result[entry.name] = Mus(entry)
+                elif magic[:4] == MIDI_MAGIC:
+                    result[entry.name] = MidiLump(entry)
                 elif magic[:4] == OGG_MAGIC:
                     result[entry.name] = OggLump(entry)
                 elif magic[:3] == MP3_ID3_MAGIC or magic[:2] in (
@@ -307,8 +311,8 @@ class WadFile:
                     result[entry.name] = Mp3Lump(entry)
         return result
 
-    def get_music(self, name: str) -> Mus | OggLump | Mp3Lump | None:
-        """Return a named music lump (MUS/OGG/MP3), or None if not found."""
+    def get_music(self, name: str) -> Mus | MidiLump | OggLump | Mp3Lump | None:
+        """Return a named music lump (MUS/MIDI/OGG/MP3), or None if not found."""
         return self.music.get(name.upper())
 
     @cached_property

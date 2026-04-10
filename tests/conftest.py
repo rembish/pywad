@@ -15,6 +15,8 @@ DOOM1_WAD = WADS_DIR / "DOOM.WAD"
 DOOM2_WAD = WADS_DIR / "DOOM2.WAD"
 HERETIC_WAD = WADS_DIR / "HERETIC.WAD"
 HEXEN_WAD = WADS_DIR / "HEXEN.WAD"
+FREEDOOM1_WAD = WADS_DIR / "freedoom1.wad"
+FREEDOOM2_WAD = WADS_DIR / "freedoom2.wad"
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +97,24 @@ def hexen_wad() -> Generator[WadFile, None, None]:
     if not HEXEN_WAD.exists():
         pytest.skip("HEXEN.WAD not found in wads/")
     with WadFile(str(HEXEN_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def freedoom1_wad() -> Generator[WadFile, None, None]:
+    """Open freedoom1.wad for the entire test session (GPL, committed to repo)."""
+    if not FREEDOOM1_WAD.exists():
+        pytest.skip("freedoom1.wad not found in wads/")
+    with WadFile(str(FREEDOOM1_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def freedoom2_wad() -> Generator[WadFile, None, None]:
+    """Open freedoom2.wad for the entire test session (GPL, committed to repo)."""
+    if not FREEDOOM2_WAD.exists():
+        pytest.skip("freedoom2.wad not found in wads/")
+    with WadFile(str(FREEDOOM2_WAD)) as w:
         yield w
 
 

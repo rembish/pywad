@@ -1,4 +1,5 @@
 """Tests for the SNDINFO lump parser."""
+
 from __future__ import annotations
 
 from wadlib.lumps.sndinfo import SndInfo

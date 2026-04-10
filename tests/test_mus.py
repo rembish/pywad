@@ -1,8 +1,9 @@
-"""Tests for MUS lump and MUS→MIDI conversion."""
+"""Tests for MUS lump and MUS->MIDI conversion."""
 
 import struct
 
 from wadlib.lumps.mus import _MUS_MAGIC, _TICKS_PER_QN, Mus
+from wadlib.lumps.ogg import MidiLump
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -89,7 +90,27 @@ def test_to_midi_nontrivial_length(doom1_wad: WadFile) -> None:
 
 
 def test_to_midi_all_tracks(doom1_wad: WadFile) -> None:
-    """All music lumps should convert without error."""
-    for name, mus in doom1_wad.music.items():
-        midi = mus.to_midi()
+    """All MUS lumps should convert to MIDI without error."""
+    for name, lump in doom1_wad.music.items():
+        if not isinstance(lump, Mus):
+            continue
+        midi = lump.to_midi()
         assert midi[:4] == b"MThd", f"{name}: bad MIDI header"
+
+
+# ---------------------------------------------------------------------------
+# MIDI lump detection (freedoom uses raw MIDI, not MUS)
+# ---------------------------------------------------------------------------
+
+
+def test_freedoom_music_is_midi(freedoom1_wad: WadFile) -> None:
+    assert len(freedoom1_wad.music) > 0
+    for lump in freedoom1_wad.music.values():
+        assert isinstance(lump, MidiLump)
+
+
+def test_freedoom_midi_raw_starts_with_mthd(freedoom1_wad: WadFile) -> None:
+    lump = freedoom1_wad.get_music("D_E1M1")
+    assert lump is not None
+    assert isinstance(lump, MidiLump)
+    assert lump.raw()[:4] == b"MThd"

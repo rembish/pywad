@@ -1,4 +1,5 @@
 """Tests for COLORMAP lump."""
+
 from wadlib.lumps.colormap import _COLORMAP_SIZE, _NUM_COLORMAPS, ColormapLump
 from wadlib.wad import WadFile
 

@@ -1,4 +1,4 @@
-"""OGG and MP3 music lump wrappers."""
+"""OGG, MP3, and MIDI music lump wrappers."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ MP3_ID3_MAGIC = b"ID3"
 MP3_SYNC_MAGIC = b"\xff\xfb"
 MP3_SYNC_MAGIC2 = b"\xff\xf3"
 MP3_SYNC_MAGIC3 = b"\xff\xf2"
+MIDI_MAGIC = b"MThd"
 
 
 class OggLump(BaseLump):
@@ -26,5 +27,14 @@ class Mp3Lump(BaseLump):
 
     def save(self, path: str) -> None:
         """Write the raw MP3 data to *path*."""
+        with open(path, "wb") as f:
+            f.write(self.raw())
+
+
+class MidiLump(BaseLump):
+    """A WAD lump containing a raw MIDI file (Standard MIDI Format)."""
+
+    def save(self, path: str) -> None:
+        """Write the raw MIDI data to *path*."""
         with open(path, "wb") as f:
             f.write(self.raw())

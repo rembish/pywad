@@ -1,4 +1,5 @@
 """ANIMDEFS lump parser (Hexen format) — animated flat/texture definitions."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
