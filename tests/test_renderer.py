@@ -108,6 +108,6 @@ def test_renderer_hexen(hexen_wad: WadFile) -> None:
     assert isinstance(img, Image.Image)
 
 
-def test_renderer_heretic(heretic_wad: WadFile) -> None:
-    img = MapRenderer(heretic_wad.maps[0]).render()
+def test_renderer_heretic(blasphemer_wad: WadFile) -> None:
+    img = MapRenderer(blasphemer_wad.maps[0]).render()
     assert isinstance(img, Image.Image)

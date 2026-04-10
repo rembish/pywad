@@ -17,6 +17,7 @@ HERETIC_WAD = WADS_DIR / "HERETIC.WAD"
 HEXEN_WAD = WADS_DIR / "HEXEN.WAD"
 FREEDOOM1_WAD = WADS_DIR / "freedoom1.wad"
 FREEDOOM2_WAD = WADS_DIR / "freedoom2.wad"
+BLASPHEMER_WAD = WADS_DIR / "blasphem.wad"
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +116,19 @@ def freedoom2_wad() -> Generator[WadFile, None, None]:
     if not FREEDOOM2_WAD.exists():
         pytest.skip("freedoom2.wad not found in wads/")
     with WadFile(str(FREEDOOM2_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def blasphemer_wad() -> Generator[WadFile, None, None]:
+    """Open blasphem.wad (Blasphemer, BSD-3) for the entire test session.
+
+    Blasphemer is a free/open-source Heretic IWAD replacement.
+    Same binary format as Doom (Doom-format THINGS/LINEDEFS, E#M# map names).
+    """
+    if not BLASPHEMER_WAD.exists():
+        pytest.skip("blasphem.wad not found in wads/")
+    with WadFile(str(BLASPHEMER_WAD)) as w:
         yield w
 
 

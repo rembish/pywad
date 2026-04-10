@@ -133,6 +133,7 @@ wads/*
 !wads/.gitkeep
 !wads/freedoom1.wad
 !wads/freedoom2.wad
+!wads/blasphem.wad
 
 # OMC (oh-my-claudecode) orchestration state
 .omc/

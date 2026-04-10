@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.48] - 2026-04-10
+
+### Added
+
+- Committed `blasphem.wad` (Blasphemer 0.1.8, BSD-3 Clause) — a free/open-source
+  Heretic IWAD replacement; Heretic format tests now run unconditionally without
+  requiring the proprietary `HERETIC.WAD`
+- `blasphemer_wad` session fixture in the test suite; all Heretic-format tests
+  rewired from `heretic_wad` to `blasphemer_wad`
+
 ## [0.0.47] - 2026-04-10
 
 ### Added

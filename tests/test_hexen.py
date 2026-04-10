@@ -24,36 +24,36 @@ def test_hexen_linedef_format_size() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_heretic_wad_type(heretic_wad: WadFile) -> None:
+def test_heretic_wad_type(blasphemer_wad: WadFile) -> None:
     from wadlib.enums import WadType
 
-    assert heretic_wad.wad_type == WadType.IWAD
+    assert blasphemer_wad.wad_type == WadType.IWAD
 
 
-def test_heretic_has_maps(heretic_wad: WadFile) -> None:
-    assert len(heretic_wad.maps) > 0
+def test_heretic_has_maps(blasphemer_wad: WadFile) -> None:
+    assert len(blasphemer_wad.maps) > 0
 
 
-def test_heretic_map_count(heretic_wad: WadFile) -> None:
+def test_heretic_map_count(blasphemer_wad: WadFile) -> None:
     # Heretic has 45 maps (E1-E5 with 9 each, plus secret levels)
-    assert len(heretic_wad.maps) >= 45
+    assert len(blasphemer_wad.maps) >= 45
 
 
-def test_heretic_maps_have_things(heretic_wad: WadFile) -> None:
-    m = heretic_wad.maps[0]
+def test_heretic_maps_have_things(blasphemer_wad: WadFile) -> None:
+    m = blasphemer_wad.maps[0]
     assert m.things is not None
     assert len(m.things) > 0
 
 
-def test_heretic_maps_have_sectors(heretic_wad: WadFile) -> None:
-    assert heretic_wad.maps[0].sectors is not None
+def test_heretic_maps_have_sectors(blasphemer_wad: WadFile) -> None:
+    assert blasphemer_wad.maps[0].sectors is not None
 
 
-def test_heretic_no_hexen_things(heretic_wad: WadFile) -> None:
+def test_heretic_no_hexen_things(blasphemer_wad: WadFile) -> None:
     # Heretic uses Doom-format things, NOT HexenThing
     from wadlib.lumps.things import Thing
 
-    t = heretic_wad.maps[0].things[0]
+    t = blasphemer_wad.maps[0].things[0]
     assert isinstance(t, Thing)
     assert not isinstance(t, HexenThing)
 
