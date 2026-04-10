@@ -3,6 +3,7 @@
 import argparse
 
 from .commands import (
+    diff,
     export_animation,
     export_colormap,
     export_endoom,
@@ -55,6 +56,9 @@ def main() -> None:
     )
 
     subs = parser.add_subparsers(dest="group", metavar="<command>")
+
+    # diff (top-level, no subgroup)
+    diff.configure(subs.add_parser("diff", help="compare two WADs and report differences"))
 
     # info (top-level, no subgroup)
     info.configure(subs.add_parser("info", help="show WAD header and summary stats"))
