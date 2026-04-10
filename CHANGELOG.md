@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.53] - 2026-04-10
+
+### Added
+
+- `tests/test_cli.py` — 38 subprocess-level integration tests covering every
+  `wadcli` command group: `check` (clean exit 0 + bad-WAD exit 1 + `--json`),
+  `diff` (identical WAD exits 0, different exits 1, JSON structure), `info`
+  (text + JSON), `list` (maps/lumps/textures/flats/sprites/sounds/music/patches/stats,
+  all with `--json` validation), `export` (map, flat, sound, music, texture,
+  sprite, lump — each verifies the output file is created and non-empty)
+
 ## [0.0.52] - 2026-04-10
 
 ### Added
