@@ -29,6 +29,7 @@ TEXTURE1 / TEXTURE2 (Doom format):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from struct import calcsize, unpack
 
 from .base import BaseLump
@@ -62,7 +63,7 @@ class TextureDef:
 class PNames(BaseLump):
     """PNAMES lump — ordered list of patch names."""
 
-    @property
+    @cached_property
     def names(self) -> list[str]:
         """Return all patch names as a list of strings."""
         if not self.readable():
@@ -107,7 +108,7 @@ class TextureList(BaseLump):
             patches.append(PatchDescriptor(int(ox), int(oy), int(pidx)))
         return TextureDef(name, int(width), int(height), patches)
 
-    @property
+    @cached_property
     def textures(self) -> list[TextureDef]:
         """Parse and return all texture definitions."""
         if not self.readable():

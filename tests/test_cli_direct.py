@@ -797,7 +797,6 @@ def test_export_endoom_default_path(capsys: pytest.CaptureFixture[str]) -> None:
         os.chdir(old_cwd)
 
 
-@pytest.mark.slow
 def test_export_map_with_floors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test export_map with floors=True to cover more renderer paths."""
     from wadlib.cli.commands import export_map

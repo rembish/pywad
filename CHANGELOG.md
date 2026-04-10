@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.57] - 2026-04-10
+
+### Changed
+
+- **`BaseLump` typed via `Generic[T]`**: `read_item`, `__iter__`, `__next__`,
+  `__getitem__`, and `get` now carry proper `T` / `T | None` return types
+  instead of bare `Any`.
+- **`PNames.names` and `TextureList.textures` → `@cached_property`**: avoids
+  O(N²) re-parsing in `TextureCompositor.compose_all()`.
+- **`MapLevel.attach_vertexes` → `attach_vertices`**: corrects the English
+  spelling; dispatch table in `wad.py` updated accordingly.
+- **`load_pwad()` preserves `load_deh()` override**: any external `.deh` file
+  is saved before cache eviction and restored afterwards automatically.
+- **`Picture` header cached**: four `@property` methods that each re-parsed the
+  same 8-byte header unified into a single `@cached_property _header`.
+- **`MapRenderer.im` / `.draw` made private** (`_im`, `_draw`): a new public
+  `image` property exposes the canvas.  All call-sites (CLI, tests) updated.
+
 ## [0.0.56] - 2026-04-10
 
 ### Changed

@@ -20,6 +20,7 @@ Each column is a series of "posts":
 
 from __future__ import annotations
 
+from functools import cached_property
 from struct import calcsize, unpack
 from typing import Any
 
@@ -35,33 +36,29 @@ _HEADER_SIZE = calcsize(_HEADER_FMT)
 class Picture(BaseLump):
     """A single Doom-format picture (patch, sprite, or weapon graphic)."""
 
-    @property
-    def pic_width(self) -> int:
+    @cached_property
+    def _header(self) -> tuple[int, int, int, int]:
         self.seek(0)
         raw = self.read(_HEADER_SIZE)
         assert raw is not None
-        return int(unpack(_HEADER_FMT, raw)[0])
+        w, h, lx, ty = unpack(_HEADER_FMT, raw)
+        return int(w), int(h), int(lx), int(ty)
+
+    @property
+    def pic_width(self) -> int:
+        return self._header[0]
 
     @property
     def pic_height(self) -> int:
-        self.seek(0)
-        raw = self.read(_HEADER_SIZE)
-        assert raw is not None
-        return int(unpack(_HEADER_FMT, raw)[1])
+        return self._header[1]
 
     @property
     def left_offset(self) -> int:
-        self.seek(0)
-        raw = self.read(_HEADER_SIZE)
-        assert raw is not None
-        return int(unpack(_HEADER_FMT, raw)[2])
+        return self._header[2]
 
     @property
     def top_offset(self) -> int:
-        self.seek(0)
-        raw = self.read(_HEADER_SIZE)
-        assert raw is not None
-        return int(unpack(_HEADER_FMT, raw)[3])
+        return self._header[3]
 
     def _draw_column(self, col_x: int, col_off: int, palette: Palette, pixels: Any) -> None:
         self.seek(col_off)

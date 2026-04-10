@@ -21,7 +21,7 @@ def test_exporter_still_creates_image(freedoom1_wad: WadFile) -> None:
         warnings.simplefilter("ignore", DeprecationWarning)
         exp = MapExporter(freedoom1_wad.maps[0])
         exp.process()
-        assert isinstance(exp.im, Image.Image)
+        assert isinstance(exp.image, Image.Image)
 
 
 def test_exporter_save_still_works(freedoom1_wad: WadFile, tmp_path: Path) -> None:

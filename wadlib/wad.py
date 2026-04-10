@@ -60,7 +60,7 @@ _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
 # Doom-format lump dispatch: name -> (attach method, constructor)
 _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "THINGS": ("attach_things", Things),
-    "VERTEXES": ("attach_vertexes", Vertices),
+    "VERTEXES": ("attach_vertices", Vertices),
     "LINEDEFS": ("attach_linedefs", Lines),
     "SIDEDEFS": ("attach_sidedefs", SideDefs),
     "SECTORS": ("attach_sectors", Sectors),
@@ -100,13 +100,16 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     def __init__(self, filename: str) -> None:
         self.fd = open(filename, "rb")  # noqa: SIM115  # pylint: disable=consider-using-with
-
-        magic_raw, self.directory_size, self._directory_offset = unpack(
-            HEADER_FORMAT, self.fd.read(calcsize(HEADER_FORMAT))
-        )
-        magic = magic_raw.decode("ascii")
-        if magic not in WadType.names():
-            raise BadHeaderWadException(magic)
+        try:
+            magic_raw, self.directory_size, self._directory_offset = unpack(
+                HEADER_FORMAT, self.fd.read(calcsize(HEADER_FORMAT))
+            )
+            magic = magic_raw.decode("ascii")
+            if magic not in WadType.names():
+                raise BadHeaderWadException(magic)
+        except Exception:
+            self.fd.close()
+            raise
 
         self.wad_type = WadType[magic]
         self._pwads: list[WadFile] = []
@@ -125,9 +128,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
                 print(wad.maps)
         """
         wad = cls(base)
-        for path in pwads:
-            pwad = cls(path)
-            wad._pwads.append(pwad)
+        try:
+            for path in pwads:
+                wad._pwads.append(cls(path))
+        except Exception:
+            wad.close()
+            raise
         return wad
 
     def close(self) -> None:
@@ -483,13 +489,18 @@ class WadFile:  # pylint: disable=too-many-public-methods
         """Dynamically layer a PWAD on top of the current WAD stack.
 
         Invalidates all cached properties so they are re-derived from the
-        updated stack on next access.  If :meth:`load_deh` was called before
-        this method, call it again afterwards to restore the override.
+        updated stack on next access.  Any external ``.deh`` override loaded
+        via :meth:`load_deh` is preserved across the cache eviction.
         """
         pwad = WadFile(path)
         self._pwads.append(pwad)
+        # Preserve any externally-loaded DEH override before evicting caches.
+        saved_deh = self.__dict__.get("dehacked")
         # Evict every cached_property from the instance dict so they pick up
         # the new PWAD on next access.
         for name in list(self.__dict__):
             if isinstance(getattr(type(self), name, None), cached_property):
                 del self.__dict__[name]
+        # Restore DEH override if one was present.
+        if saved_deh is not None:
+            self.__dict__["dehacked"] = saved_deh

@@ -76,7 +76,7 @@ class BaseMapEntry(BaseLump):
     def attach_things(self, things: Things | HexenThings) -> None:
         self.things = things
 
-    def attach_vertexes(self, vertices: Vertices) -> None:
+    def attach_vertices(self, vertices: Vertices) -> None:
         self.vertices = vertices
 
     def attach_linedefs(self, lines: Lines | HexenLineDefs) -> None:

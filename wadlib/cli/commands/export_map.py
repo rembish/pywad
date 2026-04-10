@@ -59,5 +59,5 @@ def run(args: argparse.Namespace) -> None:
         renderer = MapRenderer(target, wad=wad, options=opts)
         renderer.render()
         renderer.save(output)
-        w, h = renderer.im.size
+        w, h = renderer.image.size
         print(f"Saved {w}x{h} image to {output}")

@@ -167,10 +167,10 @@ class MapRenderer:
         img_w = int(map_w * scale) + 2 * _PADDING
         img_h = int(map_h * scale) + 2 * _PADDING
         if self._opts.alpha:
-            self.im = Image.new("RGBA", (img_w, img_h), color=(0, 0, 0, 0))
+            self._im = Image.new("RGBA", (img_w, img_h), color=(0, 0, 0, 0))
         else:
-            self.im = Image.new("RGB", (img_w, img_h), color=(20, 20, 20))
-        self.draw = ImageDraw(self.im)
+            self._im = Image.new("RGB", (img_w, img_h), color=(20, 20, 20))
+        self._draw = ImageDraw(self._im)
 
         # Resolve palette and colormap once
         self._palette: Palette | None = None
@@ -227,13 +227,13 @@ class MapRenderer:
         return img.resize((tile_px, tile_px), Image.Resampling.NEAREST)
 
     def _tile_canvas(self, tile: Image.Image) -> Image.Image:
-        """Produce a canvas-sized image tiled with *tile* (same mode as self.im)."""
-        mode = self.im.mode
-        tiled = Image.new(mode, self.im.size)
+        """Produce a canvas-sized image tiled with *tile* (same mode as self._im)."""
+        mode = self._im.mode
+        tiled = Image.new(mode, self._im.size)
         src = tile.convert(mode)
         tw, th = src.size
-        for ty in range(0, self.im.height, th):
-            for tx in range(0, self.im.width, tw):
+        for ty in range(0, self._im.height, th):
+            for tx in range(0, self._im.width, tw):
                 tiled.paste(src, (tx, ty))
         return tiled
 
@@ -369,9 +369,9 @@ class MapRenderer:
         if len(refined) < 3:
             return
         points = [self._px(int(x), int(y)) for x, y in refined]
-        mask = Image.new("L", self.im.size, 0)
+        mask = Image.new("L", self._im.size, 0)
         ImageDraw(mask).polygon(points, fill=255, outline=255)
-        self.im.paste(tiled, (0, 0), mask=mask)
+        self._im.paste(tiled, (0, 0), mask=mask)
 
     def _draw_floors(self) -> None:
         m = self.level
@@ -416,10 +416,10 @@ class MapRenderer:
             # Black outline pass on exterior (one-sided) walls.
             for p1, p2, one_sided in lines:
                 if one_sided:
-                    self.draw.line([p1, p2], fill=(0, 0, 0, 255), width=5)
+                    self._draw.line([p1, p2], fill=(0, 0, 0, 255), width=5)
         for p1, p2, one_sided in lines:
             colour = (220, 220, 220) if one_sided else (110, 110, 110)
-            self.draw.line([p1, p2], fill=colour, width=1)
+            self._draw.line([p1, p2], fill=colour, width=1)
 
     # ------------------------------------------------------------------
     # Thing rendering
@@ -446,7 +446,7 @@ class MapRenderer:
         tip = _pt(angle_deg)
         b1 = _pt(angle_deg + 120)
         b2 = _pt(angle_deg - 120)
-        self.draw.polygon([tip, b1, b2], fill=colour)
+        self._draw.polygon([tip, b1, b2], fill=colour)
 
     def _get_sprite_image(self, type_id: int) -> Image.Image | None:
         """Return a scaled sprite image for *type_id*, or None if unavailable.
@@ -487,7 +487,7 @@ class MapRenderer:
             sprite_img = self._get_sprite_image(thing.type)
             if sprite_img is not None:
                 sw, sh = sprite_img.size
-                self.im.paste(sprite_img, (cx - sw // 2, cy - sh // 2), mask=sprite_img)
+                self._im.paste(sprite_img, (cx - sw // 2, cy - sh // 2), mask=sprite_img)
                 return
 
         if cat in (ThingCategory.PLAYER, ThingCategory.MONSTER):
@@ -496,7 +496,7 @@ class MapRenderer:
 
         elif cat == ThingCategory.KEY:
             # Diamond
-            self.draw.polygon(
+            self._draw.polygon(
                 [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)],
                 outline=colour,
             )
@@ -504,20 +504,20 @@ class MapRenderer:
         elif cat in (ThingCategory.WEAPON, ThingCategory.POWERUP):
             # Outlined circle (larger)
             r2 = max(3, int(6 * self._scale * self._opts.thing_scale))
-            self.draw.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], outline=colour)
+            self._draw.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], outline=colour)
 
         elif cat in (ThingCategory.HEALTH, ThingCategory.ARMOR, ThingCategory.AMMO):
             # Small filled square
-            self.draw.rectangle([cx - r, cy - r, cx + r, cy + r], fill=colour)
+            self._draw.rectangle([cx - r, cy - r, cx + r, cy + r], fill=colour)
 
         elif cat == ThingCategory.DECORATION:
             # Tiny dot
             rd = max(1, r // 2)
-            self.draw.ellipse([cx - rd, cy - rd, cx + rd, cy + rd], fill=colour)
+            self._draw.ellipse([cx - rd, cy - rd, cx + rd, cy + rd], fill=colour)
 
         else:
             # UNKNOWN — single pixel dot
-            self.draw.point((cx, cy), fill=colour)
+            self._draw.point((cx, cy), fill=colour)
 
     def _draw_things(self) -> None:
         if not self.level.things:
@@ -529,6 +529,11 @@ class MapRenderer:
     # Public API
     # ------------------------------------------------------------------
 
+    @property
+    def image(self) -> Image.Image:
+        """The current canvas image."""
+        return self._im
+
     def render(self) -> Image.Image:
         """Draw all enabled layers and return the finished image."""
         if self._opts.show_floors:
@@ -536,12 +541,12 @@ class MapRenderer:
         self._draw_linedefs()
         if self._opts.show_things:
             self._draw_things()
-        return self.im
+        return self._im
 
     def save(self, path: str) -> None:
         """Save the rendered image to *path*."""
-        self.im.save(path)
+        self._im.save(path)
 
     def show(self) -> None:
         """Open the rendered image in the system viewer."""
-        self.im.show()
+        self._im.show()

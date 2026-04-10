@@ -826,6 +826,6 @@ def test_renderer_show(tmp_path: Path) -> None:
     with WadFile(str(wad_path)) as w:
         r = MapRenderer(w.maps[0])
         r.render()
-        with patch.object(r.im, "show") as mock_show:
+        with patch.object(r.image, "show") as mock_show:
             r.show()
             mock_show.assert_called_once()

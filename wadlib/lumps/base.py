@@ -2,18 +2,23 @@ from collections.abc import Iterator
 from functools import cached_property
 from io import SEEK_CUR, SEEK_END, SEEK_SET, BytesIO
 from struct import calcsize, unpack
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 from ..directory import DirectoryEntry
 
+T = TypeVar("T")
 
-class BaseLump:
+
+class BaseLump(Generic[T]):
     """Base class for all WAD lump types.
 
     Each instance buffers its raw bytes from the WAD file descriptor on
     construction, making it completely independent of the shared fd
     afterwards.  This means concurrent iteration over multiple lumps
     from the same WAD is safe.
+
+    The type parameter *T* is the row item type returned by ``read_item``
+    and ``get``.  Concrete subclasses fix it via ``_row_item``.
     """
 
     _row_format: ClassVar[str | None] = None
@@ -51,11 +56,11 @@ class BaseLump:
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}[{len(self) or 'n/a'}]>"
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[T]:
         self.seek(0)
         return self
 
-    def __next__(self) -> Any:
+    def __next__(self) -> T:
         if not self.readable():
             raise StopIteration
         assert self._rposition is not None
@@ -70,7 +75,7 @@ class BaseLump:
         assert self._size is not None
         return self._size // self._row_size
 
-    def __getitem__(self, index: int) -> Any:
+    def __getitem__(self, index: int) -> T:
         return self.read_item(index)
 
     def seek(self, offset: int, whence: int = SEEK_SET) -> int | None:
@@ -132,9 +137,9 @@ class BaseLump:
         assert data is not None
         return unpack(self._row_format, data)
 
-    def read_item(self, index: int | None = None) -> Any:
+    def read_item(self, index: int | None = None) -> T:
         if not self.readable():
-            return None
+            return None  # type: ignore[return-value]
 
         assert self._row_item is not None
         row = self.read_row(index)
@@ -157,7 +162,7 @@ class BaseLump:
     def readable(self) -> bool:
         return self._rposition is not None
 
-    def get(self, index: int, default: Any = None) -> Any:
+    def get(self, index: int, default: T | None = None) -> T | None:
         if 0 <= index < len(self):
             return self[index]
         return default
