@@ -269,8 +269,17 @@ _SPRITE_PREFIXES: dict[int, str] = {
     2025: "SUIT",
     2026: "PMAP",
     2045: "PVIS",
-    # Decorations
-    10: "PLAY",  # Bloody Mess (dead player)
+    # Dead decorations — same prefixes as the live entity; use death-frame suffix
+    10: "PLAY",  # Bloody Mess
+    12: "PLAY",  # Pool of Blood and Flesh
+    15: "PLAY",  # Dead Player
+    18: "POSS",  # Dead Zombieman
+    19: "SPOS",  # Dead Shotgun Guy
+    20: "TROO",  # Dead Imp
+    21: "SARG",  # Dead Demon
+    22: "HEAD",  # Dead Cacodemon
+    23: "SKUL",  # Dead Lost Soul
+    # Static decorations — "A0" idle is correct
     34: "CAND",  # Candle
     35: "CBRA",  # Candelabra
     76: "FCAN",  # Burning Barrel
@@ -293,6 +302,27 @@ _SPRITE_PREFIXES: dict[int, str] = {
     85: "TLMP",
     86: "TLP2",
 }
+
+
+# For dead-character decorations the last death frame ("N0") is the correct
+# static pose.  Everything else uses the default idle rotation ("A0", "A1").
+_SPRITE_SUFFIX_OVERRIDES: dict[int, tuple[str, ...]] = {
+    10: ("N0",),  # Bloody Mess
+    12: ("N0",),  # Pool of Blood and Flesh
+    15: ("N0",),  # Dead Player
+    18: ("N0",),  # Dead Zombieman
+    19: ("N0",),  # Dead Shotgun Guy
+    20: ("N0",),  # Dead Imp
+    21: ("N0",),  # Dead Demon
+    22: ("N0",),  # Dead Cacodemon
+    23: ("N0",),  # Dead Lost Soul
+}
+_DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
+
+
+def get_sprite_suffixes(type_id: int) -> tuple[str, ...]:
+    """Return the sprite frame suffixes to try for *type_id* (most preferred first)."""
+    return _SPRITE_SUFFIX_OVERRIDES.get(type_id, _DEFAULT_SPRITE_SUFFIXES)
 
 
 def get_name(type_id: int) -> str:

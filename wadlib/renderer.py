@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
-from .doom_types import ThingCategory, get_category, get_sprite_prefix
+from .doom_types import ThingCategory, get_category, get_sprite_prefix, get_sprite_suffixes
 from .lumps.colormap import ColormapLump
 from .lumps.map import BaseMapEntry
 from .lumps.nodes import SSECTOR_FLAG
@@ -499,22 +499,22 @@ class MapRenderer:
     def _get_sprite_image(self, type_id: int) -> Image.Image | None:
         """Return a scaled sprite image for *type_id*, or None if unavailable.
 
-        Tries lump ``{prefix}A0`` first (rotation-free), then ``{prefix}A1``
-        (front-facing 8-way sprite).  Result is cached by lump name so each
-        unique sprite is decoded and scaled at most once per render.
+        Uses ``get_sprite_suffixes`` to determine which frame suffixes to try
+        (e.g. ``("A0", "A1")`` for idle sprites, ``("N0",)`` for dead poses).
+        Result is cached by ``(prefix, suffixes)`` so types that share a prefix
+        but need different frames get independent cache entries.
         """
         if self._wad is None or self._palette is None:
             return None
         prefix = get_sprite_prefix(type_id)
         if prefix is None:
             return None
-        # Cache key is the prefix, not per-suffix, so that a miss on A0 does not
-        # short-circuit the A1 lookup on subsequent calls for the same type.
-        cache_key = prefix
+        suffixes = get_sprite_suffixes(type_id)
+        cache_key = prefix + "|" + ",".join(suffixes)
         if cache_key in self._sprite_cache:
             return self._sprite_cache[cache_key]
         result: Image.Image | None = None
-        for suffix in ("A0", "A1"):
+        for suffix in suffixes:
             lump_name = prefix + suffix
             sprite = self._wad.get_sprite(lump_name)
             if sprite is None:
@@ -534,7 +534,7 @@ class MapRenderer:
         cx, cy = self._px(thing.x, thing.y)
         r = max(2, int(5 * self._scale * self._opts.thing_scale))
 
-        if self._opts.show_sprites and cat != ThingCategory.DECORATION:
+        if self._opts.show_sprites:
             sprite_img = self._get_sprite_image(thing.type)
             if sprite_img is not None:
                 sw, sh = sprite_img.size

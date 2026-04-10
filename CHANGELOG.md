@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.67] - 2026-04-10
+
+### Fixed
+
+- **Dead-character decorations now render as dead-pose sprites** (`--sprites`):
+  types 10/12/15 (dead player), 18–23 (dead monsters) now look up the last
+  death frame (`N0`) instead of the standing idle frame (`A0`/`A1`).
+- **Candelabras and other static decorations restored**: the blanket
+  "DECORATION never shows sprites" guard from v0.0.66 was too broad.
+  Now only the sprite *frame* selection differs per type; all decoration
+  types with a known prefix render their sprite normally.
+- **Missing dead decoration sprite entries added** to `_SPRITE_PREFIXES`:
+  types 12 (Pool of Blood and Flesh), 15 (Dead Player), 18–23 (dead monsters).
+- **Sprite cache key now includes suffix list** so types sharing a prefix
+  (e.g. live `PLAY` vs dead `PLAY`) get independent cache entries.
+
 ## [0.0.66] - 2026-04-10
 
 ### Fixed
