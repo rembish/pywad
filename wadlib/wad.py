@@ -476,3 +476,18 @@ class WadFile:  # pylint: disable=too-many-public-methods
         # cached_property stores its value in __dict__ under the property name;
         # setting it directly bypasses the descriptor and acts as an override.
         self.__dict__["dehacked"] = DehackedFile(path)
+
+    def load_pwad(self, path: str) -> None:
+        """Dynamically layer a PWAD on top of the current WAD stack.
+
+        Invalidates all cached properties so they are re-derived from the
+        updated stack on next access.  If :meth:`load_deh` was called before
+        this method, call it again afterwards to restore the override.
+        """
+        pwad = WadFile(path)
+        self._pwads.append(pwad)
+        # Evict every cached_property from the instance dict so they pick up
+        # the new PWAD on next access.
+        for name in list(self.__dict__):
+            if isinstance(getattr(type(self), name, None), cached_property):
+                del self.__dict__[name]
