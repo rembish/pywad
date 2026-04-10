@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.50] - 2026-04-10
+
+### Added
+
+- `wadcli check` — sanity-checks a WAD for common authoring errors; checks all maps for:
+  missing textures (sidedef upper/lower/middle not in TEXTURE1/TEXTURE2), missing flats
+  (sector floor/ceiling not in F_START..F_END), out-of-range sidedef/vertex/sector
+  references in linedefs and sidedefs, and duplicate map names across the PWAD stack;
+  exits with code 1 when issues are found; supports `--json` for pipeline use
+
 ## [0.0.49] - 2026-04-10
 
 ### Fixed

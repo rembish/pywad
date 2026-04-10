@@ -17,7 +17,7 @@ from .segs import Segs, SubSectors
 from .sidedefs import SideDefs
 from .things import Things
 from .vertices import Vertices
-from .znodes import ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNodVertex, ZNodesLump
+from .znodes import ZNodesLump, ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNodVertex
 
 if TYPE_CHECKING:
     from ..directory import DirectoryEntry

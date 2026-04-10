@@ -3,6 +3,7 @@
 import argparse
 
 from .commands import (
+    check,
     diff,
     export_animation,
     export_colormap,
@@ -56,6 +57,9 @@ def main() -> None:
     )
 
     subs = parser.add_subparsers(dest="group", metavar="<command>")
+
+    # check (top-level, no subgroup)
+    check.configure(subs.add_parser("check", help="sanity-check a WAD for authoring errors"))
 
     # diff (top-level, no subgroup)
     diff.configure(subs.add_parser("diff", help="compare two WADs and report differences"))
