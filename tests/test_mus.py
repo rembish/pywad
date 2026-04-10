@@ -7,17 +7,30 @@ from wadlib.lumps.ogg import MidiLump
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
-# WadFile.music / get_music
+# WadFile.music / get_music — generic (freedoom ships MIDI lumps, not MUS)
 # ---------------------------------------------------------------------------
 
 
-def test_music_dict_not_empty(doom1_wad: WadFile) -> None:
-    assert len(doom1_wad.music) > 0
+def test_music_dict_not_empty(freedoom1_wad: WadFile) -> None:
+    assert len(freedoom1_wad.music) > 0
 
 
-def test_music_dict_keys_start_with_d(doom1_wad: WadFile) -> None:
-    for name in doom1_wad.music:
+def test_music_dict_keys_start_with_d(freedoom1_wad: WadFile) -> None:
+    for name in freedoom1_wad.music:
         assert name.startswith("D_"), name
+
+
+def test_get_music_case_insensitive(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.get_music("d_e1m1") is not None
+
+
+def test_get_music_missing_returns_none(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.get_music("D_NOEXIST") is None
+
+
+# ---------------------------------------------------------------------------
+# MUS format — requires DOOM.WAD (MUS lumps); skipped without it
+# ---------------------------------------------------------------------------
 
 
 def test_get_music_returns_mus(doom1_wad: WadFile) -> None:
@@ -25,28 +38,10 @@ def test_get_music_returns_mus(doom1_wad: WadFile) -> None:
     assert isinstance(mus, Mus)
 
 
-def test_get_music_case_insensitive(doom1_wad: WadFile) -> None:
-    assert doom1_wad.get_music("d_e1m1") is not None
-
-
-def test_get_music_missing_returns_none(doom1_wad: WadFile) -> None:
-    assert doom1_wad.get_music("D_NOEXIST") is None
-
-
-# ---------------------------------------------------------------------------
-# Mus.raw()
-# ---------------------------------------------------------------------------
-
-
 def test_raw_starts_with_mus_magic(doom1_wad: WadFile) -> None:
     mus = doom1_wad.get_music("D_E1M1")
     assert mus is not None
     assert mus.raw()[:4] == _MUS_MAGIC
-
-
-# ---------------------------------------------------------------------------
-# Mus.to_midi()
-# ---------------------------------------------------------------------------
 
 
 def test_to_midi_returns_bytes(doom1_wad: WadFile) -> None:

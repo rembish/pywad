@@ -53,8 +53,8 @@ def test_map2_next(hexen_wad: WadFile) -> None:
     assert entry.next == 3
 
 
-def test_doom1_has_no_mapinfo(doom1_wad: WadFile) -> None:
-    assert doom1_wad.mapinfo is None
+def test_doom1_has_no_mapinfo(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.mapinfo is None
 
 
 def test_get_returns_correct_entry(hexen_wad: WadFile) -> None:

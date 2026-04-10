@@ -10,21 +10,21 @@ from wadlib.exceptions import BadHeaderWadException
 from wadlib.wad import WadFile
 
 
-def test_doom1_wad_type(doom1_wad: WadFile) -> None:
-    assert doom1_wad.wad_type == WadType.IWAD
+def test_freedoom1_wad_type(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.wad_type == WadType.IWAD
 
 
-def test_doom2_wad_type(doom2_wad: WadFile) -> None:
-    assert doom2_wad.wad_type == WadType.IWAD
+def test_freedoom2_wad_type(freedoom2_wad: WadFile) -> None:
+    assert freedoom2_wad.wad_type == WadType.IWAD
 
 
-def test_doom1_directory_size(doom1_wad: WadFile) -> None:
+def test_doom1_directory_size(freedoom1_wad: WadFile) -> None:
     # DOOM.WAD has hundreds of lumps
-    assert doom1_wad.directory_size > 0
+    assert freedoom1_wad.directory_size > 0
 
 
-def test_doom2_directory_size(doom2_wad: WadFile) -> None:
-    assert doom2_wad.directory_size > 0
+def test_doom2_directory_size(freedoom2_wad: WadFile) -> None:
+    assert freedoom2_wad.directory_size > 0
 
 
 def test_minimal_iwad_type(minimal_iwad: WadFile) -> None:

@@ -50,7 +50,7 @@ def test_compositor_compose_not_blank(freedoom1_wad: WadFile) -> None:
     comp = TextureCompositor(freedoom1_wad)
     img = comp.compose(name)
     assert img is not None
-    colours = set(img.getdata())
+    colours = set(img.get_flattened_data())
     assert len(colours) > 1
 
 

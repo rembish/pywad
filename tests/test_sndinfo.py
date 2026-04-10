@@ -33,5 +33,5 @@ def test_hexen_sndinfo_known_mapping(hexen_wad: WadFile) -> None:
     assert sounds.get("PlayerFighterNormalDeath") == "FGTDDTH"
 
 
-def test_doom1_sndinfo_is_none(doom1_wad: WadFile) -> None:
-    assert doom1_wad.sndinfo is None
+def test_doom1_sndinfo_is_none(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.sndinfo is None

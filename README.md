@@ -14,8 +14,8 @@ pip install wadlib          # library + wadcli command
 For development:
 
 ```bash
-git clone https://github.com/arembish/pywad
-cd pywad
+git clone https://github.com/arembish/wadlib
+cd wadlib
 make install                # creates .venv, installs with dev deps
 ```
 

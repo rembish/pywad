@@ -64,5 +64,5 @@ def test_x_005_flat_random_timing(hexen_wad: WadFile) -> None:
     assert flat.is_random
 
 
-def test_doom1_animdefs_is_none(doom1_wad: WadFile) -> None:
-    assert doom1_wad.animdefs is None
+def test_doom1_animdefs_is_none(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.animdefs is None

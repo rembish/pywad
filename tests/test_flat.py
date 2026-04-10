@@ -10,21 +10,21 @@ from wadlib.wad import WadFile
 # ---------------------------------------------------------------------------
 
 
-def test_flats_returns_dict(doom1_wad: WadFile) -> None:
-    assert isinstance(doom1_wad.flats, dict)
+def test_flats_returns_dict(freedoom1_wad: WadFile) -> None:
+    assert isinstance(freedoom1_wad.flats, dict)
 
 
-def test_flats_nonempty(doom1_wad: WadFile) -> None:
-    assert len(doom1_wad.flats) > 0
+def test_flats_nonempty(freedoom1_wad: WadFile) -> None:
+    assert len(freedoom1_wad.flats) > 0
 
 
-def test_flats_values_are_flat(doom1_wad: WadFile) -> None:
-    for flat in doom1_wad.flats.values():
+def test_flats_values_are_flat(freedoom1_wad: WadFile) -> None:
+    for flat in freedoom1_wad.flats.values():
         assert isinstance(flat, Flat)
 
 
-def test_flats_doom2(doom2_wad: WadFile) -> None:
-    assert len(doom2_wad.flats) > 0
+def test_flats_doom2(freedoom2_wad: WadFile) -> None:
+    assert len(freedoom2_wad.flats) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -32,22 +32,22 @@ def test_flats_doom2(doom2_wad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_get_flat_known(doom1_wad: WadFile) -> None:
+def test_get_flat_known(freedoom1_wad: WadFile) -> None:
     # FLOOR0_1 is in every Doom 1 WAD
-    flat = doom1_wad.get_flat("FLOOR0_1")
+    flat = freedoom1_wad.get_flat("FLOOR0_1")
     assert flat is not None
     assert isinstance(flat, Flat)
 
 
-def test_get_flat_case_insensitive(doom1_wad: WadFile) -> None:
-    upper = doom1_wad.get_flat("FLOOR0_1")
-    lower = doom1_wad.get_flat("floor0_1")
+def test_get_flat_case_insensitive(freedoom1_wad: WadFile) -> None:
+    upper = freedoom1_wad.get_flat("FLOOR0_1")
+    lower = freedoom1_wad.get_flat("floor0_1")
     assert upper is not None
     assert lower is not None
 
 
-def test_get_flat_missing_returns_none(doom1_wad: WadFile) -> None:
-    assert doom1_wad.get_flat("DOESNOTEXIST") is None
+def test_get_flat_missing_returns_none(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.get_flat("DOESNOTEXIST") is None
 
 
 # ---------------------------------------------------------------------------
@@ -55,29 +55,29 @@ def test_get_flat_missing_returns_none(doom1_wad: WadFile) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_flat_decode_returns_rgb_image(doom1_wad: WadFile) -> None:
-    assert doom1_wad.playpal is not None
-    palette = doom1_wad.playpal.get_palette(0)
-    flat = doom1_wad.get_flat("FLOOR0_1")
+def test_flat_decode_returns_rgb_image(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.playpal is not None
+    palette = freedoom1_wad.playpal.get_palette(0)
+    flat = freedoom1_wad.get_flat("FLOOR0_1")
     assert flat is not None
     img = flat.decode(palette)
     assert isinstance(img, Image.Image)
     assert img.mode == "RGB"
 
 
-def test_flat_decode_correct_size(doom1_wad: WadFile) -> None:
-    assert doom1_wad.playpal is not None
-    palette = doom1_wad.playpal.get_palette(0)
-    flat = doom1_wad.get_flat("FLOOR0_1")
+def test_flat_decode_correct_size(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.playpal is not None
+    palette = freedoom1_wad.playpal.get_palette(0)
+    flat = freedoom1_wad.get_flat("FLOOR0_1")
     assert flat is not None
     img = flat.decode(palette)
     assert img.size == (FLAT_SIZE, FLAT_SIZE)
 
 
-def test_flat_decode_pixel_colours_in_range(doom1_wad: WadFile) -> None:
-    assert doom1_wad.playpal is not None
-    palette = doom1_wad.playpal.get_palette(0)
-    flat = doom1_wad.get_flat("FLOOR0_1")
+def test_flat_decode_pixel_colours_in_range(freedoom1_wad: WadFile) -> None:
+    assert freedoom1_wad.playpal is not None
+    palette = freedoom1_wad.playpal.get_palette(0)
+    flat = freedoom1_wad.get_flat("FLOOR0_1")
     assert flat is not None
     img = flat.decode(palette)
     for x in range(img.width):

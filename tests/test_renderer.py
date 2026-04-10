@@ -41,7 +41,7 @@ def test_renderer_nontrivial_size(freedoom1_wad: WadFile) -> None:
 
 def test_renderer_not_blank(freedoom1_wad: WadFile) -> None:
     img = MapRenderer(freedoom1_wad.maps[0]).render()
-    colours = set(img.getdata())
+    colours = set(img.get_flattened_data())
     assert len(colours) > 1
 
 
@@ -89,7 +89,7 @@ def test_renderer_floors_with_wad(freedoom1_wad: WadFile) -> None:
 def test_renderer_floors_not_blank(freedoom1_wad: WadFile) -> None:
     opts = RenderOptions(show_floors=True)
     img = MapRenderer(freedoom1_wad.maps[0], wad=freedoom1_wad, options=opts).render()
-    colours = set(img.getdata())
+    colours = set(img.get_flattened_data())
     assert len(colours) > 5  # floor textures add many colours
 
 
