@@ -10,7 +10,10 @@ def configure(p: argparse.ArgumentParser) -> None:
     add_wad_args(p)
     p.add_argument("output", help="output PNG path")
     p.add_argument(
-        "--palette", type=int, default=0, metavar="N",
+        "--palette",
+        type=int,
+        default=0,
+        metavar="N",
         help="PLAYPAL palette index to use for rendering (default: 0)",
     )
     p.set_defaults(func=run)
@@ -32,8 +35,10 @@ def run(args: argparse.Namespace) -> None:
         h_px = cm.count * cell
 
         from PIL import Image
+
         img = Image.new("RGB", (w_px, h_px))
         pixels = img.load()
+        assert pixels is not None
         for row in range(cm.count):
             colormap = cm.get(row)
             for col in range(256):

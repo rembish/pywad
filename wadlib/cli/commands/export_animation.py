@@ -1,10 +1,12 @@
 """wadcli export animation — render an ANIMDEFS sequence as an animated GIF."""
+
 import argparse
 import sys
 
 from PIL import Image
 
 from ...compositor import TextureCompositor
+from ...directory import DirectoryEntry
 from ...lumps.flat import Flat
 from ...wad import WadFile
 from .._wad_args import add_wad_args, open_wad
@@ -87,7 +89,7 @@ def run(args: argparse.Namespace) -> None:
         compositor = TextureCompositor(wad, palette=palette) if anim.kind == "texture" else None
 
         # Build a lookup from name -> DirectoryEntry for flats (any size)
-        flat_entries: dict[str, object] = {}
+        flat_entries: dict[str, DirectoryEntry] = {}
         if anim.kind == "flat":
             inside = False
             for entry in wad.directory:
@@ -110,21 +112,23 @@ def run(args: argparse.Namespace) -> None:
                 sys.exit(1)
             lump_name = ordered[idx]
 
+            frame_img: Image.Image
             if anim.kind == "flat":
-                entry = flat_entries.get(lump_name)
-                if entry is None:
+                flat_entry = flat_entries.get(lump_name)
+                if flat_entry is None:
                     print(f"Flat '{lump_name}' not found.", file=sys.stderr)
                     sys.exit(1)
-                flat = Flat(entry)  # type: ignore[arg-type]
-                img = flat.decode(palette).convert("RGBA")
+                assert palette is not None
+                frame_img = Flat(flat_entry).decode(palette).convert("RGBA")
             else:
                 assert compositor is not None
-                img = compositor.compose(lump_name)
-                if img is None:
+                composed = compositor.compose(lump_name)
+                if composed is None:
                     print(f"Texture '{lump_name}' not found.", file=sys.stderr)
                     sys.exit(1)
+                frame_img = composed
 
-            frames.append(img)
+            frames.append(frame_img)
             ms = int(frame.min_tics * _TICS_MS)
             durations.append(max(ms, 20))  # GIF minimum ~20ms
 

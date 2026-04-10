@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.39] - 2026-04-10
+
+### Fixed
+
+- `list_maps`: replaced `object` parameter types with precise `MapInfoLump | None` / `ZMapInfoLump | None` / `ZMapInfoEntry | MapInfoEntry | None` unions; used `Mapping` for covariant music dict; all mypy errors resolved
+- `export_colormap`: added `assert pixels is not None` to satisfy mypy's `PixelAccess | None` check
+- `export_animation`: typed `flat_entries` as `dict[str, DirectoryEntry]`; split `img` variable into `frame_img` to avoid `Image | None` assignment error; added `assert palette is not None` guard
+
 ## [0.0.38] - 2026-04-10
 
 ### Fixed
