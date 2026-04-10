@@ -534,7 +534,7 @@ class MapRenderer:
         cx, cy = self._px(thing.x, thing.y)
         r = max(2, int(5 * self._scale * self._opts.thing_scale))
 
-        if self._opts.show_sprites:
+        if self._opts.show_sprites and cat != ThingCategory.DECORATION:
             sprite_img = self._get_sprite_image(thing.type)
             if sprite_img is not None:
                 sw, sh = sprite_img.size

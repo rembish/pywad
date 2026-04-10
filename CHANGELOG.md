@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.66] - 2026-04-10
+
+### Fixed
+
+- **`--sprites` shows PLAY sprite for Bloody Mess decorations**: thing type 10
+  ("Bloody Mess") is a `DECORATION` but shares the `PLAY` sprite prefix with
+  actual player starts.  `DECORATION` category things now always render as
+  their marker dot regardless of `--sprites`, so decorative dead-player props
+  no longer look like live player starts on the map.
+
 ## [0.0.65] - 2026-04-10
 
 ### Fixed
