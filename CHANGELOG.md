@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.70] - 2026-04-10
+
+### Added
+
+- **Strife support** (`strife_types.py`): complete thing type table covering all
+  230 editor type IDs used in STRIFE1.WAD — monsters (Acolyte variants, Peasants,
+  Rebels, Beggars, Reaver, Crusader, Inquisitor, Sentinel, Templar, Stalker,
+  Bishop, AlienSpectres, Loremaster, Programmer, Oracle, RatBuddy, Zombie),
+  weapons (Crossbow, Assault Rifle, Mauler, Flamethrower, Grenade Launcher,
+  Sigil pieces), keys (Silver/Brass/Gold + 14 quest keys), ammo, health, armor,
+  and 80+ decorations.  99% coverage (only null/corrupt type-0 placeholders
+  remain unknown).
+- `GameType.STRIFE` added to the enum; `detect_game()` detects Strife via the
+  `AGRD` sprite prefix (Acolyte Guard) unique to that game.
+- **DEHACKED Thing parsing** (`DehackedLump.things`): parses `ID # = N` blocks
+  from embedded DEHACKED lumps to discover custom in-game type IDs defined by
+  PWADs (e.g. REKKR types 633/654/666/668/699 and Eviternity types 140–144).
+  Returns a `dict[int, DehackedThing]` with `name`, `bits`, `is_monster`, and
+  `is_item` attributes.  Renderer automatically loads this overlay and uses it
+  for category detection on unknown types.
+- `DehackedThing` dataclass exposed from `thing_types` module.
+- MBF Helper Dog (type 888, sprite `DOGS`) added to `doom_types.py` as an
+  MBF source-port extension — used in Eviternity (454 instances) and any MBF21
+  PWAD without needing a DEHACKED declaration.
+
+### Fixed
+
+- DEHACKED comment-stripping was incorrectly treating inline `#` in property
+  names (e.g. `ID # = 633`) as a line comment, causing `DehackedLump.things`
+  to return zero results.  Fixed to only skip lines where `#` is the first
+  non-whitespace character.
+
+### Changed
+
+- `thing_types.py` dispatch functions (`get_name`, `get_category`,
+  `get_sprite_prefix`, `get_sprite_suffixes`) now accept an optional
+  `deh: dict[int, DehackedThing] | None` overlay for PWAD custom types.
+- `renderer.py` loads `wad.dehacked.things` at construction and passes it to
+  all type lookups so custom PWAD things render as proper colored icons instead
+  of near-invisible grey dots.
+
 ## [0.0.69] - 2026-04-10
 
 ### Added

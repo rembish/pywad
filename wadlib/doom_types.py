@@ -54,6 +54,7 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (72, "Commander Keen", ThingCategory.MONSTER),
     (84, "Wolfenstein SS", ThingCategory.MONSTER),
     (88, "Boss Brain", ThingCategory.MONSTER),
+    (888, "MBF Helper Dog", ThingCategory.MONSTER),  # MBF source port extension
     # ---- Keys ------------------------------------------------------------------
     (5, "Blue Keycard", ThingCategory.KEY),
     (6, "Yellow Keycard", ThingCategory.KEY),
@@ -202,6 +203,7 @@ _SPRITE_PREFIXES: dict[int, str] = {
     72: "KEEN",  # Commander Keen
     84: "SSWV",  # Wolfenstein SS
     88: "BBRN",  # Boss Brain
+    888: "DOGS",  # MBF Helper Dog
     # Keys
     5: "BKEY",
     6: "YKEY",

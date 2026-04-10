@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
+from .lumps.dehacked import DehackedThing
 from .thing_types import (
     GameType,
     ThingCategory,
@@ -196,6 +197,13 @@ class MapRenderer:
         # Detect which game this WAD belongs to so the right type table is used
         self._game: GameType = detect_game(wad) if wad is not None else GameType.DOOM
         self._invisible_types: frozenset[int] = get_invisible_types(self._game)
+
+        # Load custom thing type definitions from an embedded DEHACKED lump.
+        # These extend (or redefine) the base game table for PWADs that add new
+        # monsters, decorations, etc. via the DEHEXTRA "ID # = N" mechanism.
+        self._deh_things: dict[int, DehackedThing] = (
+            wad.dehacked.things if wad is not None and wad.dehacked is not None else {}
+        )
 
         # Sprite image cache: 4-char prefix → scaled PIL image (or None = not found)
         self._sprite_cache: dict[str, Image.Image | None] = {}
@@ -518,10 +526,11 @@ class MapRenderer:
         """
         if self._wad is None or self._palette is None:
             return None
-        prefix = get_sprite_prefix(type_id, self._game)
+        deh = self._deh_things or None
+        prefix = get_sprite_prefix(type_id, self._game, deh)
         if prefix is None:
             return None
-        suffixes = get_sprite_suffixes(type_id, self._game)
+        suffixes = get_sprite_suffixes(type_id, self._game, deh)
         cache_key = prefix + "|" + ",".join(suffixes)
         if cache_key in self._sprite_cache:
             return self._sprite_cache[cache_key]
@@ -543,7 +552,7 @@ class MapRenderer:
     def _draw_thing(self, thing: Any) -> None:
         if thing.type in self._invisible_types:
             return
-        cat = get_category(thing.type, self._game)
+        cat = get_category(thing.type, self._game, self._deh_things or None)
         colour = _CATEGORY_COLOUR[cat]
         cx, cy = self._px(thing.x, thing.y)
         r = max(2, int(5 * self._scale * self._opts.thing_scale))
