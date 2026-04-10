@@ -3,13 +3,17 @@
 import argparse
 import sys
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("name", help="sprite lump name, e.g. PLAYA1")
-    p.add_argument("output", help="output PNG path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output PNG path (default: <NAME>.png)",
+    )
     p.add_argument(
         "--palette", type=int, default=0, metavar="N", help="PLAYPAL palette index (default: 0)"
     )
@@ -18,6 +22,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     lump_name = args.name.upper()
+    output: str = args.output or f"{lump_name}.png"
     with open_wad(args) as wad:
         pic = wad.get_sprite(lump_name)
         if pic is None:
@@ -28,6 +33,6 @@ def run(args: argparse.Namespace) -> None:
             sys.exit(1)
         palette = wad.playpal.get_palette(args.palette)
         img = pic.decode(palette)
-        img.save(args.output)
+        img.save(output)
         w, h = img.size
-        print(f"Saved {w}x{h} RGBA image to {args.output}")
+        print(f"Saved {w}x{h} RGBA image to {output}")

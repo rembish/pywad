@@ -132,53 +132,75 @@ with WadFile.open("DOOM2.WAD", "SIGIL_II.WAD") as wad:
 
 ## `wadcli` — command-line tool
 
-Every subcommand accepts `--pwad PATH` (repeatable) to layer additional
-PWADs on top of the base WAD.
+`--wad`, `--pwad`, and `--deh` are global options placed **before** the
+subcommand, so you can keep the WAD path constant while varying commands:
+
+```bash
+wadcli --wad DOOM2.WAD list maps
+wadcli --wad DOOM2.WAD --pwad SIGIL_II.WAD list maps
+wadcli --wad DOOM2.WAD export map E6M1
+```
+
+Output file arguments on `export` subcommands are optional — a sensible
+default filename is derived from the lump/map name when omitted.
 
 ```
-wadcli info <wad> [--pwad <pwad>...]
-wadcli list lumps   <wad>
-wadcli list maps    <wad>
-wadcli list flats   <wad>
-wadcli list sprites <wad>
-wadcli list textures <wad>
-wadcli list sounds  <wad>
-wadcli list music   <wad>
-wadcli list patches <wad>
-wadcli list animations <wad>
-wadcli export map       <wad> <MAP>  <out.png> [--floors] [--alpha] [--scale N] [--pwad ...]
-wadcli export flat      <wad> <NAME> <out.png>
-wadcli export sprite    <wad> <NAME> <out.png>
-wadcli export texture   <wad> <NAME> <out.png>
-wadcli export patch     <wad> <NAME> <out.png>
-wadcli export sound     <wad> <NAME> <out.wav>
-wadcli export music     <wad> <NAME> <out.mid>
-wadcli export colormap  <wad> <out.png>
-wadcli export animation <wad> <NAME> <out.gif>
-wadcli export lump      <wad> <NAME> <out.bin>
-wadcli export endoom    <wad> [out.ansi]
+wadcli [--wad PATH] [--pwad PATH]... [--deh PATH] <command> ...
+
+wadcli info [--json]
+wadcli list lumps      [--filter NAME] [--json]
+wadcli list maps       [--json]
+wadcli list flats      [--filter NAME] [--json]
+wadcli list sprites    [--json]
+wadcli list textures   [--filter NAME] [--json]
+wadcli list sounds     [--json]
+wadcli list music      [--json]
+wadcli list patches    [--filter NAME] [--json]
+wadcli list animations [--json]
+wadcli export map       <MAP>  [out.png]  [--floors] [--alpha] [--scale N]
+wadcli export flat      <NAME> [out.png]
+wadcli export sprite    <NAME> [out.png]
+wadcli export texture   <NAME> [out.png]
+wadcli export patch     <NAME> [out.png]
+wadcli export sound     <NAME> [out.wav]  [--raw]
+wadcli export music     <NAME> [out.mid]  [--raw]
+wadcli export colormap  [out.png]
+wadcli export palette   [out.png]         [--palette N]
+wadcli export font      <stcfn|fonta|fontb> [out.png]
+wadcli export animation <NAME> [out.gif]
+wadcli export lump      <NAME> [out.bin]
+wadcli export endoom    [out.txt]         [--ansi]
 ```
 
 ### Examples
 
 ```bash
 # WAD summary
-wadcli info wads/DOOM2.WAD
+wadcli --wad DOOM2.WAD info
+
+# WAD summary as JSON (useful in shell pipelines)
+wadcli --wad DOOM2.WAD info --json | jq .maps
 
 # Render SIGIL II map with floor textures (flats come from base DOOM2.WAD)
-wadcli export map wads/DOOM2.WAD E6M1 e6m1.png --floors --pwad wads/SIGIL_II.WAD
+wadcli --wad DOOM2.WAD --pwad SIGIL_II.WAD export map E6M1
 
-# List all Scythe 2 maps with thing/linedef counts
-wadcli list maps wads/scythe2.wad
+# List all maps with thing/linedef counts
+wadcli --wad scythe2.wad list maps
 
-# Export a sprite as PNG (POSS = Former Human / Zombie Trooper)
-wadcli export sprite wads/DOOM.WAD POSSA1 trooper.png
+# Export a sprite as PNG — output defaults to POSSA1.png
+wadcli --wad DOOM.WAD export sprite POSSA1
 
-# Export music as MIDI
-wadcli export music wads/DOOM.WAD D_E1M1 e1m1.mid
+# Export music as MIDI — output defaults to D_E1M1.mid
+wadcli --wad DOOM.WAD export music D_E1M1
+
+# Export the full colour palette swatch
+wadcli --wad DOOM.WAD export palette
+
+# Export Doom's HUD font as a sprite sheet
+wadcli --wad DOOM.WAD export font stcfn
 
 # Export an animated flat as a GIF
-wadcli export animation wads/HEXEN.WAD FLTWAWA1 water.gif
+wadcli --wad HEXEN.WAD export animation FLTWAWA1
 ```
 
 ---

@@ -1,17 +1,63 @@
 """wadcli info — WAD header summary."""
 
 import argparse
+import json
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
+    p.add_argument("--json", action="store_true", help="output as JSON")
     p.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> None:
     with open_wad(args) as wad:
+        pnames = wad.pnames
+        playpal = wad.playpal
+        animdefs = wad.animdefs
+        mapinfo = wad.mapinfo
+        zmapinfo = wad.zmapinfo
+        sndinfo = wad.sndinfo
+        deh = wad.dehacked
+
+        fonts = []
+        if wad.stcfn:
+            fonts.append(f"STCFN ({len(wad.stcfn)} glyphs)")
+        if wad.fonta:
+            fonts.append(f"FONTA ({len(wad.fonta)} glyphs)")
+        if wad.fontb:
+            fonts.append(f"FONTB ({len(wad.fontb)} glyphs)")
+
+        if args.json:
+            deh_info: dict[str, object] | None = None
+            if deh is not None:
+                deh_info = {
+                    "doom_version": deh.doom_version,
+                    "par_times": len(deh.par_times),
+                }
+            data: dict[str, object] = {
+                "type": wad.wad_type.name,
+                "lumps": wad.directory_size,
+                "maps": [str(m) for m in wad.maps],
+                "textures": len(wad.texture1 or []) + len(wad.texture2 or []),
+                "flats": len(wad.flats),
+                "patches": len(pnames) if pnames else 0,
+                "palettes": len(playpal) if playpal else 0,
+                "sprites": len(wad.sprites),
+                "sounds": len(wad.sounds),
+                "music": len(wad.music),
+                "colormap": wad.colormap is not None,
+                "animdefs": len(animdefs.animations) if animdefs else 0,
+                "mapinfo": len(mapinfo.maps) if mapinfo else 0,
+                "zmapinfo": len(zmapinfo.maps) if zmapinfo else 0,
+                "sndinfo": len(sndinfo.sounds) if sndinfo else 0,
+                "fonts": fonts,
+                "dehacked": deh_info,
+            }
+            print(json.dumps(data, indent=2))
+            return
+
         print(f"Type    : {wad.wad_type.name}")
         print(f"Lumps   : {wad.directory_size}")
         print(f"Maps    : {len(wad.maps)}")
@@ -21,39 +67,25 @@ def run(args: argparse.Namespace) -> None:
             print(f"          {names}{suffix}")
         print(f"Textures: {len(wad.texture1 or []) + len(wad.texture2 or [])}")
         print(f"Flats   : {len(wad.flats)}")
-        pnames = wad.pnames
         print(f"Patches : {len(pnames) if pnames else 0}")
-        playpal = wad.playpal
         print(f"Palettes: {len(playpal) if playpal else 0}")
         print(f"Sprites : {len(wad.sprites)}")
         print(f"Sounds  : {len(wad.sounds)}")
         print(f"Music   : {len(wad.music)}")
         print(f"Colormap: {'yes' if wad.colormap is not None else 'no'}")
-        animdefs = wad.animdefs
         if animdefs is not None:
             print(f"ANIMDEFS: {len(animdefs.animations)} animations")
         else:
             print("ANIMDEFS: none")
-        mapinfo = wad.mapinfo
         mi_count = len(mapinfo.maps) if mapinfo is not None else 0
         print(f"MAPINFO : {mi_count} maps" if mi_count else "MAPINFO : none")
-        zmapinfo = wad.zmapinfo
         zmi_count = len(zmapinfo.maps) if zmapinfo is not None else 0
         print(f"ZMAPINFO: {zmi_count} maps" if zmi_count else "ZMAPINFO: none")
-        sndinfo = wad.sndinfo
         if sndinfo is not None:
             print(f"SNDINFO : {len(sndinfo.sounds)} sounds")
         else:
             print("SNDINFO : none")
-        fonts = []
-        if wad.stcfn:
-            fonts.append(f"STCFN ({len(wad.stcfn)} glyphs)")
-        if wad.fonta:
-            fonts.append(f"FONTA ({len(wad.fonta)} glyphs)")
-        if wad.fontb:
-            fonts.append(f"FONTB ({len(wad.fontb)} glyphs)")
         print(f"Fonts   : {', '.join(fonts) if fonts else 'none'}")
-        deh = wad.dehacked
         if deh is not None:
             par_count = len(deh.par_times)
             ver = deh.doom_version

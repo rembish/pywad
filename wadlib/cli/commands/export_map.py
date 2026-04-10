@@ -4,15 +4,17 @@ import argparse
 import sys
 
 from ...renderer import MapRenderer, RenderOptions
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(
-        p, pwad_help="PWAD to layer on top of base WAD (e.g. 'DOOM2.WAD --pwad SIGIL_II.WAD')"
-    )
     p.add_argument("map", help="map name, e.g. E1M1 or MAP01")
-    p.add_argument("output", help="output PNG path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output PNG path (default: <MAP>.png)",
+    )
     p.add_argument(
         "--scale", type=float, default=0.0, help="pixels per map unit (default: auto-fit)"
     )
@@ -38,6 +40,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     map_name = args.map.upper()
+    output: str = args.output or f"{map_name}.png"
     opts = RenderOptions(
         scale=args.scale,
         show_things=not args.no_things,
@@ -55,6 +58,6 @@ def run(args: argparse.Namespace) -> None:
 
         renderer = MapRenderer(target, wad=wad, options=opts)
         renderer.render()
-        renderer.save(args.output)
+        renderer.save(output)
         w, h = renderer.im.size
-        print(f"Saved {w}x{h} image to {args.output}")
+        print(f"Saved {w}x{h} image to {output}")

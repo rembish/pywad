@@ -3,12 +3,16 @@
 import argparse
 import sys
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
-    p.add_argument("output", help="output file path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output file path (default: ENDOOM.ans with --ansi, ENDOOM.txt otherwise)",
+    )
     p.add_argument(
         "--ansi",
         action="store_true",
@@ -18,6 +22,8 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
+    default_ext = ".ans" if args.ansi else ".txt"
+    output: str = args.output or f"ENDOOM{default_ext}"
     with open_wad(args) as wad:
         endoom = wad.endoom
         if endoom is None:
@@ -26,7 +32,7 @@ def run(args: argparse.Namespace) -> None:
 
         text = endoom.to_ansi() if args.ansi else endoom.to_text()
         data = text.encode("utf-8", errors="replace")
-        with open(args.output, "wb") as f:
+        with open(output, "wb") as f:
             f.write(data)
 
-        print(f"Saved {len(data)} bytes to {args.output}")
+        print(f"Saved {len(data)} bytes to {output}")

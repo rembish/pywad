@@ -5,13 +5,17 @@ import sys
 
 from ...lumps.mus import Mus
 from ...lumps.ogg import MidiLump, Mp3Lump, OggLump
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("name", help="music lump name, e.g. D_E1M1")
-    p.add_argument("output", help="output file path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output file path (default: <NAME>.<ext> based on format)",
+    )
     p.add_argument(
         "--raw",
         action="store_true",
@@ -35,18 +39,23 @@ def run(args: argparse.Namespace) -> None:
         if isinstance(lump, Mus):
             data = lump.raw() if args.raw else lump.to_midi()
             fmt = "MUS" if args.raw else "MIDI"
+            ext = ".mus" if args.raw else ".mid"
         elif isinstance(lump, MidiLump):
             data = lump.raw()
             fmt = "MIDI"
+            ext = ".mid"
         elif isinstance(lump, OggLump):
             data = lump.raw()
             fmt = "OGG"
+            ext = ".ogg"
         else:
             assert isinstance(lump, Mp3Lump)
             data = lump.raw()
             fmt = "MP3"
+            ext = ".mp3"
 
-        with open(args.output, "wb") as f:
+        output: str = args.output or f"{lump_name}{ext}"
+        with open(output, "wb") as f:
             f.write(data)
 
-        print(f"Saved {len(data)} bytes ({fmt}) to {args.output}")
+        print(f"Saved {len(data)} bytes ({fmt}) to {output}")

@@ -9,15 +9,19 @@ from ...compositor import TextureCompositor
 from ...directory import DirectoryEntry
 from ...lumps.flat import Flat
 from ...wad import WadFile
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 _TICS_MS = 1000 / 35  # ms per tic at 35 Hz
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("name", help="flat or texture animation name (e.g. x_001)")
-    p.add_argument("output", help="output GIF path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output GIF path (default: <NAME>.gif)",
+    )
     p.add_argument(
         "--palette",
         type=int,
@@ -45,6 +49,7 @@ def _flat_directory_order(wad: WadFile) -> list[str]:
 
 
 def run(args: argparse.Namespace) -> None:
+    output: str = args.output or f"{args.name}.gif"
     with open_wad(args) as wad:
         if wad.animdefs is None:
             print("No ANIMDEFS lump found.", file=sys.stderr)
@@ -137,11 +142,11 @@ def run(args: argparse.Namespace) -> None:
             sys.exit(1)
 
         frames[0].save(
-            args.output,
+            output,
             save_all=True,
             append_images=frames[1:],
             duration=durations,
             loop=0,
         )
         w, h = frames[0].size
-        print(f"Saved {len(frames)}-frame {w}x{h} GIF to {args.output}")
+        print(f"Saved {len(frames)}-frame {w}x{h} GIF to {output}")

@@ -3,12 +3,16 @@
 import argparse
 import sys
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
-    p.add_argument("output", help="output PNG path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output PNG path (default: COLORMAP.png)",
+    )
     p.add_argument(
         "--palette",
         type=int,
@@ -20,6 +24,7 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
+    output: str = args.output or "COLORMAP.png"
     with open_wad(args) as wad:
         if wad.colormap is None:
             print("No COLORMAP lump found.", file=sys.stderr)
@@ -47,5 +52,5 @@ def run(args: argparse.Namespace) -> None:
                     for dx in range(cell):
                         pixels[col * cell + dx, row * cell + dy] = (r, g, b)
 
-        img.save(args.output)
-        print(f"Saved {w_px}x{h_px} colormap grid to {args.output}")
+        img.save(output)
+        print(f"Saved {w_px}x{h_px} colormap grid to {output}")

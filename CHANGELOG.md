@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.42] - 2026-04-10
+
+### Changed
+
+- **CLI: global `--wad` / `--pwad` / `--deh` flags** — WAD arguments are now placed before the
+  subcommand (`wadcli --wad DOOM.WAD list maps`) instead of after it; this lets you keep the WAD
+  path constant while switching commands without retyping it
+- **CLI: optional output paths on all `export` subcommands** — the output file argument is now
+  optional; when omitted a default filename is derived from the lump/map name and format
+  (e.g. `export map E1M1` → `E1M1.png`, `export music D_E1M1` → `D_E1M1.mid`)
+
+### Added
+
+- `wadcli export palette` — renders the PLAYPAL lump as a colour-swatch PNG
+  (16 colours × 16 rows per palette); supports `--palette N` to export a single palette
+- `wadcli export font` — renders a WAD font (`stcfn`, `fonta`, or `fontb`) as a sprite-sheet PNG
+  with one glyph per cell and ASCII labels; supports `--cols N` and `--palette N`
+- `--json` flag on `info` and all `list *` subcommands — outputs structured JSON suitable for
+  shell pipelines (`wadcli --wad DOOM2.WAD info --json | jq .maps`)
+
 ## [0.0.40] - 2026-04-09
 
 ### Added

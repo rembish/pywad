@@ -1,12 +1,13 @@
 """wadcli list maps — print maps with thing and linedef counts."""
 
 import argparse
+import json
 import re
 from collections.abc import Mapping
 
 from ...lumps.mapinfo import MapInfoEntry, MapInfoLump
 from ...lumps.zmapinfo import ZMapInfoEntry, ZMapInfoLump
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 _DOOM1_MAP_RE = re.compile(r"^E(\d)M(\d)$", re.IGNORECASE)
 _DOOM2_MAP_RE = re.compile(r"^MAP(\d{2})$", re.IGNORECASE)
@@ -103,20 +104,56 @@ def _music_for_map(
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
+    p.add_argument("--json", action="store_true", help="output as JSON")
     p.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> None:
     with open_wad(args) as wad:
         if not wad.maps:
-            print("No maps found.")
+            if args.json:
+                print("[]")
+            else:
+                print("No maps found.")
             return
 
         mapinfo = wad.mapinfo
         zmapinfo = wad.zmapinfo
         music = wad.music
         language = wad.language.strings if wad.language is not None else None
+
+        rows = []
+        for m in wad.maps:
+            map_name = str(m)
+            things = len(m.things) if m.things else 0
+            lines = len(m.lines) if m.lines else 0
+            verts = len(m.vertices) if m.vertices else 0
+            sectors = len(m.sectors) if m.sectors else 0
+            mi_entry = _resolve_mi(map_name, mapinfo, zmapinfo)
+
+            raw_title: str = getattr(mi_entry, "title", "") or ""
+            lookup_key: str | None = getattr(mi_entry, "title_lookup", None)
+            if lookup_key and language:
+                title = language.get(lookup_key.upper(), raw_title)
+            else:
+                title = raw_title
+
+            lump = _music_for_map(map_name, music, mi_entry)
+            rows.append(
+                {
+                    "name": map_name,
+                    "title": title,
+                    "music": lump,
+                    "things": things,
+                    "linedefs": lines,
+                    "vertices": verts,
+                    "sectors": sectors,
+                }
+            )
+
+        if args.json:
+            print(json.dumps(rows, indent=2))
+            return
 
         has_title = mapinfo is not None or zmapinfo is not None
         has_music = bool(music)
@@ -131,29 +168,14 @@ def run(args: argparse.Namespace) -> None:
         print(header)
         print("-" * len(header))
 
-        for m in wad.maps:
-            map_name = str(m)
-            things = len(m.things) if m.things else 0
-            lines = len(m.lines) if m.lines else 0
-            verts = len(m.vertices) if m.vertices else 0
-            sectors = len(m.sectors) if m.sectors else 0
-
-            mi_entry = _resolve_mi(map_name, mapinfo, zmapinfo)
-
-            row = f"{map_name:<10}"
-
+        for row in rows:
+            line = f"{row['name']:<10}"
             if has_title:
-                raw_title: str = getattr(mi_entry, "title", "") or ""
-                lookup_key: str | None = getattr(mi_entry, "title_lookup", None)
-                if lookup_key and language:
-                    title = language.get(lookup_key.upper(), raw_title)
-                else:
-                    title = raw_title
-                row += f"  {title:<28}"
-
+                line += f"  {row['title']:<28}"
             if has_music:
-                lump = _music_for_map(map_name, music, mi_entry)
-                row += f"  {lump:<12}"
-
-            row += f"  {things:>8}  {lines:>10}  {verts:>10}  {sectors:>8}"
-            print(row)
+                line += f"  {row['music']:<12}"
+            line += (
+                f"  {row['things']:>8}  {row['linedefs']:>10}"
+                f"  {row['vertices']:>10}  {row['sectors']:>8}"
+            )
+            print(line)

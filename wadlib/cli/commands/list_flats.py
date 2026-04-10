@@ -1,13 +1,14 @@
 """wadcli list flats — list F_START/F_END namespace entries."""
 
 import argparse
+import json
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("--filter", metavar="NAME", help="only show flats containing NAME")
+    p.add_argument("--json", action="store_true", help="output as JSON")
     p.set_defaults(func=run)
 
 
@@ -17,6 +18,9 @@ def run(args: argparse.Namespace) -> None:
         names = sorted(wad.flats.keys())
         if name_filter:
             names = [n for n in names if name_filter in n]
+        if args.json:
+            print(json.dumps(names))
+            return
         if not names:
             print("No flats found.")
             return

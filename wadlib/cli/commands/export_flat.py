@@ -3,13 +3,17 @@
 import argparse
 import sys
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("flat", help="flat name, e.g. FLOOR0_1")
-    p.add_argument("output", help="output PNG path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output PNG path (default: <FLAT>.png)",
+    )
     p.add_argument(
         "--palette", type=int, default=0, metavar="N", help="PLAYPAL palette index (default: 0)"
     )
@@ -24,10 +28,12 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
+    flat_name = args.flat.upper()
+    output: str = args.output or f"{flat_name}.png"
     with open_wad(args) as wad:
-        flat = wad.get_flat(args.flat.upper())
+        flat = wad.get_flat(flat_name)
         if flat is None:
-            print(f"Flat '{args.flat}' not found.", file=sys.stderr)
+            print(f"Flat '{flat_name}' not found.", file=sys.stderr)
             sys.exit(1)
         if wad.playpal is None:
             print("WAD has no PLAYPAL lump.", file=sys.stderr)
@@ -39,6 +45,6 @@ def run(args: argparse.Namespace) -> None:
                 (img.width * args.scale, img.height * args.scale),
                 resample=0,  # NEAREST
             )
-        img.save(args.output)
+        img.save(output)
         w, h = img.size
-        print(f"Saved {w}x{h} image to {args.output}")
+        print(f"Saved {w}x{h} image to {output}")

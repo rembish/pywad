@@ -7,8 +7,10 @@ from .commands import (
     export_colormap,
     export_endoom,
     export_flat,
+    export_font,
     export_map,
     export_music,
+    export_palette,
     export_patch,
     export_sound,
     export_sprite,
@@ -33,6 +35,24 @@ def main() -> None:
         description="Doom WAD file toolkit — inspect and export WAD contents.",
     )
     parser.set_defaults(func=lambda _: parser.print_help())
+
+    # Global WAD arguments — shared by all subcommands
+    parser.add_argument("--wad", metavar="PATH", help="path to base WAD file (IWAD or PWAD)")
+    parser.add_argument(
+        "--pwad",
+        dest="pwads",
+        metavar="PATH",
+        action="append",
+        default=[],
+        help="additional PWAD to layer on top (may be repeated)",
+    )
+    parser.add_argument(
+        "--deh",
+        metavar="PATH",
+        default=None,
+        help="standalone .deh DeHackEd patch to apply",
+    )
+
     subs = parser.add_subparsers(dest="group", metavar="<command>")
 
     # info (top-level, no subgroup)
@@ -72,12 +92,18 @@ def main() -> None:
         export_subs.add_parser("endoom", help="export ENDOOM lump as text or ANSI")
     )
     export_flat.configure(export_subs.add_parser("flat", help="render a floor/ceiling flat to PNG"))
+    export_font.configure(
+        export_subs.add_parser("font", help="render a WAD font as a sprite-sheet PNG")
+    )
     extract_lump.configure(export_subs.add_parser("lump", help="dump raw lump bytes to a file"))
     export_map.configure(export_subs.add_parser("map", help="render a map to a PNG image"))
     export_music.configure(
         export_subs.add_parser(
             "music", help="export a music lump as MIDI (.mid) or raw MUS (--raw)"
         )
+    )
+    export_palette.configure(
+        export_subs.add_parser("palette", help="render PLAYPAL as a colour swatch PNG")
     )
     export_patch.configure(export_subs.add_parser("patch", help="render a patch or sprite to PNG"))
     export_sound.configure(

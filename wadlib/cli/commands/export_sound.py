@@ -3,13 +3,17 @@
 import argparse
 import sys
 
-from .._wad_args import add_wad_args, open_wad
+from .._wad_args import open_wad
 
 
 def configure(p: argparse.ArgumentParser) -> None:
-    add_wad_args(p)
     p.add_argument("name", help="sound lump name, e.g. DSPISTOL")
-    p.add_argument("output", help="output file path")
+    p.add_argument(
+        "output",
+        nargs="?",
+        default=None,
+        help="output file path (default: <NAME>.wav or <NAME>.dmx with --raw)",
+    )
     p.add_argument(
         "--raw",
         action="store_true",
@@ -20,6 +24,8 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     lump_name = args.name.upper()
+    ext = ".dmx" if args.raw else ".wav"
+    output: str = args.output or f"{lump_name}{ext}"
     with open_wad(args) as wad:
         snd = wad.get_sound(lump_name)
         if snd is None:
@@ -31,8 +37,8 @@ def run(args: argparse.Namespace) -> None:
             sys.exit(1)
 
         data = snd.raw() if args.raw else snd.to_wav()
-        with open(args.output, "wb") as f:
+        with open(output, "wb") as f:
             f.write(data)
 
         fmt = "raw" if args.raw else "WAV"
-        print(f"Saved {len(data)} bytes ({fmt}) to {args.output}")
+        print(f"Saved {len(data)} bytes ({fmt}) to {output}")
