@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.36] - 2026-04-10
+
+### Added
+
+- `DehackedFile` (`wadlib.lumps.dehacked`) — reads a standalone `.deh` file from disk; exposes the same API as `DehackedLump` (`par_times`, `doom_version`, `patch_format`, `raw()`)
+- `WadFile.load_deh(path)` — loads an external `.deh` and injects it as the WAD's `dehacked` property, overriding any embedded DEHACKED lump
+- `--deh PATH` option on every `wadcli` subcommand — applies a standalone DeHackEd patch alongside the loaded WAD
+
 ## [0.0.35] - 2026-04-09
 
 ### Added

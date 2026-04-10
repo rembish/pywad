@@ -18,7 +18,7 @@ from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
 from .lumps.blockmap import BlockMap, Reject
 from .lumps.colormap import ColormapLump
-from .lumps.dehacked import DehackedLump
+from .lumps.dehacked import DehackedFile, DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.hexen import HexenLineDefs, HexenThings
@@ -422,7 +422,21 @@ class WadFile:
 
     @cached_property
     def dehacked(self) -> DehackedLump | None:
-        """Return the DEHACKED lump (PWAD-aware), or None if not present."""
+        """Return the DEHACKED lump (PWAD-aware), or None if not present.
+
+        An external ``.deh`` file takes priority if one was loaded via
+        :meth:`load_deh`.
+        """
         entry = self._find_lump("DEHACKED")
         return DehackedLump(entry) if entry else None
+
+    def load_deh(self, path: str) -> None:
+        """Load a standalone ``.deh`` file and use it as this WAD's DEHACKED data.
+
+        Overrides any embedded DEHACKED lump.  Call before first access to
+        ``wad.dehacked``; subsequent calls replace the previously loaded file.
+        """
+        # cached_property stores its value in __dict__ under the property name;
+        # setting it directly bypasses the descriptor and acts as an override.
+        self.__dict__["dehacked"] = DehackedFile(path)
 

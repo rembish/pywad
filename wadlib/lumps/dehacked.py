@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from functools import cached_property
+from pathlib import Path
 
 from .base import BaseLump
 
@@ -75,3 +76,26 @@ class DehackedLump(BaseLump):
         """Return the ``Patch format`` field from the patch header, or ``None``."""
         m = re.search(r"^Patch format\s*=\s*(\d+)", self._text, re.MULTILINE | re.IGNORECASE)
         return int(m.group(1)) if m else None
+
+
+class DehackedFile(DehackedLump):
+    """Standalone ``.deh`` file on disk (not embedded in a WAD lump).
+
+    Presents the same API as :class:`DehackedLump` so it can be used
+    wherever a ``DehackedLump`` is expected::
+
+        deh = DehackedFile("rekkr.deh")
+        print(deh.par_times)
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        # Skip BaseLump.__init__ — we have no DirectoryEntry.
+        object.__init__(self)
+        self._deh_path = Path(path)
+
+    @cached_property
+    def _text(self) -> str:
+        return self._deh_path.read_bytes().decode("latin-1")
+
+    def raw(self) -> bytes:
+        return self._deh_path.read_bytes()
