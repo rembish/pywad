@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.56] - 2026-04-10
+
+### Changed
+
+- Coverage threshold lowered from 90% to **80%** (`--cov-fail-under=80`).
+  GHA CI only has 3 WADs (blasphem, freedoom1, freedoom2); the 63 tests that
+  require HEXEN.WAD, DOOM.WAD, or DOOM2.WAD skip, dropping CI coverage to
+  ~85%.  80% is a conservative floor that passes in both environments.
+
 ## [0.0.55] - 2026-04-10
 
 ### Changed
