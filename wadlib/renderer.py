@@ -393,11 +393,55 @@ class MapRenderer:
     # Linedef rendering
     # ------------------------------------------------------------------
 
+    # Doom automap colours (RGB).  Chosen to read clearly on both dark and
+    # transparent backgrounds.
+    _LINE_ONE_SIDED: tuple[int, int, int] = (220, 220, 220)  # solid wall — white
+    _LINE_TWO_SIDED: tuple[int, int, int] = (110, 110, 110)  # passable — grey
+    _LINE_FLOOR_CHANGE: tuple[int, int, int] = (220, 180, 80)  # step / ledge — yellow
+    _LINE_CEIL_CHANGE: tuple[int, int, int] = (140, 140, 140)  # ceiling change — light grey
+    _LINE_SECRET: tuple[int, int, int] = (220, 50, 220)  # secret — magenta
+    _LINE_SPECIAL: tuple[int, int, int] = (80, 200, 255)  # door / trigger — cyan
+
+    # Linedef flag bits (Doom / Boom)
+    _FLAG_SECRET = 0x0020  # mapped as one-sided on automap
+
+    def _linedef_colour(self, line: Any) -> tuple[int, int, int]:
+        """Classify a linedef and return its automap colour."""
+        m = self.level
+        left_sd = getattr(line, "left_sidedef", -1)
+        one_sided = left_sd in (-1, 0xFFFF)
+
+        # Secret flag: draw as solid wall regardless of geometry
+        if getattr(line, "flags", 0) & self._FLAG_SECRET:
+            return self._LINE_SECRET
+
+        if one_sided:
+            # Check for special action (door, lift, trigger)
+            if getattr(line, "special_type", 0):
+                return self._LINE_SPECIAL
+            return self._LINE_ONE_SIDED
+
+        # Two-sided: compare front and back sector floor/ceiling heights
+        if m.sidedefs and m.sectors:
+            right_sd = getattr(line, "right_sidedef", 0)
+            right_sec_idx = getattr(m.sidedefs.get(right_sd), "sector", None)
+            left_sec_idx = getattr(m.sidedefs.get(left_sd), "sector", None)
+            right_sec = m.sectors.get(right_sec_idx) if right_sec_idx is not None else None
+            left_sec = m.sectors.get(left_sec_idx) if left_sec_idx is not None else None
+
+            if right_sec and left_sec:
+                if right_sec.floor_height != left_sec.floor_height:
+                    return self._LINE_FLOOR_CHANGE
+                if right_sec.ceiling_height != left_sec.ceiling_height:
+                    return self._LINE_CEIL_CHANGE
+
+        return self._LINE_TWO_SIDED
+
     def _iter_linedef_endpoints(
         self,
-    ) -> list[tuple[tuple[int, int], tuple[int, int], bool]]:
-        """Return [(p1, p2, one_sided)] for all linedefs with valid vertices."""
-        result: list[tuple[tuple[int, int], tuple[int, int], bool]] = []
+    ) -> list[tuple[tuple[int, int], tuple[int, int], tuple[int, int, int]]]:
+        """Return [(p1, p2, colour)] for all linedefs with valid vertices."""
+        result: list[tuple[tuple[int, int], tuple[int, int], tuple[int, int, int]]] = []
         m = self.level
         if not m.lines or not m.vertices:
             return result
@@ -406,19 +450,18 @@ class MapRenderer:
             v2 = m.vertices.get(getattr(line, "finish_vertex", getattr(line, "end_vertex", -1)))
             if v1 is None or v2 is None:
                 continue
-            one_sided = line.left_sidedef in (-1, 0xFFFF)
-            result.append((self._px(v1.x, v1.y), self._px(v2.x, v2.y), one_sided))
+            colour = self._linedef_colour(line)
+            result.append((self._px(v1.x, v1.y), self._px(v2.x, v2.y), colour))
         return result
 
     def _draw_linedefs(self) -> None:
         lines = self._iter_linedef_endpoints()
         if self._opts.alpha:
             # Black outline pass on exterior (one-sided) walls.
-            for p1, p2, one_sided in lines:
-                if one_sided:
+            for p1, p2, colour in lines:
+                if colour == self._LINE_ONE_SIDED:
                     self._draw.line([p1, p2], fill=(0, 0, 0, 255), width=5)
-        for p1, p2, one_sided in lines:
-            colour = (220, 220, 220) if one_sided else (110, 110, 110)
+        for p1, p2, colour in lines:
             self._draw.line([p1, p2], fill=colour, width=1)
 
     # ------------------------------------------------------------------
