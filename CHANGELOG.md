@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.47] - 2026-04-10
+
+### Added
+
+- **ZNODES support** — maps compiled by ZDoom/GZDoom's node builder (XNOD uncompressed and
+  ZNOD zlib-compressed variants) are now parsed automatically; the extended BSP nodes, segs,
+  and subsectors replace the vanilla lumps and the extra vertices are merged into the map's vertex
+  list so the floor renderer works on GZDoom-compiled maps unchanged
+- `MapData.ZNODES` enum member recognises the ZNODES lump name in the map directory scan
+
+### Fixed
+
+- `MapRenderer._clip_by_segs`: changed `break` to `continue` when a seg lookup returns `None`
+  (previously aborted the entire subsector clip at the first missing seg); also skip mini-segs
+  (`linedef == 0xFFFF`) that carry no real wall information
+
 ## [0.0.46] - 2026-04-10
 
 ### Added

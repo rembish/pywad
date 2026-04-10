@@ -17,6 +17,7 @@ from .segs import Segs, SubSectors
 from .sidedefs import SideDefs
 from .things import Things
 from .vertices import Vertices
+from .znodes import ZNodesLump, ZNodList, ZNodVertex
 
 if TYPE_CHECKING:
     from ..directory import DirectoryEntry
@@ -101,6 +102,24 @@ class BaseMapEntry(BaseLump):
 
     def attach_blockmap(self, blockmap: BlockMap) -> None:
         self.blockmap = blockmap
+
+    def attach_znodes(self, znodes: ZNodesLump) -> None:
+        """Replace vanilla BSP data with ZNOD/XNOD extended nodes.
+
+        Merges any extra vertices produced by the ZDoom node builder onto the
+        end of the map's existing vertex list, then replaces segs, ssectors,
+        and nodes with the ZNOD equivalents so the renderer's BSP walk works
+        unchanged.
+        """
+        p = znodes.parsed
+        orig: list[ZNodVertex] = (
+            [ZNodVertex(v.x, v.y) for v in self.vertices] if self.vertices else []
+        )
+        combined: list[ZNodVertex] = orig + list(p.extra_vertices)
+        self.vertices = ZNodList(combined)  # type: ignore[assignment]
+        self.segs = p.segs  # type: ignore[assignment]
+        self.ssectors = p.subsectors  # type: ignore[assignment]
+        self.nodes = p.nodes  # type: ignore[assignment]
 
 
 class Doom1MapEntry(BaseMapEntry):

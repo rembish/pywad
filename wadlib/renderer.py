@@ -281,7 +281,9 @@ class MapRenderer:
         for j in range(ssector.seg_count):
             seg = m.segs.get(ssector.first_seg + j)
             if seg is None:
-                break
+                continue
+            if getattr(seg, "linedef", None) == 0xFFFF:
+                continue  # mini-seg: no real wall, skip clipping
             v1 = m.vertices.get(seg.start_vertex)
             v2 = m.vertices.get(seg.end_vertex)
             if v1 is None or v2 is None:

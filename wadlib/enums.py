@@ -24,3 +24,4 @@ class MapData(ExtendedEnum):
     REJECT = "Map Reject Table"
     BLOCKMAP = "Map Blockmap"
     BEHAVIOR = "Map Compiled Script"
+    ZNODES = "Map Extended BSP Nodes"

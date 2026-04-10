@@ -53,6 +53,7 @@ from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
+from .lumps.znodes import ZNodesLump
 
 _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
 
@@ -68,6 +69,7 @@ _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "NODES": ("attach_nodes", Nodes),
     "REJECT": ("attach_reject", Reject),
     "BLOCKMAP": ("attach_blockmap", BlockMap),
+    "ZNODES": ("attach_znodes", ZNodesLump),
 }
 
 # Hexen overrides only differ for THINGS and LINEDEFS
