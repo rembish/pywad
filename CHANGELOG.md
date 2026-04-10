@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.68] - 2026-04-10
+
+### Fixed
+
+- **Doom/Doom 2 thing type table overhauled** — corrected wrong ID assignments and
+  added missing entries:
+  - Type 70 is the Doom 2 Burning Barrel (`FCAN`), not a Heretic monster.
+  - HDB series (hanging torsos) now correctly maps types 73–78 to HDB1–HDB6.
+  - Blood pools: types 79 → `POB1`, 80 → `POB2`, 81 → `BRS1` (pool of brains).
+  - Type 24 (Pool of Blood and Flesh) → `POL5`.
+  - Added type 2035 (Exploding Barrel → `BAR1`) — very common in Doom 2 maps.
+  - Added type 2013 (Soulsphere → `SOUL`).
+  - Added type 2028 (Floor Lamp → `COLU`).
+- **Invisible gameplay markers no longer render**: types 0 (corrupt/null), 11
+  (Deathmatch Start), 14 (Teleport Landing), 87 (Spawn Spot), and 89 (Spawn
+  Shooter) have no in-game visual and are now silently skipped by the renderer.
+- All maps in DOOM.WAD, DOOM2.WAD, TNT.WAD, Plutonia.WAD now render without
+  unknown grey dots.
+
 ## [0.0.67] - 2026-04-10
 
 ### Fixed

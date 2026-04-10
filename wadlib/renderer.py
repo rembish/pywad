@@ -21,7 +21,13 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
-from .doom_types import ThingCategory, get_category, get_sprite_prefix, get_sprite_suffixes
+from .doom_types import (
+    INVISIBLE_TYPES,
+    ThingCategory,
+    get_category,
+    get_sprite_prefix,
+    get_sprite_suffixes,
+)
 from .lumps.colormap import ColormapLump
 from .lumps.map import BaseMapEntry
 from .lumps.nodes import SSECTOR_FLAG
@@ -529,6 +535,8 @@ class MapRenderer:
         return result
 
     def _draw_thing(self, thing: Any) -> None:
+        if thing.type in INVISIBLE_TYPES:
+            return
         cat = get_category(thing.type)
         colour = _CATEGORY_COLOUR[cat]
         cx, cy = self._px(thing.x, thing.y)

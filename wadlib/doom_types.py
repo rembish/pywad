@@ -1,7 +1,11 @@
 """Doom thing type catalog — names and rendering categories for well-known type IDs.
 
-Covers Doom 1, Ultimate Doom, and Doom 2 thing types.  Heretic and Hexen
-use the same numeric space but different IDs; unknown IDs fall back to UNKNOWN.
+Covers Doom 1, Ultimate Doom, and Doom 2 thing types only.  Heretic and Hexen
+share numeric ranges but map IDs to completely different entities; they are
+handled by heretic_types.py and hexen_types.py respectively.
+
+# TODO: support DECORATE/ZScript lumps so GZDoom PWADs can define new types
+#       directly in the WAD without requiring a hardcoded table here.
 """
 
 from enum import Enum
@@ -78,6 +82,7 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     # ---- Health ----------------------------------------------------------------
     (2011, "Stimpack", ThingCategory.HEALTH),
     (2012, "Medikit", ThingCategory.HEALTH),
+    (2013, "Soulsphere", ThingCategory.HEALTH),
     (2014, "Health Bonus", ThingCategory.HEALTH),
     # ---- Armor -----------------------------------------------------------------
     (2015, "Armor Bonus", ThingCategory.ARMOR),
@@ -137,25 +142,22 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (61, "Hanging Torso Looking Down", ThingCategory.DECORATION),
     (62, "Hanging Torso Open Brain", ThingCategory.DECORATION),
     (63, "Hanging Torso Brain Out", ThingCategory.DECORATION),
-    (73, "Hanging Torso One Arm", ThingCategory.DECORATION),
-    (74, "Hanging Torso No Brain", ThingCategory.DECORATION),
-    (75, "Pool of Brain", ThingCategory.DECORATION),
-    (76, "Burning Barrel", ThingCategory.DECORATION),
-    (77, "Hanging Legs", ThingCategory.DECORATION),
-    (78, "Hanging Torso Looking Up", ThingCategory.DECORATION),
-    (79, "Pool of Blood Small", ThingCategory.DECORATION),
-    (80, "Brain Stem", ThingCategory.DECORATION),
-    (81, "Pile of Guts", ThingCategory.DECORATION),
+    (70, "Burning Barrel", ThingCategory.DECORATION),  # Doom 2
+    (73, "Hanging Victim Guts Removed", ThingCategory.DECORATION),
+    (74, "Hanging Victim Guts and Brain Removed", ThingCategory.DECORATION),
+    (75, "Hanging Torso Looking Down", ThingCategory.DECORATION),
+    (76, "Hanging Torso Open Skull", ThingCategory.DECORATION),
+    (77, "Hanging Torso Looking Up", ThingCategory.DECORATION),
+    (78, "Hanging Torso Brain Removed", ThingCategory.DECORATION),
+    (79, "Pool of Blood", ThingCategory.DECORATION),
+    (80, "Pool of Blood (small)", ThingCategory.DECORATION),
+    (81, "Pool of Brains", ThingCategory.DECORATION),
     (85, "Tall Techno Floor Lamp", ThingCategory.DECORATION),
     (86, "Short Techno Floor Lamp", ThingCategory.DECORATION),
+    (2028, "Floor Lamp", ThingCategory.DECORATION),
     (87, "Spawn Spot", ThingCategory.DECORATION),
     (89, "Spawn Shooter", ThingCategory.DECORATION),
-    # ---- Heretic monsters (non-conflicting IDs only) ---------------------------
-    (70, "Iron Lich", ThingCategory.MONSTER),
-    (90, "Golem Boss", ThingCategory.MONSTER),
-    (92, "Nitrogolem Boss", ThingCategory.MONSTER),
-    (254, "D'Sparil (Serpent)", ThingCategory.MONSTER),
-    (255, "D'Sparil (Wizard)", ThingCategory.MONSTER),
+    (2035, "Exploding Barrel", ThingCategory.DECORATION),
     # ---- Hexen monsters (non-conflicting IDs only) -----------------------------
     (107, "Centaur", ThingCategory.MONSTER),
     (115, "Centaur Leader", ThingCategory.MONSTER),
@@ -198,6 +200,17 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
 ]
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}
+
+# Thing type IDs that have no in-game visual representation (invisible game-mechanics
+# markers such as deathmatch spawns, teleport destinations, and boss brain targets).
+# The renderer skips these by default.
+INVISIBLE_TYPES: frozenset[int] = frozenset({
+    0,   # Null/corrupt editor placeholder — not a real thing
+    11,  # Deathmatch Start
+    14,  # Teleport Landing
+    87,  # Spawn Spot (boss brain target)
+    89,  # Spawn Shooter
+})
 
 # Maps thing type ID to the 4-char WAD sprite lump prefix (first frame = "A0" or "A1").
 # Only Doom 1/2 things are listed; Heretic/Hexen entries are omitted (different WADs).
@@ -256,6 +269,7 @@ _SPRITE_PREFIXES: dict[int, str] = {
     # Health
     2011: "STIM",
     2012: "MEDI",
+    2013: "SOUL",
     2014: "BON1",
     # Armor
     2015: "BON2",
@@ -279,10 +293,46 @@ _SPRITE_PREFIXES: dict[int, str] = {
     21: "SARG",  # Dead Demon
     22: "HEAD",  # Dead Cacodemon
     23: "SKUL",  # Dead Lost Soul
+    # Impaled bodies / skull poles (Doom 1 & 2)
+    25: "POL1",  # Impaled Human
+    26: "POL6",  # Twitching Impaled Human
+    27: "POL4",  # Skull on a Pole
+    28: "POL3",  # Five Skulls (Pile)
+    29: "POL5",  # Pile of Skulls and Bones
+    # Misc gore decorations
+    41: "CEYE",  # Evil Eye
+    42: "FSKU",  # Floating Skulls
+    # Hanging corpses (Doom 2) — non-blocking
+    49: "GOR1",  # Hanging body
+    50: "GOR2",  # Hanging body (arms out)
+    51: "GOR3",  # Hanging pair of legs
+    52: "GOR4",  # Hanging victim (1-legged)
+    53: "GOR5",  # Hanging leg
+    # Hanging corpses (Doom 2) — blocking variants use same sprites
+    59: "GOR1",
+    60: "GOR3",
+    61: "GOR5",
+    62: "GOR2",
+    63: "GOR4",
+    # Burning barrel (Doom 2)
+    70: "FCAN",
+    # Hanging torsos (Doom 2) — HDB series (types 73-78)
+    73: "HDB1",  # Hanging victim, guts removed
+    74: "HDB2",  # Hanging victim, guts and brain removed
+    75: "HDB3",  # Hanging torso, looking down
+    76: "HDB4",  # Hanging torso, open skull
+    77: "HDB5",  # Hanging torso, looking up
+    78: "HDB6",  # Hanging torso, brain removed
+    # Blood pools (Doom 2)
+    24: "POL5",  # Pool of blood and flesh
+    79: "POB1",  # Pool of blood
+    80: "POB2",  # Pool of blood (small)
+    81: "BRS1",  # Pool of brains
+    # Explosive barrel (Doom 2)
+    2035: "BAR1",
     # Static decorations — "A0" idle is correct
     34: "CAND",  # Candle
     35: "CBRA",  # Candelabra
-    76: "FCAN",  # Burning Barrel
     48: "ELEC",  # Techno Column
     30: "COL1",
     31: "COL2",
@@ -301,6 +351,7 @@ _SPRITE_PREFIXES: dict[int, str] = {
     47: "SMIT",  # Stalagmite
     85: "TLMP",
     86: "TLP2",
+    2028: "COLU",  # Floor lamp
 }
 
 
