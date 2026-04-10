@@ -25,6 +25,7 @@ from .commands import (
     list_patches,
     list_sounds,
     list_sprites,
+    list_stats,
     list_textures,
 )
 
@@ -74,6 +75,7 @@ def main() -> None:
     list_sprites.configure(
         list_subs.add_parser("sprites", help="list sprite lumps with dimensions")
     )
+    list_stats.configure(list_subs.add_parser("stats", help="aggregate statistics across all maps"))
     list_textures.configure(
         list_subs.add_parser("textures", help="list composite texture names and dimensions")
     )
