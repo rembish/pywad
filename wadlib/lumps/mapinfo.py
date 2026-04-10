@@ -30,7 +30,7 @@ class MapInfoLump(BaseLump):
     """MAPINFO lump: per-map metadata for Hexen WADs."""
 
     @cached_property
-    def maps(self) -> list[MapInfoEntry]:
+    def maps(self) -> list[MapInfoEntry]:  # pylint: disable=too-many-branches
         """Return all map entries defined in MAPINFO."""
         entries: list[MapInfoEntry] = []
         current: MapInfoEntry | None = None
@@ -79,6 +79,6 @@ class MapInfoLump(BaseLump):
 
         return entries
 
-    def get(self, map_num: int) -> MapInfoEntry | None:  # type: ignore[override]
+    def get(self, map_num: int) -> MapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ
         """Return the MapInfoEntry for the given map number, or None."""
         return next((m for m in self.maps if m.map_num == map_num), None)

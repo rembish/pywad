@@ -108,7 +108,7 @@ def configure(p: argparse.ArgumentParser) -> None:
     p.set_defaults(func=run)
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals
     with open_wad(args) as wad:
         if not wad.maps:
             if args.json:
@@ -161,9 +161,7 @@ def run(args: argparse.Namespace) -> None:
         hdr_map = f"{'MAP':<10}"
         hdr_title = f"  {'TITLE':<28}" if has_title else ""
         hdr_music = f"  {'MUSIC':<12}" if has_music else ""
-        hdr_counts = "  {:>8}  {:>10}  {:>10}  {:>8}".format(
-            "THINGS", "LINEDEFS", "VERTICES", "SECTORS"
-        )
+        hdr_counts = f"  {'THINGS':>8}  {'LINEDEFS':>10}  {'VERTICES':>10}  {'SECTORS':>8}"
         header = hdr_map + hdr_title + hdr_music + hdr_counts
         print(header)
         print("-" * len(header))

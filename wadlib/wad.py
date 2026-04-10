@@ -93,7 +93,7 @@ def _attach_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen: b
             map_entry.attach(entry)
 
 
-class WadFile:
+class WadFile:  # pylint: disable=too-many-public-methods
     fd: BinaryIO
 
     def __init__(self, filename: str) -> None:

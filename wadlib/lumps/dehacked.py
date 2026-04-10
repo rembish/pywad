@@ -89,9 +89,9 @@ class DehackedFile(DehackedLump):
         print(deh.par_times)
     """
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path) -> None:  # pylint: disable=super-init-not-called
         # Skip BaseLump.__init__ — we have no DirectoryEntry.
-        object.__init__(self)
+        object.__init__(self)  # pylint: disable=non-parent-init-called
         self._deh_path = Path(path)
 
     @cached_property

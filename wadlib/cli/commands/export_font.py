@@ -3,6 +3,8 @@
 import argparse
 import sys
 
+from PIL import Image, ImageDraw
+
 from .._wad_args import open_wad
 
 _FONTS = ("stcfn", "fonta", "fontb")
@@ -35,9 +37,32 @@ def configure(p: argparse.ArgumentParser) -> None:
     p.set_defaults(func=run)
 
 
-def run(args: argparse.Namespace) -> None:
-    from PIL import Image, ImageDraw
+def _build_sheet(  # pylint: disable=too-many-locals
+    decoded: dict[int, Image.Image],
+    cols: int,
+) -> Image.Image:
+    """Compose all glyphs into a sprite-sheet PNG."""
+    cell_w = max(img.width for img in decoded.values()) + _GAP
+    cell_h = max(img.height for img in decoded.values()) + _LABEL_H + _GAP
+    n = len(decoded)
+    sheet_rows = (n + cols - 1) // cols
 
+    sheet = Image.new("RGBA", (cols * cell_w, sheet_rows * cell_h), (0, 0, 0, 255))
+    draw = ImageDraw.Draw(sheet)
+
+    for i, (ordinal, glyph_img) in enumerate(decoded.items()):
+        col = i % cols
+        row = i // cols
+        x = col * cell_w
+        y = row * cell_h
+        sheet.paste(glyph_img, (x, y), glyph_img)
+        char = chr(ordinal) if 32 <= ordinal < 127 else f"\\x{ordinal:02x}"
+        draw.text((x, y + cell_h - _LABEL_H), char, fill=(180, 180, 180, 255))
+
+    return sheet
+
+
+def run(args: argparse.Namespace) -> None:
     font_key: str = args.font.lower()
     output: str = args.output or f"{font_key.upper()}.png"
 
@@ -52,25 +77,7 @@ def run(args: argparse.Namespace) -> None:
 
         palette = wad.playpal.get_palette(args.palette)
         decoded = {ordinal: pic.decode(palette) for ordinal, pic in sorted(glyphs.items())}
-
-        cols = max(1, args.cols)
-        cell_w = max(img.width for img in decoded.values()) + _GAP
-        cell_h = max(img.height for img in decoded.values()) + _LABEL_H + _GAP
-        n = len(decoded)
-        sheet_rows = (n + cols - 1) // cols
-
-        sheet = Image.new("RGBA", (cols * cell_w, sheet_rows * cell_h), (0, 0, 0, 255))
-        draw = ImageDraw.Draw(sheet)
-
-        for i, (ordinal, glyph_img) in enumerate(decoded.items()):
-            col = i % cols
-            row = i // cols
-            x = col * cell_w
-            y = row * cell_h
-            sheet.paste(glyph_img, (x, y), glyph_img)
-            char = chr(ordinal) if 32 <= ordinal < 127 else f"\\x{ordinal:02x}"
-            draw.text((x, y + cell_h - _LABEL_H), char, fill=(180, 180, 180, 255))
-
+        sheet = _build_sheet(decoded, max(1, args.cols))
         sheet.save(output)
         w, h = sheet.size
-        print(f"Saved {n}-glyph {w}x{h} sprite sheet to {output}")
+        print(f"Saved {len(decoded)}-glyph {w}x{h} sprite sheet to {output}")

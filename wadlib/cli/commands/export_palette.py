@@ -3,6 +3,8 @@
 import argparse
 import sys
 
+from PIL import Image
+
 from .._wad_args import open_wad
 
 _SWATCH_SIZE = 24  # pixels per colour cell
@@ -21,14 +23,30 @@ def configure(p: argparse.ArgumentParser) -> None:
         type=int,
         default=None,
         metavar="N",
-        help="export only palette N instead of all 14 (0-indexed)",
+        help="export only palette N instead of all (0-indexed)",
     )
     p.set_defaults(func=run)
 
 
-def run(args: argparse.Namespace) -> None:
-    from PIL import Image
+def _fill_swatches(
+    pixels: object,
+    palette: list[tuple[int, int, int]],
+    y_base: int,
+) -> None:
+    """Paint one palette's 256 swatches into *pixels* starting at y_base."""
+    rows_per_palette = 256 // _COLS
+    for i, (r, g, b) in enumerate(palette):
+        col = i % _COLS
+        row = i // _COLS
+        x0 = col * _SWATCH_SIZE
+        y0 = y_base + row * _SWATCH_SIZE
+        for dy in range(_SWATCH_SIZE):
+            for dx in range(_SWATCH_SIZE):
+                pixels[x0 + dx, y0 + dy] = (r, g, b)  # type: ignore[index]
+    _ = rows_per_palette  # used implicitly via loop bounds above
 
+
+def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals
     output: str = args.output or "PLAYPAL.png"
     with open_wad(args) as wad:
         if wad.playpal is None:
@@ -60,14 +78,7 @@ def run(args: argparse.Namespace) -> None:
         for pal_row, pal_idx in enumerate(palette_indices):
             palette = playpal.get_palette(pal_idx)
             y_base = pal_row * rows_per_palette * _SWATCH_SIZE
-            for i, (r, g, b) in enumerate(palette):
-                col = i % _COLS
-                row = i // _COLS
-                x0 = col * _SWATCH_SIZE
-                y0 = y_base + row * _SWATCH_SIZE
-                for dy in range(_SWATCH_SIZE):
-                    for dx in range(_SWATCH_SIZE):
-                        pixels[x0 + dx, y0 + dy] = (r, g, b)
+            _fill_swatches(pixels, palette, y_base)
 
         img.save(output)
         label = (

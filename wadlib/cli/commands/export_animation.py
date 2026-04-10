@@ -48,7 +48,7 @@ def _flat_directory_order(wad: WadFile) -> list[str]:
     return result
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     output: str = args.output or f"{args.name}.gif"
     with open_wad(args) as wad:
         if wad.animdefs is None:
@@ -71,7 +71,7 @@ def run(args: argparse.Namespace) -> None:
         palette = wad.playpal.get_palette(args.palette) if wad.playpal else None
 
         # Build ordered name list for the relevant kind.
-        # For flats, use the full directory order (not wad.flats which only keeps 4096-byte entries).
+        # For flats use the full directory order (not wad.flats which only keeps 4096-byte entries).
         if anim.kind == "flat":
             ordered = _flat_directory_order(wad)
         else:

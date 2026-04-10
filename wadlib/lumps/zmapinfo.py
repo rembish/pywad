@@ -56,7 +56,7 @@ class ZMapInfoLump(BaseLump):
     """ZMAPINFO lump: ZDoom-format map metadata with brace-delimited blocks."""
 
     @cached_property
-    def maps(self) -> list[ZMapInfoEntry]:
+    def maps(self) -> list[ZMapInfoEntry]:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """Return all map entries."""
         text = _strip_comments(self.raw().decode("latin-1"))
         entries: list[ZMapInfoEntry] = []
@@ -135,7 +135,7 @@ class ZMapInfoLump(BaseLump):
 
         return entries
 
-    def get(self, map_name: str) -> ZMapInfoEntry | None:  # type: ignore[override]
+    def get(self, map_name: str) -> ZMapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ
         """Return the entry for the given map name (case-insensitive), or None."""
         return next(
             (e for e in self.maps if e.map_name == map_name.upper()),

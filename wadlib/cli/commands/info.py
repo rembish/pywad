@@ -11,7 +11,7 @@ def configure(p: argparse.ArgumentParser) -> None:
     p.set_defaults(func=run)
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,too-many-statements
     with open_wad(args) as wad:
         pnames = wad.pnames
         playpal = wad.playpal

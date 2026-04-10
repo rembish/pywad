@@ -3,6 +3,8 @@
 import argparse
 import sys
 
+from PIL import Image
+
 from .._wad_args import open_wad
 
 
@@ -23,7 +25,7 @@ def configure(p: argparse.ArgumentParser) -> None:
     p.set_defaults(func=run)
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals
     output: str = args.output or "COLORMAP.png"
     with open_wad(args) as wad:
         if wad.colormap is None:
@@ -38,8 +40,6 @@ def run(args: argparse.Namespace) -> None:
         cell = 4
         w_px = 256 * cell
         h_px = cm.count * cell
-
-        from PIL import Image
 
         img = Image.new("RGB", (w_px, h_px))
         pixels = img.load()
