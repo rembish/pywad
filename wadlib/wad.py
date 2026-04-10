@@ -182,7 +182,16 @@ class WadFile:
                     order.append(name)
                 seen[name] = map_entry
 
-        return [seen[n] for n in order]
+        def _map_sort_key(name: str) -> tuple[int, int, int]:
+            m1 = DOOM1_MAP_NAME_REGEX.match(name)
+            if m1:
+                return (0, int(m1.group("episode")), int(m1.group("number")))
+            m2 = DOOM2_MAP_NAME_REGEX.match(name)
+            if m2:
+                return (1, 0, int(m2.group("number")))
+            return (2, 0, 0)
+
+        return [seen[n] for n in sorted(order, key=_map_sort_key)]
 
     def _find_lump(self, name: str) -> "DirectoryEntry | None":
         """Return the highest-priority directory entry with the given name.

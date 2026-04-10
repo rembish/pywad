@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.38] - 2026-04-10
+
+### Fixed
+
+- `WadFile.maps` now returns maps sorted in canonical order (E1M1…E4M9, then MAP01…MAP32) regardless of WAD directory order; PWADs like BTSX E1 that store maps non-sequentially previously listed MAP32 first
+
 ## [0.0.37] - 2026-04-10
 
 ### Added
