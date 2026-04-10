@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.52] - 2026-04-10
+
+### Added
+
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`): runs `make check`
+  (format, lint, mypy, pylint, fast tests) on Python 3.12 and 3.13 on every
+  push and pull-request to `master`; a separate step runs the `slow` test
+  subset (compositor and floor-renderer stress tests) using the committed
+  freedoom WADs
+- CI status badge in README
+
 ## [0.0.51] - 2026-04-10
 
 ### Added
