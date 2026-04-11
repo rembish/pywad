@@ -16,6 +16,7 @@ from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException
 from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
+from .lumps.behavior import BehaviorLump
 from .lumps.blockmap import BlockMap, Reject
 from .lumps.colormap import ColormapLump
 from .lumps.dehacked import DehackedFile, DehackedLump
@@ -70,6 +71,7 @@ _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "REJECT": ("attach_reject", Reject),
     "BLOCKMAP": ("attach_blockmap", BlockMap),
     "ZNODES": ("attach_znodes", ZNodesLump),
+    "BEHAVIOR": ("attach_behavior", BehaviorLump),
 }
 
 # Hexen overrides only differ for THINGS and LINEDEFS

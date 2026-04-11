@@ -46,6 +46,7 @@ class BaseMapEntry(BaseLump[Any]):
         self.nodes: Nodes | ZNodList[ZNodNode] | None = None
         self.reject: Reject | None = None
         self.blockmap: BlockMap | None = None
+        self.behavior: object | None = None  # BehaviorLump if Hexen/ZDoom ACS
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}>"
@@ -102,6 +103,9 @@ class BaseMapEntry(BaseLump[Any]):
 
     def attach_blockmap(self, blockmap: BlockMap) -> None:
         self.blockmap = blockmap
+
+    def attach_behavior(self, behavior: object) -> None:
+        self.behavior = behavior
 
     def attach_znodes(self, znodes: ZNodesLump) -> None:
         """Replace vanilla BSP data with ZNOD/XNOD extended nodes.
