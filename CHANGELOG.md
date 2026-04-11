@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.75] - 2026-04-11
+
+### Added
+
+- **`WadArchive`** — unified `zipfile.ZipFile`-style interface for WAD files
+  with `"r"` / `"w"` / `"a"` modes.  `namelist()`, `infolist()`, `read()`,
+  `writestr()`, `write()`, `replace()`, `remove()`, `extract()`, `extractall()`,
+  iteration, membership tests.  `LumpInfo` dataclass analogous to `ZipInfo`.
+
+## [0.0.74] - 2026-04-11
+
+### Added
+
+- **Lump validation** (`wadlib/validate.py`) — catches errors on write:
+  - Name validation (charset, length 1-8)
+  - Record-size checks for map lumps (THINGS 10/20, LINEDEFS 14/16, etc.)
+  - Fixed-size checks (COLORMAP 8704, ENDOOM 4000, PLAYPAL multiple of 768)
+  - Flat size (4096 bytes), picture header validation
+  - Structural checks: namespace marker pairing, orphan map data lumps
+  - Hexen format awareness (20-byte things, 16-byte linedefs)
+  - Integrated into `WadArchive` write path; pass `validate=False` to bypass.
+- `InvalidLumpError` exception raised on validation failure.
+
+## [0.0.73] - 2026-04-11
+
+### Added
+
+- **MIDI to MUS converter** (`wadlib/lumps/mid2mus.py`): `midi_to_mus()` converts
+  Standard MIDI Files (format 0 and 1) to Doom's MUS format.  Full MIDI parser
+  with running status, VLQ timing, all channel events.  Round-trip verified
+  against real freedoom2.wad music lumps.
+
+## [0.0.72] - 2026-04-11
+
+### Changed
+
+- **`wadlib.types` package** — game type modules (`doom_types`, `heretic_types`,
+  `hexen_types`, `strife_types`, `thing_types`) unified into `wadlib/types/`
+  package.  Shared `GameModule` base class eliminates duplicated dispatch
+  functions.  Import paths: `from wadlib.types import detect_game, ThingCategory`
+  or `from wadlib.types.doom import THING_TYPES`.
+
+## [0.0.71] - 2026-04-11
+
+### Added
+
+- **`WadWriter`** — low-level WAD creation and modification.  Create new
+  IWAD/PWAD from scratch, round-trip existing WADs (`WadWriter.from_wad()`),
+  add/insert/replace/remove lumps, namespace helpers (`add_flat()`,
+  `add_sprite()`, `add_patch()`), and `add_map()` for building complete maps
+  from typed Python objects.
+- **Binary serialization** — `to_bytes()` on all map data types: `Thing`,
+  `Vertex`, `LineDefinition`, `SideDef`, `Sector`, `Seg`, `SubSector`, `Node`,
+  `HexenThing`, `HexenLineDef`.  Byte-exact round-trip verified against real WADs.
+- **Format encoders** for the write path:
+  - `encode_picture(image, palette)` — PIL RGBA image to Doom column-RLE picture format
+  - `encode_flat(image, palette)` — PIL image to 64x64 palette-indexed flat
+  - `encode_dmx(pcm, rate)` — raw 8-bit PCM to DMX sound lump
+  - `palette_to_bytes()` / `palettes_to_bytes()` — palette serialization
+  - `pnames_to_bytes()` / `texturelist_to_bytes()` — texture definition serialization
+  - `Reject.build()` / `Reject.from_bytes()` — REJECT table construction
+- `WadWriter` and `WadArchive` exported from `wadlib.__init__`.
+
 ## [0.0.70] - 2026-04-10
 
 ### Added
