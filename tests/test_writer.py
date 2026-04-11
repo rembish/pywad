@@ -641,7 +641,7 @@ class TestRoundTrip:
             writer = WadWriter.from_wad(wad)
             # Check by index since names can repeat (e.g. THINGS per map)
             for i, entry in enumerate(wad.directory):
-                writer_data = writer._lumps[i].data
+                writer_data = writer.lumps[i].data
                 assert len(writer_data) == entry.size, (
                     f"Size mismatch at index {i} ({entry.name}): "
                     f"{len(writer_data)} != {entry.size}"
