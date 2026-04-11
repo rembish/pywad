@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.78] - 2026-04-11
+
+### Added
+
+- **Shell completion** for bash and zsh (`completion/wadcli.bash`,
+  `completion/wadcli.zsh`).  Covers all wadcli subcommands, options, file type
+  filtering (`.wad`, `.deh`), context-aware argument hints (font names, export
+  flags), and wadmount completion.
+
+## [0.0.77] - 2026-04-11
+
+### Added
+
+- **FUSE filesystem** (`wadlib/fuse.py`): mount any WAD as a virtual directory
+  with auto-format conversion.  `wadmount DOOM2.WAD /mnt/doom2` exposes lumps
+  organised by type (flats, sprites, sounds, music, maps, patches, lumps) with
+  on-the-fly conversion: flats/sprites as PNG, sounds as WAV, music as MIDI.
+- **Write support**: drop standard files into the mounted directory and they
+  auto-convert back — WAV to DMX, MIDI to MUS, PNG to flat/picture.
+  Changes are flushed to the WAD on unmount.
+- **`wadmount` CLI command** with `--readonly` and `--background` flags.
+- Optional `[fuse]` dependency group: `pip install wadlib[fuse]`.
+
 ## [0.0.76] - 2026-04-11
 
 ### Added

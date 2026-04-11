@@ -348,6 +348,44 @@ wadcli --wad DOOM.WAD export font stcfn
 wadcli --wad HEXEN.WAD export animation FLTWAWA1
 ```
 
+### Shell completion
+
+Bash and Zsh completions are provided in the `completion/` directory:
+
+```bash
+# Bash — add to ~/.bashrc or copy to /etc/bash_completion.d/
+source completion/wadcli.bash
+
+# Zsh — copy to a directory in $fpath or source directly
+source completion/wadcli.zsh
+```
+
+Completions cover all subcommands, options, file type filtering (`.wad`, `.deh`),
+and context-aware argument hints (font names, export flags, etc.).
+
+### FUSE mounting
+
+Mount any WAD as a virtual directory with auto-format conversion:
+
+```bash
+pip install wadlib[fuse]     # install fusepy dependency
+wadmount DOOM2.WAD /mnt/doom2
+
+ls /mnt/doom2/flats/         # *.png (auto-converted from 64x64 raw)
+ls /mnt/doom2/sounds/        # *.wav (auto-converted from DMX)
+ls /mnt/doom2/music/         # *.mid (auto-converted from MUS)
+ls /mnt/doom2/sprites/       # *.png (auto-converted from Doom picture)
+ls /mnt/doom2/maps/MAP01/    # *.lmp (raw map data)
+ls /mnt/doom2/lumps/         # *.lmp (raw access to everything)
+
+# Write support — drop files in and they auto-convert back:
+cp pistol.wav /mnt/doom2/sounds/DSPISTOL.wav   # WAV -> DMX
+cp e1m1.mid /mnt/doom2/music/D_E1M1.mid        # MIDI -> MUS
+cp floor.png /mnt/doom2/flats/MYFLOOR.png       # PNG -> flat
+
+fusermount -u /mnt/doom2     # unmount (saves changes)
+```
+
 ---
 
 ## Supported games / formats
