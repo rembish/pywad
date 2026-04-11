@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.76] - 2026-04-11
+
+### Added
+
+- **`wav_to_dmx()`** (`wadlib/lumps/sound.py`): parse WAV files (8-bit/16-bit,
+  mono/stereo) and convert to DMX sound lumps.  Handles bit-depth conversion
+  (16-bit signed -> 8-bit unsigned) and stereo downmix automatically.
+- **`build_colormap()`** (`wadlib/lumps/colormap.py`): generate a full 34-table
+  COLORMAP from a palette.  32 progressive darkening levels + invulnerability
+  greyscale tint + all-black table.  Accepts hex colour strings for the
+  invulnerability tint (e.g. `invuln_tint="#FFD700"`).
+- **Hex colour utilities**: `hex_to_rgb()` and `rgb_to_hex()` in
+  `wadlib/lumps/colormap.py`.  Supports `"#RRGGBB"`, `"RRGGBB"`, `"#RGB"`,
+  and `"RGB"` formats.
+
 ## [0.0.75] - 2026-04-11
 
 ### Added

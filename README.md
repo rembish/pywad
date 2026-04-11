@@ -188,9 +188,10 @@ Every format the library can read, it can also write:
 |---|---|---|
 | Pictures/Sprites | `Picture.decode(palette)` -> PIL Image | `encode_picture(image, palette)` |
 | Flats | `Flat.decode(palette)` -> PIL Image | `encode_flat(image, palette)` |
-| Sounds | `DmxSound.to_wav()` -> WAV bytes | `encode_dmx(pcm, rate)` |
+| Sounds | `DmxSound.to_wav()` -> WAV bytes | `wav_to_dmx(wav)` / `encode_dmx(pcm, rate)` |
 | Music (MUS) | `Mus.to_midi()` -> MIDI bytes | `midi_to_mus(midi_bytes)` |
 | Palettes | `PlayPal.get_palette()` -> RGB tuples | `palette_to_bytes(palette)` |
+| Colormaps | `ColormapLump.get(level)` -> 256 bytes | `build_colormap(palette)` |
 | Textures | `TextureList.textures` -> TextureDef list | `texturelist_to_bytes(textures)` |
 | Patch names | `PNames.names` -> string list | `pnames_to_bytes(names)` |
 
@@ -206,18 +207,40 @@ with WadFile("DOOM2.WAD") as wad:
     img = comp.render_rgba("BRICK7")     # RGBA
 ```
 
-### Audio export
+### Audio
 
 ```python
+# Export: DMX → WAV, MUS → MIDI
 sound = wad.get_sound("DSPISTOL")
 wav_bytes = sound.to_wav()
 
 music = wad.get_music("D_E1M1")
 midi_bytes = music.to_midi()
 
-# Convert MIDI to Doom's MUS format
+# Import: WAV → DMX, MIDI → MUS
+from wadlib.lumps.sound import wav_to_dmx
+dmx_bytes = wav_to_dmx(open("pistol.wav", "rb").read())
+
 from wadlib.lumps.mid2mus import midi_to_mus
-mus_bytes = midi_to_mus(midi_bytes)
+mus_bytes = midi_to_mus(open("e1m1.mid", "rb").read())
+```
+
+### Colormaps
+
+```python
+from wadlib.lumps.colormap import build_colormap, hex_to_rgb, rgb_to_hex
+
+# Build a COLORMAP from a palette (34 light-level tables)
+with WadFile("DOOM2.WAD") as wad:
+    pal = wad.playpal.get_palette(0)
+    colormap = build_colormap(pal)
+
+# Custom invulnerability tint using hex colour
+colormap = build_colormap(pal, invuln_tint="#FFD700")  # gold
+
+# Hex colour utilities
+r, g, b = hex_to_rgb("#FF8800")       # (255, 136, 0)
+hex_str = rgb_to_hex(255, 136, 0)     # "#FF8800"
 ```
 
 ### Map rendering
