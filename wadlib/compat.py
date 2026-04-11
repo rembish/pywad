@@ -119,17 +119,17 @@ def detect_features(wad: WadFile) -> list[CompLevelFeature]:
             break
 
     # --- ZDoom features ---
-    if wad._find_lump("ZMAPINFO"):
+    if wad.find_lump("ZMAPINFO"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "ZMAPINFO lump"))
-    if wad._find_lump("LANGUAGE"):
+    if wad.find_lump("LANGUAGE"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "LANGUAGE lump"))
-    if wad._find_lump("SNDINFO"):
+    if wad.find_lump("SNDINFO"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "SNDINFO lump"))
-    if wad._find_lump("DECORATE"):
+    if wad.find_lump("DECORATE"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "DECORATE lump"))
-    if wad._find_lump("ZSCRIPT"):
+    if wad.find_lump("ZSCRIPT"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "ZSCRIPT lump"))
-    if wad._find_lump("GLDEFS"):
+    if wad.find_lump("GLDEFS"):
         features.append(CompLevelFeature(CompLevel.ZDOOM, "GLDEFS lump"))
 
     # ZNODES in any map
@@ -143,9 +143,9 @@ def detect_features(wad: WadFile) -> list[CompLevelFeature]:
                 break
 
     # --- Boom features ---
-    if wad._find_lump("ANIMATED"):
+    if wad.find_lump("ANIMATED"):
         features.append(CompLevelFeature(CompLevel.BOOM, "ANIMATED lump (Boom binary animations)"))
-    if wad._find_lump("SWITCHES"):
+    if wad.find_lump("SWITCHES"):
         features.append(CompLevelFeature(CompLevel.BOOM, "SWITCHES lump (Boom switch textures)"))
 
     # Check for Boom thing flags or generalized linedef types in maps

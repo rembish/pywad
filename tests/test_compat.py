@@ -254,7 +254,7 @@ class TestConvertComplevel:
 
             with WadFile(out_path) as wad:
                 # ANIMATED should be gone
-                assert wad._find_lump("ANIMATED") is None
+                assert wad.find_lump("ANIMATED") is None
         finally:
             os.unlink(path)
             os.unlink(out_path)
@@ -273,7 +273,7 @@ class TestConvertComplevel:
                 assert any("ZMAPINFO" in a for a in result.applied)
 
             with WadFile(out_path) as wad:
-                assert wad._find_lump("ZMAPINFO") is None
+                assert wad.find_lump("ZMAPINFO") is None
         finally:
             os.unlink(path)
             os.unlink(out_path)
@@ -338,8 +338,8 @@ sector { heightfloor = 0; heightceiling = 128; texturefloor = "FLAT1"; texturece
 
             # Should now have binary map data
             with WadFile(out_path) as wad:
-                assert wad._find_lump("TEXTMAP") is None
-                assert wad._find_lump("ENDMAP") is None
+                assert wad.find_lump("TEXTMAP") is None
+                assert wad.find_lump("ENDMAP") is None
                 m = wad.maps[0]
                 assert m.things is not None
                 t = list(m.things)[0]
