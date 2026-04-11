@@ -53,6 +53,36 @@ class ZMapInfoEntry:
         return self.title
 
 
+def serialize_zmapinfo(entries: list[ZMapInfoEntry]) -> str:
+    """Serialize a list of ZMapInfoEntry to ZMAPINFO text (ZDoom format)."""
+    parts: list[str] = []
+    for e in entries:
+        if e.title_lookup:
+            parts.append(f'map {e.map_name} lookup "{e.title_lookup}"')
+        else:
+            parts.append(f'map {e.map_name} "{e.title}"')
+        parts.append("{")
+        if e.levelnum is not None:
+            parts.append(f"    levelnum = {e.levelnum}")
+        if e.next:
+            parts.append(f'    next = "{e.next}"')
+        if e.secretnext:
+            parts.append(f'    secretnext = "{e.secretnext}"')
+        if e.sky1:
+            parts.append(f'    sky1 = "{e.sky1}"')
+        if e.music:
+            parts.append(f'    music = "{e.music}"')
+        if e.titlepatch:
+            parts.append(f'    titlepatch = "{e.titlepatch}"')
+        if e.cluster is not None:
+            parts.append(f"    cluster = {e.cluster}")
+        if e.par is not None:
+            parts.append(f"    par = {e.par}")
+        parts.append("}")
+        parts.append("")
+    return "\n".join(parts)
+
+
 class ZMapInfoLump(BaseLump[Any]):
     """ZMAPINFO lump: ZDoom-format map metadata with brace-delimited blocks."""
 
