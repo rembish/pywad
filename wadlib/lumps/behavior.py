@@ -178,3 +178,174 @@ class BehaviorLump(BaseLump[Any]):
     @property
     def format(self) -> str:
         return self.parsed.format
+
+    def disassemble(self, script_index: int = 0) -> str:
+        """Disassemble a script to human-readable p-code.
+
+        Returns a multi-line string showing each instruction.
+        """
+        if script_index >= len(self.scripts):
+            raise IndexError(f"Script index {script_index} out of range")
+        script = self.scripts[script_index]
+        data = self.raw()
+        return disassemble_acs(data, script.offset, self.parsed.strings)
+
+
+# ---------------------------------------------------------------------------
+# ACS opcode table (subset — covers the most common instructions)
+# Reference: https://doomwiki.org/wiki/ACS_bytecode
+# ---------------------------------------------------------------------------
+
+# (name, number_of_immediate_args)
+_ACS_OPCODES: dict[int, tuple[str, int]] = {
+    0: ("NOP", 0),
+    1: ("Terminate", 0),
+    2: ("Suspend", 0),
+    3: ("PushNumber", 1),
+    4: ("LSpec1", 1),
+    5: ("LSpec2", 1),
+    6: ("LSpec3", 1),
+    7: ("LSpec4", 1),
+    8: ("LSpec5", 1),
+    9: ("LSpec1Direct", 2),
+    10: ("LSpec2Direct", 3),
+    11: ("LSpec3Direct", 4),
+    12: ("LSpec4Direct", 5),
+    13: ("LSpec5Direct", 6),
+    14: ("Add", 0),
+    15: ("Subtract", 0),
+    16: ("Multiply", 0),
+    17: ("Divide", 0),
+    18: ("Modulus", 0),
+    19: ("EQ", 0),
+    20: ("NE", 0),
+    21: ("LT", 0),
+    22: ("GT", 0),
+    23: ("LE", 0),
+    24: ("GE", 0),
+    25: ("AssignScriptVar", 1),
+    26: ("AssignMapVar", 1),
+    27: ("AssignWorldVar", 1),
+    28: ("PushScriptVar", 1),
+    29: ("PushMapVar", 1),
+    30: ("PushWorldVar", 1),
+    31: ("AddScriptVar", 1),
+    32: ("AddMapVar", 1),
+    33: ("AddWorldVar", 1),
+    34: ("SubScriptVar", 1),
+    35: ("SubMapVar", 1),
+    36: ("SubWorldVar", 1),
+    37: ("MulScriptVar", 1),
+    38: ("MulMapVar", 1),
+    39: ("MulWorldVar", 1),
+    40: ("DivScriptVar", 1),
+    41: ("DivMapVar", 1),
+    42: ("DivWorldVar", 1),
+    43: ("ModScriptVar", 1),
+    44: ("ModMapVar", 1),
+    45: ("ModWorldVar", 1),
+    46: ("IncScriptVar", 1),
+    47: ("IncMapVar", 1),
+    48: ("IncWorldVar", 1),
+    49: ("DecScriptVar", 1),
+    50: ("DecMapVar", 1),
+    51: ("DecWorldVar", 1),
+    52: ("Goto", 1),
+    53: ("IfGoto", 1),
+    54: ("Drop", 0),
+    55: ("Delay", 0),
+    56: ("DelayDirect", 1),
+    57: ("Random", 0),
+    58: ("RandomDirect", 2),
+    59: ("ThingCount", 0),
+    60: ("ThingCountDirect", 2),
+    61: ("TagWait", 0),
+    62: ("TagWaitDirect", 1),
+    63: ("PolyWait", 0),
+    64: ("PolyWaitDirect", 1),
+    65: ("ChangeFloor", 0),
+    66: ("ChangeFloorDirect", 1),
+    67: ("ChangeCeiling", 0),
+    68: ("ChangeCeilingDirect", 1),
+    69: ("Restart", 0),
+    70: ("AndLogical", 0),
+    71: ("OrLogical", 0),
+    72: ("AndBitwise", 0),
+    73: ("OrBitwise", 0),
+    74: ("EorBitwise", 0),
+    75: ("NegateLogical", 0),
+    76: ("LShift", 0),
+    77: ("RShift", 0),
+    78: ("UnaryMinus", 0),
+    79: ("IfNotGoto", 1),
+    80: ("LineSide", 0),
+    81: ("ScriptWait", 0),
+    82: ("ScriptWaitDirect", 1),
+    83: ("ClearLineSpecial", 0),
+    84: ("CaseGoto", 2),
+    85: ("BeginPrint", 0),
+    86: ("EndPrint", 0),
+    87: ("PrintString", 0),
+    88: ("PrintNumber", 0),
+    89: ("PrintCharacter", 0),
+    90: ("PlayerCount", 0),
+    91: ("GameType", 0),
+    92: ("GameSkill", 0),
+    93: ("Timer", 0),
+    94: ("SectorSound", 0),
+    95: ("AmbientSound", 0),
+    96: ("SoundSequence", 0),
+    97: ("SetLineTexture", 0),
+    98: ("SetLineBlocking", 0),
+    99: ("SetLineSpecial", 0),
+    100: ("ThingSound", 0),
+    101: ("EndPrintBold", 0),
+}
+
+
+def disassemble_acs(
+    data: bytes,
+    start_offset: int,
+    strings: list[str] | None = None,
+    max_instructions: int = 200,
+) -> str:
+    """Disassemble ACS bytecode starting at *start_offset*.
+
+    Returns human-readable assembly text. Stops at Terminate/Suspend
+    or after *max_instructions*.
+    """
+    lines: list[str] = []
+    pos = start_offset
+    count = 0
+
+    while pos + 4 <= len(data) and count < max_instructions:
+        opcode = struct.unpack("<I", data[pos : pos + 4])[0]
+        pos += 4
+        count += 1
+
+        if opcode in _ACS_OPCODES:
+            name, argc = _ACS_OPCODES[opcode]
+            args: list[str] = []
+            for _ in range(argc):
+                if pos + 4 > len(data):
+                    break
+                arg = struct.unpack("<i", data[pos : pos + 4])[0]
+                pos += 4
+                # Annotate string references for print instructions
+                if name == "PushNumber" and strings and 0 <= arg < len(strings):
+                    args.append(f"{arg}  ; {strings[arg]!r}")
+                elif name in ("PrintString",) and strings:
+                    args.append(str(arg))
+                else:
+                    args.append(str(arg))
+
+            arg_str = ", ".join(args)
+            lines.append(f"  {name}{f'  {arg_str}' if arg_str else ''}")
+        else:
+            lines.append(f"  ??? opcode {opcode}")
+
+        # Stop at terminator instructions
+        if opcode in (1, 2):  # Terminate, Suspend
+            break
+
+    return "\n".join(lines)
