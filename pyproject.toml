@@ -13,8 +13,10 @@ dependencies = ["Pillow>=9.2"]
 
 [project.scripts]
 wadcli = "wadlib.cli:main"
+wadmount = "wadlib.cli.mount:main"
 
 [project.optional-dependencies]
+fuse = ["fusepy>=3.0"]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
