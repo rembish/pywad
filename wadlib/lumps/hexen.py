@@ -7,6 +7,7 @@ Detection: a BEHAVIOR lump in the same map block signals Hexen format.
 """
 
 from dataclasses import dataclass
+from struct import pack
 from typing import ClassVar
 
 from .base import BaseLump
@@ -35,6 +36,24 @@ class HexenThing:
     def __post_init__(self) -> None:
         self.flags = Flags(self.flags)
 
+    def to_bytes(self) -> bytes:
+        return pack(
+            HEXEN_THING_FORMAT,
+            self.tid,
+            self.x,
+            self.y,
+            self.z,
+            self.angle,
+            self.type,
+            int(self.flags),
+            self.action,
+            self.arg0,
+            self.arg1,
+            self.arg2,
+            self.arg3,
+            self.arg4,
+        )
+
 
 @dataclass
 class HexenLineDef:
@@ -49,6 +68,22 @@ class HexenLineDef:
     arg4: int
     right_sidedef: int
     left_sidedef: int
+
+    def to_bytes(self) -> bytes:
+        return pack(
+            HEXEN_LINEDEF_FORMAT,
+            self.start_vertex,
+            self.finish_vertex,
+            self.flags,
+            self.special_type,
+            self.arg0,
+            self.arg1,
+            self.arg2,
+            self.arg3,
+            self.arg4,
+            self.right_sidedef,
+            self.left_sidedef,
+        )
 
 
 class HexenThings(BaseLump[HexenThing]):

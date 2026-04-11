@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from struct import calcsize, unpack
+from struct import calcsize, pack, unpack
 from typing import Any
 
 from .base import BaseLump
@@ -46,11 +46,19 @@ _PATCH_DESC_FMT = "<hhHhh"
 _PATCH_DESC_SIZE = calcsize(_PATCH_DESC_FMT)
 
 
+def _encode_name8(name: str) -> bytes:
+    """Encode a name to 8-byte null-padded ASCII."""
+    return name.encode("ascii")[:8].ljust(8, b"\x00")
+
+
 @dataclass
 class PatchDescriptor:
     origin_x: int
     origin_y: int
     patch_index: int
+
+    def to_bytes(self) -> bytes:
+        return pack(_PATCH_DESC_FMT, self.origin_x, self.origin_y, self.patch_index, 0, 0)
 
 
 @dataclass
@@ -59,6 +67,19 @@ class TextureDef:
     width: int
     height: int
     patches: list[PatchDescriptor]
+
+    def to_bytes(self) -> bytes:
+        """Serialize this texture definition (header + patch descriptors)."""
+        hdr = pack(
+            _TEX_HDR_FMT,
+            _encode_name8(self.name),
+            0,  # masked (unused)
+            self.width,
+            self.height,
+            0,  # columndirectory (unused)
+            len(self.patches),
+        )
+        return hdr + b"".join(p.to_bytes() for p in self.patches)
 
 
 class PNames(BaseLump[Any]):
@@ -144,3 +165,30 @@ class TextureList(BaseLump[Any]):
             if tex.name.upper() == name_upper:
                 return tex
         return None
+
+
+def pnames_to_bytes(names: list[str]) -> bytes:
+    """Serialize a list of patch names to PNAMES lump bytes."""
+    buf = pack("<I", len(names))
+    for name in names:
+        buf += _encode_name8(name)
+    return buf
+
+
+def texturelist_to_bytes(textures: list[TextureDef]) -> bytes:
+    """Serialize a list of TextureDefs to a TEXTURE1/TEXTURE2 lump."""
+    count = len(textures)
+    # First: count (4 bytes) + offset table (count x 4 bytes)
+    header_size = 4 + count * 4
+    # Serialize each texture definition
+    tex_blobs = [t.to_bytes() for t in textures]
+    # Compute offsets (relative to start of lump)
+    offsets: list[int] = []
+    pos = header_size
+    for blob in tex_blobs:
+        offsets.append(pos)
+        pos += len(blob)
+    buf = pack("<I", count)
+    buf += pack(f"<{count}I", *offsets)
+    buf += b"".join(tex_blobs)
+    return buf

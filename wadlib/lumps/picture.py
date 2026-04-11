@@ -1,4 +1,4 @@
-"""Doom picture format decoder.
+"""Doom picture format decoder/encoder.
 
 The picture format is a column-based, run-length encoded image used for
 all patches, sprites, and weapon graphics in WAD files.
@@ -21,7 +21,7 @@ Each column is a series of "posts":
 from __future__ import annotations
 
 from functools import cached_property
-from struct import calcsize, unpack
+from struct import calcsize, pack, unpack
 from typing import Any
 
 from PIL import Image
@@ -102,3 +102,86 @@ class Picture(BaseLump[Any]):
             self._draw_column(col_x, int(col_off), palette, pixels)
 
         return img
+
+
+def _nearest_palette_index(r: int, g: int, b: int, palette: Palette) -> int:
+    """Return the index of the closest colour in *palette*."""
+    best_idx = 0
+    best_dist = float("inf")
+    for i, (pr, pg, pb) in enumerate(palette):
+        d = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2
+        if d < best_dist:
+            best_dist = d
+            best_idx = i
+            if d == 0:
+                break
+    return best_idx
+
+
+def encode_picture(  # pylint: disable=too-many-locals
+    image: Image.Image,
+    palette: Palette,
+    left_offset: int = 0,
+    top_offset: int = 0,
+) -> bytes:
+    """Encode a PIL RGBA image into Doom picture format bytes.
+
+    Transparent pixels (alpha < 128) become gaps between posts.
+    Opaque pixels are quantised to the nearest palette colour.
+    """
+    image = image.convert("RGBA")
+    width, height = image.size
+    raw = image.tobytes()  # RGBA interleaved, row-major
+
+    def _px(x: int, y: int) -> tuple[int, int, int, int]:
+        off = (y * width + x) * 4
+        return raw[off], raw[off + 1], raw[off + 2], raw[off + 3]
+
+    # Build column data
+    column_data = bytearray()
+    column_offsets: list[int] = []
+    data_start = _HEADER_SIZE + width * 4  # header + offset table
+
+    for col_x in range(width):
+        column_offsets.append(data_start + len(column_data))
+
+        # Collect runs of opaque pixels as posts
+        row = 0
+        while row < height:
+            # Skip transparent pixels
+            while row < height and _px(col_x, row)[3] < 128:
+                row += 1
+            if row >= height:
+                break
+
+            # Start of a post
+            topdelta = row
+            post_pixels: list[int] = []
+            while row < height and _px(col_x, row)[3] >= 128 and len(post_pixels) < 255:
+                r, g, b, _a = _px(col_x, row)
+                post_pixels.append(_nearest_palette_index(r, g, b, palette))
+                row += 1
+
+            # Handle topdelta > 254 by splitting into multiple posts
+            # (vanilla Doom uses single-byte topdelta, max 254)
+            while topdelta > 254:
+                # Emit a zero-length post at 254 to advance the cursor
+                column_data.append(254)
+                column_data.append(0)
+                column_data.append(0)  # pre-pad
+                column_data.append(0)  # post-pad
+                topdelta -= 254
+
+            column_data.append(topdelta)
+            column_data.append(len(post_pixels))
+            column_data.append(0)  # pre-padding
+            column_data.extend(post_pixels)
+            column_data.append(0)  # post-padding
+
+        # End-of-column marker
+        column_data.append(0xFF)
+
+    # Assemble the lump
+    header = pack(_HEADER_FMT, width, height, left_offset, top_offset)
+    offsets = pack(f"<{width}I", *column_offsets)
+    return header + offsets + bytes(column_data)

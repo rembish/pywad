@@ -26,8 +26,39 @@ class Reject:
         entry.owner.fd.seek(entry.offset)
         self._data: bytes = entry.owner.fd.read(entry.size)
 
+    @classmethod
+    def from_bytes(cls, data: bytes) -> Reject:
+        """Create a Reject table from raw bytes (no WAD entry required)."""
+        obj = object.__new__(cls)
+        obj._data = data
+        return obj
+
+    @classmethod
+    def build(cls, num_sectors: int, rejected: set[tuple[int, int]] | None = None) -> Reject:
+        """Build a REJECT table for *num_sectors*.
+
+        *rejected* is a set of ``(from_sector, to_sector)`` pairs that should
+        be marked as rejected (cannot see each other).  If ``None``, all pairs
+        are visible (empty reject table).
+        """
+        total_bits = num_sectors * num_sectors
+        total_bytes = (total_bits + 7) // 8
+        data = bytearray(total_bytes)
+        if rejected:
+            for from_s, to_s in rejected:
+                bit_index = from_s * num_sectors + to_s
+                byte_index, bit_offset = divmod(bit_index, 8)
+                if byte_index < total_bytes:
+                    data[byte_index] |= 1 << bit_offset
+        obj = object.__new__(cls)
+        obj._data = bytes(data)
+        return obj
+
     @property
     def data(self) -> bytes:
+        return self._data
+
+    def to_bytes(self) -> bytes:
         return self._data
 
     def can_see(self, from_sector: int, to_sector: int, num_sectors: int) -> bool:
@@ -53,14 +84,38 @@ class BlockMap:
         fd = entry.owner.fd
         hdr_size = calcsize(BLOCKMAP_HEADER_FORMAT)
         fd.seek(entry.offset)
-        ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, fd.read(hdr_size))
+        raw_all = fd.read(entry.size)
+        ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, raw_all[:hdr_size])
         self._origin_x: int = int(ox)
         self._origin_y: int = int(oy)
         self._columns: int = int(cols)
         self._rows: int = int(rows)
         num_blocks = self._columns * self._rows
-        raw = fd.read(num_blocks * 2)
-        self._offsets: list[int] = [int(v) for v in unpack(f"<{num_blocks}H", raw)]
+        self._offsets: list[int] = [
+            int(v) for v in unpack(f"<{num_blocks}H", raw_all[hdr_size : hdr_size + num_blocks * 2])
+        ]
+        # Keep the raw tail (blocklists) for round-trip fidelity
+        self._raw: bytes = raw_all
+
+    @classmethod
+    def from_raw(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        cls,
+        origin_x: int,
+        origin_y: int,
+        columns: int,
+        rows: int,
+        offsets: list[int],
+        raw: bytes,
+    ) -> BlockMap:
+        """Create a BlockMap from pre-computed components."""
+        obj = object.__new__(cls)
+        obj._origin_x = origin_x
+        obj._origin_y = origin_y
+        obj._columns = columns
+        obj._rows = rows
+        obj._offsets = offsets
+        obj._raw = raw
+        return obj
 
     @property
     def origin_x(self) -> int:
@@ -85,6 +140,10 @@ class BlockMap:
     @property
     def block_count(self) -> int:
         return self._columns * self._rows
+
+    def to_bytes(self) -> bytes:
+        """Serialize the blockmap back to raw bytes."""
+        return self._raw
 
     def __repr__(self) -> str:
         return f"<BlockMap {self._columns}x{self._rows} origin=({self._origin_x},{self._origin_y})>"

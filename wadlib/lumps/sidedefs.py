@@ -1,9 +1,15 @@
 from dataclasses import dataclass
+from struct import pack
 from typing import ClassVar
 
 from .base import BaseLump
 
 SIDEDEF_FORMAT = "<hh8s8s8sH"
+
+
+def _encode_texture(name: str) -> bytes:
+    """Encode a texture name to 8-byte null-padded ASCII."""
+    return name.encode("ascii")[:8].ljust(8, b"\x00")
 
 
 @dataclass
@@ -22,6 +28,17 @@ class SideDef:
             self.lower_texture = self.lower_texture.decode("ascii").rstrip("\x00")
         if isinstance(self.middle_texture, bytes):
             self.middle_texture = self.middle_texture.decode("ascii").rstrip("\x00")
+
+    def to_bytes(self) -> bytes:
+        return pack(
+            SIDEDEF_FORMAT,
+            self.x_offset,
+            self.y_offset,
+            _encode_texture(self.upper_texture),
+            _encode_texture(self.lower_texture),
+            _encode_texture(self.middle_texture),
+            self.sector,
+        )
 
 
 class SideDefs(BaseLump[SideDef]):

@@ -59,3 +59,18 @@ class PlayPal(BaseLump[Any]):
 
     def __len__(self) -> int:
         return self.num_palettes
+
+
+def palette_to_bytes(palette: Palette) -> bytes:
+    """Serialize a single 256-colour palette to 768 raw bytes."""
+    buf = bytearray(256 * 3)
+    for i, (r, g, b) in enumerate(palette):
+        buf[i * 3] = r
+        buf[i * 3 + 1] = g
+        buf[i * 3 + 2] = b
+    return bytes(buf)
+
+
+def palettes_to_bytes(palettes: list[Palette]) -> bytes:
+    """Serialize a list of palettes (typically 14) to a PLAYPAL lump."""
+    return b"".join(palette_to_bytes(p) for p in palettes)

@@ -1,4 +1,4 @@
-"""DMX digitized sound lump decoder."""
+"""DMX digitized sound lump decoder/encoder."""
 
 from __future__ import annotations
 
@@ -47,3 +47,14 @@ class DmxSound(BaseLump[Any]):
         fmt_chunk = struct.pack("<4sIHHIIHH", b"fmt ", 16, 1, 1, rate, rate, 1, 8)
         data_chunk = struct.pack("<4sI", b"data", len(samples)) + samples
         return riff + fmt_chunk + data_chunk
+
+
+def encode_dmx(pcm_samples: bytes, rate: int = 11025) -> bytes:
+    """Encode raw 8-bit unsigned PCM samples into a DMX sound lump.
+
+    *rate* is the sample rate in Hz (typically 11025 for Doom sounds).
+    """
+    num_samples = len(pcm_samples) + _PADDING
+    header = struct.pack(_HEADER_FMT, _DMX_FORMAT, rate, num_samples)
+    padding = b"\x80" * _PADDING  # silence (0x80 = zero crossing for unsigned 8-bit)
+    return header + padding + pcm_samples
