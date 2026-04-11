@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Midnight Commander external filesystem plugin for WAD files.
+
+Install:
+    cp uwad ~/.local/share/mc/extfs.d/
+    chmod +x ~/.local/share/mc/extfs.d/uwad
+    echo 'regex/\\.wad$' >> ~/.local/share/mc/extfs.d/extfs.ini
+    echo '  Open=%cd %p/uwad://' >> ~/.local/share/mc/extfs.d/extfs.ini
+
+Usage in mc:
+    Navigate to a .wad file and press Enter to browse its contents.
+
+Commands:
+    uwad list <wadfile>             — list archive contents
+    uwad copyout <wadfile> <name> <destfile>  — extract a lump
+    uwad copyin <wadfile> <name> <srcfile>    — add/replace a lump
+    uwad rm <wadfile> <name>        — remove a lump
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import time
+
+
+def _ensure_wadlib() -> None:
+    """Try to import wadlib; if not found, add parent dir to path."""
+    try:
+        import wadlib  # noqa: F401
+    except ImportError:
+        # Try to find wadlib relative to this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        parent = os.path.dirname(script_dir)
+        if os.path.isdir(os.path.join(parent, "wadlib")):
+            sys.path.insert(0, parent)
+
+
+def cmd_list(wad_path: str) -> None:
+    """List WAD contents in mc extfs format."""
+    from wadlib.wad import WadFile
+
+    now = time.strftime("%m-%d-%Y %H:%M")
+
+    with WadFile(wad_path) as wad:
+        for entry in wad.directory:
+            # mc extfs format: permissions links owner group size date name
+            # Use directory-like structure: lumps/NAME.lmp
+            name = entry.name
+            size = entry.size
+
+            # Categorise into subdirectories
+            cat = _categorise(wad, name)
+            if cat:
+                path = f"{cat}/{name}.lmp"
+            else:
+                path = f"lumps/{name}.lmp"
+
+            print(f"-r--r--r-- 1 root root {size} {now} {path}")
+
+
+def _categorise(wad: object, name: str) -> str:
+    """Return a category directory for known lump types."""
+    from wadlib.constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+    from wadlib.enums import MapData
+
+    if DOOM1_MAP_NAME_REGEX.match(name) or DOOM2_MAP_NAME_REGEX.match(name):
+        return "maps"
+    if name in MapData.names():
+        return "maps"
+    if name in ("F_START", "F_END", "FF_START", "FF_END"):
+        return "flats"
+    if name in ("S_START", "S_END", "SS_START", "SS_END"):
+        return "sprites"
+    if name in ("P_START", "P_END", "PP_START", "PP_END"):
+        return "patches"
+    return ""
+
+
+def cmd_copyout(wad_path: str, stored_name: str, dest_path: str) -> None:
+    """Extract a lump to a file."""
+    from wadlib.wad import WadFile
+
+    # Strip category prefix and .lmp extension
+    lump_name = os.path.basename(stored_name)
+    if lump_name.endswith(".lmp"):
+        lump_name = lump_name[:-4]
+
+    with WadFile(wad_path) as wad:
+        for entry in wad.directory:
+            if entry.name == lump_name:
+                wad.fd.seek(entry.offset)
+                data = wad.fd.read(entry.size) if entry.size > 0 else b""
+                with open(dest_path, "wb") as f:
+                    f.write(data)
+                return
+
+    sys.exit(1)  # not found
+
+
+def cmd_copyin(wad_path: str, stored_name: str, src_path: str) -> None:
+    """Add or replace a lump in the WAD."""
+    from wadlib.archive import WadArchive
+
+    lump_name = os.path.basename(stored_name)
+    if lump_name.endswith(".lmp"):
+        lump_name = lump_name[:-4]
+
+    with open(src_path, "rb") as f:
+        data = f.read()
+
+    with WadArchive(wad_path, "a") as wad:
+        if not wad.replace(lump_name, data, validate=False):
+            wad.writestr(lump_name, data, validate=False)
+
+
+def cmd_rm(wad_path: str, stored_name: str) -> None:
+    """Remove a lump from the WAD."""
+    from wadlib.archive import WadArchive
+
+    lump_name = os.path.basename(stored_name)
+    if lump_name.endswith(".lmp"):
+        lump_name = lump_name[:-4]
+
+    with WadArchive(wad_path, "a") as wad:
+        wad.remove(lump_name)
+
+
+def main() -> None:
+    _ensure_wadlib()
+
+    if len(sys.argv) < 3:
+        print(f"Usage: {sys.argv[0]} <command> <wadfile> [args...]", file=sys.stderr)
+        sys.exit(1)
+
+    command = sys.argv[1]
+    wad_path = sys.argv[2]
+
+    if command == "list":
+        cmd_list(wad_path)
+    elif command == "copyout" and len(sys.argv) >= 5:
+        cmd_copyout(wad_path, sys.argv[3], sys.argv[4])
+    elif command == "copyin" and len(sys.argv) >= 5:
+        cmd_copyin(wad_path, sys.argv[3], sys.argv[4])
+    elif command == "rm" and len(sys.argv) >= 4:
+        cmd_rm(wad_path, sys.argv[3])
+    else:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

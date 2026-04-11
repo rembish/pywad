@@ -91,6 +91,14 @@ class DemoTic:
         """Weapon change slot (0 = no change)."""
         return (self.buttons >> 2) & 0x3F
 
+    def to_bytes(self, longtics: bool = False) -> bytes:
+        """Serialize this tic to bytes."""
+        if longtics:
+            return struct.pack(
+                "<bbhB", self.forwardmove, self.sidemove, self.angleturn, self.buttons
+            )
+        return struct.pack("bbbB", self.forwardmove, self.sidemove, self.angleturn, self.buttons)
+
 
 @dataclass
 class Demo:
@@ -107,6 +115,30 @@ class Demo:
     def duration_seconds(self) -> float:
         """Duration in seconds (35 tics per second)."""
         return len(self.tics) / 35.0
+
+    def to_bytes(self) -> bytes:
+        """Serialize this demo to raw bytes (playable by Doom engine)."""
+        longtics = self.header.version >= 111
+        header_bytes = bytes(
+            [
+                self.header.version,
+                self.header.skill,
+                self.header.episode,
+                self.header.map,
+                self.header.multiplayer_mode,
+                int(self.header.respawn),
+                int(self.header.fast),
+                int(self.header.nomonsters),
+                self.header.player_pov,
+                *[int(p) for p in self.header.players],
+            ]
+        )
+        body = bytearray()
+        for frame in self.tics:
+            for tic in frame:
+                body.extend(tic.to_bytes(longtics))
+        body.append(0x80)  # end marker
+        return header_bytes + bytes(body)
 
     def player_path(self, player: int = 0) -> list[tuple[float, float]]:
         """Reconstruct approximate player positions from movement inputs.
