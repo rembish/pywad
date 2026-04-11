@@ -6,13 +6,19 @@ _wadcli() {
     _init_completion || return
 
     # Top-level commands
-    local commands="info check diff list export"
+    local commands="info check complevel diff list export scan convert"
 
     # list subcommands
-    local list_cmds="animations flats lumps maps music patches sounds sprites stats textures"
+    local list_cmds="actors animations flats lumps maps music patches scripts sounds sprites stats textures"
 
     # export subcommands
-    local export_cmds="animation colormap endoom flat font lump map music palette patch sound sprite texture"
+    local export_cmds="animation colormap endoom flat font lump map music obj palette patch sound sprite texture"
+
+    # scan subcommands
+    local scan_cmds="textures"
+
+    # convert subcommands
+    local convert_cmds="pk3 wad complevel"
 
     # Global options (before subcommand)
     local global_opts="--wad --pwad --deh --help"
@@ -25,7 +31,7 @@ _wadcli() {
             --wad|--pwad|--deh)
                 ((i++))  # skip the argument
                 ;;
-            info|check|diff|list|export)
+            info|check|complevel|diff|list|export|scan|convert)
                 cmd="${words[i]}"
                 # Look for subcommand
                 for ((i=i+1; i < cword; i++)); do
@@ -84,6 +90,30 @@ _wadcli() {
                     font)
                         COMPREPLY=($(compgen -W "stcfn fonta fontb" -- "$cur"))
                         ;;
+                    obj)
+                        COMPREPLY=($(compgen -W "--scale --materials" -- "$cur"))
+                        ;;
+                    *)
+                        _filedir
+                        ;;
+                esac
+            fi
+            ;;
+        scan)
+            if [[ -z "$subcmd" ]]; then
+                COMPREPLY=($(compgen -W "$scan_cmds" -- "$cur"))
+            else
+                COMPREPLY=($(compgen -W "--json --unused" -- "$cur"))
+            fi
+            ;;
+        convert)
+            if [[ -z "$subcmd" ]]; then
+                COMPREPLY=($(compgen -W "$convert_cmds" -- "$cur"))
+            else
+                case "$subcmd" in
+                    complevel)
+                        COMPREPLY=($(compgen -W "vanilla boom mbf mbf21 zdoom udmf" -- "$cur"))
+                        ;;
                     *)
                         _filedir
                         ;;
@@ -92,6 +122,9 @@ _wadcli() {
             ;;
         info)
             COMPREPLY=($(compgen -W "--json" -- "$cur"))
+            ;;
+        complevel)
+            COMPREPLY=($(compgen -W "--json --check" -- "$cur"))
             ;;
         check)
             COMPREPLY=($(compgen -W "--json" -- "$cur"))

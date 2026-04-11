@@ -3,6 +3,8 @@
 import argparse
 import json
 
+from ...compat import detect_complevel
+from ...types import detect_game
 from .._wad_args import open_wad
 
 
@@ -21,6 +23,15 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,to
         sndinfo = wad.sndinfo
         deh = wad.dehacked
 
+        game = detect_game(wad)
+        complevel = detect_complevel(wad)
+
+        # Count ACS scripts across all maps
+        script_count = 0
+        for m in wad.maps:
+            if m.behavior is not None and hasattr(m.behavior, "scripts"):
+                script_count += len(m.behavior.scripts)
+
         fonts = []
         if wad.stcfn:
             fonts.append(f"STCFN ({len(wad.stcfn)} glyphs)")
@@ -38,6 +49,8 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,to
                 }
             data: dict[str, object] = {
                 "type": wad.wad_type.name,
+                "game": game.value,
+                "complevel": complevel.label,
                 "lumps": wad.directory_size,
                 "maps": [str(m) for m in wad.maps],
                 "textures": len(wad.texture1 or []) + len(wad.texture2 or []),
@@ -53,12 +66,15 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,to
                 "zmapinfo": len(zmapinfo.maps) if zmapinfo else 0,
                 "sndinfo": len(sndinfo.sounds) if sndinfo else 0,
                 "fonts": fonts,
+                "scripts": script_count,
                 "dehacked": deh_info,
             }
             print(json.dumps(data, indent=2))
             return
 
         print(f"Type    : {wad.wad_type.name}")
+        print(f"Game    : {game.value.capitalize()}")
+        print(f"CompLvl : {complevel.label}")
         print(f"Lumps   : {wad.directory_size}")
         print(f"Maps    : {len(wad.maps)}")
         if wad.maps:
@@ -85,6 +101,7 @@ def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-locals,to
             print(f"SNDINFO : {len(sndinfo.sounds)} sounds")
         else:
             print("SNDINFO : none")
+        print(f"Scripts : {script_count}" if script_count else "Scripts : none")
         print(f"Fonts   : {', '.join(fonts) if fonts else 'none'}")
         if deh is not None:
             par_count = len(deh.par_times)
