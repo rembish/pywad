@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Literal, overload
 
 from .enums import WadType
+from .validate import InvalidLumpError, Severity, validate_lump, validate_name
 from .wad import WadFile
 from .writer import WadWriter
 
@@ -218,18 +219,53 @@ class WadArchive:
 
     # -- Write interface ------------------------------------------------------
 
-    def writestr(self, name: str, data: bytes) -> None:
-        """Write raw bytes as a lump.  Appends to the directory."""
+    def _validate_write(self, name: str, data: bytes, **kwargs: bool) -> None:
+        """Run validation and raise ``InvalidLumpError`` on errors.
+
+        Warnings are silently accepted; only errors block the write.
+        """
+        issues = validate_name(name) + validate_lump(name, data, **kwargs)
+        errors = [i for i in issues if i.severity == Severity.ERROR]
+        if errors:
+            raise InvalidLumpError(errors)
+
+    def writestr(
+        self,
+        name: str,
+        data: bytes,
+        *,
+        validate: bool = True,
+        **kwargs: bool,
+    ) -> None:
+        """Write raw bytes as a lump.  Appends to the directory.
+
+        When *validate* is ``True`` (the default), the name and data are
+        checked against known format rules.  Pass ``validate=False`` to
+        skip validation for unusual or non-standard lumps.
+
+        Extra keyword arguments (``hexen``, ``is_flat``, ``is_picture``) are
+        forwarded to :func:`validate_lump` for format-specific checks.
+        """
         self._check_writable()
         assert self._writer is not None
+        if validate:
+            self._validate_write(name, data, **kwargs)
         self._writer.add_lump(name, data)
 
     @overload
     def write(self, filename: str) -> None: ...
     @overload
     def write(self, filename: str, arcname: str) -> None: ...
+    @overload
+    def write(self, filename: str, arcname: str, *, validate: bool) -> None: ...
 
-    def write(self, filename: str, arcname: str | None = None) -> None:
+    def write(
+        self,
+        filename: str,
+        arcname: str | None = None,
+        *,
+        validate: bool = True,
+    ) -> None:
         """Read a file from disk and add it as a lump.
 
         *arcname* overrides the lump name (defaults to the uppercased basename
@@ -242,12 +278,19 @@ class WadArchive:
             arcname = os.path.splitext(base)[0].upper()[:8]
         with open(filename, "rb") as f:
             data = f.read()
+        if validate:
+            self._validate_write(arcname, data)
         self._writer.add_lump(arcname, data)
 
-    def writemarker(self, name: str) -> None:
+    def writemarker(self, name: str, *, validate: bool = True) -> None:
         """Add a zero-length marker lump (e.g. ``MAP01``, ``F_START``)."""
         self._check_writable()
         assert self._writer is not None
+        if validate:
+            issues = validate_name(name)
+            errors = [i for i in issues if i.severity == Severity.ERROR]
+            if errors:
+                raise InvalidLumpError(errors)
         self._writer.add_marker(name)
 
     def remove(self, name: str) -> bool:
@@ -256,10 +299,12 @@ class WadArchive:
         assert self._writer is not None
         return self._writer.remove_lump(name)
 
-    def replace(self, name: str, data: bytes) -> bool:
+    def replace(self, name: str, data: bytes, *, validate: bool = True, **kwargs: bool) -> bool:
         """Replace the first lump named *name*.  Returns ``True`` if found."""
         self._check_writable()
         assert self._writer is not None
+        if validate:
+            self._validate_write(name, data, **kwargs)
         return self._writer.replace_lump(name, data)
 
     # -- Extract interface ----------------------------------------------------
