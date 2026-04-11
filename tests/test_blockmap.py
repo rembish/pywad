@@ -79,3 +79,72 @@ def test_blockmap_doom2(freedoom2_wad: WadFile) -> None:
     bm = freedoom2_wad.maps[0].blockmap
     assert bm is not None
     assert bm.block_count > 0
+
+
+# ---------------------------------------------------------------------------
+# BLOCKMAP builder
+# ---------------------------------------------------------------------------
+
+from wadlib.lumps.blockmap import build_blockmap
+
+
+def test_build_blockmap_empty() -> None:
+    data = build_blockmap([], [])
+    assert len(data) == 8  # just the header
+
+
+def test_build_blockmap_simple_square() -> None:
+    verts = [(0, 0), (256, 0), (256, 256), (0, 256)]
+    lines = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    data = build_blockmap(verts, lines)
+    # Should parse back as a valid blockmap
+    import struct
+
+    ox, oy, cols, rows = struct.unpack("<hhHH", data[:8])
+    assert cols > 0
+    assert rows > 0
+    assert cols * rows > 0
+
+
+def test_build_blockmap_parseable() -> None:
+    """Built blockmap should be parseable by the BlockMap class."""
+    from io import BytesIO
+
+    verts = [(0, 0), (512, 0), (512, 512), (0, 512)]
+    lines = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    raw = build_blockmap(verts, lines)
+
+    class _FW:
+        def __init__(self, d: bytes) -> None:
+            self.fd = BytesIO(d)
+
+    from wadlib.directory import DirectoryEntry
+
+    entry = DirectoryEntry(_FW(raw), 0, len(raw), "BLOCKMAP")  # type: ignore[arg-type]
+    bm = BlockMap(entry)
+    assert bm.columns > 0
+    assert bm.rows > 0
+    assert bm.block_count == bm.columns * bm.rows
+    assert len(bm.offsets) == bm.block_count
+
+
+def test_build_blockmap_covers_lines() -> None:
+    """Every linedef should appear in at least one block."""
+    verts = [(0, 0), (1000, 0), (1000, 1000)]
+    lines = [(0, 1), (1, 2), (2, 0)]
+    raw = build_blockmap(verts, lines)
+    # The raw data should reference linedef indices 0, 1, 2
+    # somewhere in the blocklists (after the offset table)
+    import struct
+
+    _, _, cols, rows = struct.unpack("<hhHH", raw[:8])
+    # Skip header + offsets to get blocklists
+    blocklist_start = 8 + cols * rows * 2
+    blocklist_data = raw[blocklist_start:]
+    # Should contain at least indices 0, 1, 2 as 16-bit values
+    found: set[int] = set()
+    for i in range(0, len(blocklist_data) - 1, 2):
+        val = struct.unpack("<H", blocklist_data[i : i + 2])[0]
+        if val < 3:  # linedef index
+            found.add(val)
+    assert found == {0, 1, 2}
