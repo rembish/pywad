@@ -21,12 +21,11 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
-from .lumps.colormap import ColormapLump
-from .lumps.dehacked import DehackedThing
-from .lumps.map import BaseMapEntry
-from .lumps.nodes import SSECTOR_FLAG
-from .lumps.playpal import Palette
-from .types import (
+from ..lumps.colormap import ColormapLump
+from ..lumps.dehacked import DehackedThing
+from ..lumps.map import BaseMapEntry
+from ..lumps.playpal import Palette
+from ..types import (
     GameType,
     ThingCategory,
     detect_game,
@@ -35,9 +34,10 @@ from .types import (
     get_sprite_prefix,
     get_sprite_suffixes,
 )
+from .floors import draw_floors
 
 if TYPE_CHECKING:
-    from .wad import WadFile
+    from ..wad import WadFile
 
 _PADDING = 40
 _MAX_DIM = 4096
@@ -55,53 +55,6 @@ _CATEGORY_COLOUR: dict[ThingCategory, tuple[int, int, int]] = {
     ThingCategory.DECORATION: (90, 90, 90),  # dark grey
     ThingCategory.UNKNOWN: (50, 50, 50),  # very dark
 }
-
-
-def _clip_poly(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    polygon: list[tuple[float, float]],
-    nx: float,
-    ny: float,
-    ndx: float,
-    ndy: float,
-    keep_right: bool,
-) -> list[tuple[float, float]]:
-    """Sutherland-Hodgman clip of a convex polygon against a BSP half-plane.
-
-    Half-plane convention (map-coordinate cross product):
-        cross = (P.x - nx)*ndy - (P.y - ny)*ndx
-        keep_right=True  → keep where cross >= 0  (Doom "right child" side)
-        keep_right=False → keep where cross <= 0  (Doom "left child" side)
-    """
-    if len(polygon) < 2:
-        return []
-
-    def _cross(p: tuple[float, float]) -> float:
-        return (p[0] - nx) * ndy - (p[1] - ny) * ndx
-
-    def _intersect(p1: tuple[float, float], p2: tuple[float, float]) -> tuple[float, float]:
-        c1, c2 = _cross(p1), _cross(p2)
-        denom = c1 - c2
-        if denom == 0.0:
-            return p1
-        t = c1 / denom
-        return (p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1]))
-
-    result: list[tuple[float, float]] = []
-    n = len(polygon)
-    for i in range(n):
-        curr = polygon[i]
-        prev = polygon[i - 1]
-        cc = _cross(curr)
-        pc = _cross(prev)
-        curr_in = cc >= 0 if keep_right else cc <= 0
-        prev_in = pc >= 0 if keep_right else pc <= 0
-        if curr_in:
-            if not prev_in:
-                result.append(_intersect(prev, curr))
-            result.append(curr)
-        elif prev_in:
-            result.append(_intersect(prev, curr))
-    return result
 
 
 @dataclass
@@ -219,200 +172,11 @@ class MapRenderer:
         return px, py
 
     # ------------------------------------------------------------------
-    # Floor rendering — BSP tree walk with Sutherland-Hodgman clipping
+    # Floor rendering — delegates to floors module
     # ------------------------------------------------------------------
-    # Doom only stores linedef-based segs in the SEGS lump; the partition-
-    # line segments that complete each subsector's convex boundary are
-    # implicit in the BSP node tree.  Building the polygon from seg
-    # start-vertices alone misses those boundary vertices, leaving ~44% of
-    # subsectors with fewer than 3 points.
-    #
-    # The correct approach: walk the NODE tree recursively, clipping a
-    # bounding polygon at each partition plane (Sutherland-Hodgman).  At
-    # each leaf (subsector) the clipped polygon IS the full convex region.
-
-    def _shaded_palette(self, light_level: int) -> Palette:
-        """Return a palette remapped through the colormap for *light_level*."""
-        assert self._palette is not None
-        if self._colormap is None:
-            return self._palette
-        colormap_idx = max(0, min(31, (255 - light_level) // 8))
-        cmap = self._colormap.get(colormap_idx)
-        return [self._palette[cmap[i]] for i in range(256)]
-
-    def _build_flat_tile(self, flat_name: str, light_level: int) -> Image.Image | None:
-        """Decode and scale a flat for tiling, shaded by *light_level*."""
-        if self._wad is None or self._palette is None:
-            return None
-        flat = self._wad.get_flat(flat_name)
-        if flat is None:
-            return None
-        img = flat.decode(self._shaded_palette(light_level))
-        tile_px = max(1, int(64 * self._scale))
-        return img.resize((tile_px, tile_px), Image.Resampling.NEAREST)
-
-    def _tile_canvas(self, tile: Image.Image) -> Image.Image:
-        """Produce a canvas-sized image tiled with *tile* (same mode as self._im)."""
-        mode = self._im.mode
-        tiled = Image.new(mode, self._im.size)
-        src = tile.convert(mode)
-        tw, th = src.size
-        for ty in range(0, self._im.height, th):
-            for tx in range(0, self._im.width, tw):
-                tiled.paste(src, (tx, ty))
-        return tiled
-
-    def _sector_for_seg(self, seg: Any) -> int | None:
-        """Return the sector index that a Seg faces, or None."""
-        m = self.level
-        if m.lines is None or m.sidedefs is None:
-            return None
-        line = m.lines.get(seg.linedef)
-        if line is None:
-            return None
-        sd_idx = line.right_sidedef if seg.direction == 0 else line.left_sidedef
-        if sd_idx in (-1, 0xFFFF):
-            return None
-        sd = m.sidedefs.get(sd_idx)
-        return sd.sector if sd is not None else None
-
-    def _sector_from_ssector(self, ssector: Any) -> int | None:
-        """Return the sector index for a subsector (from any of its segs)."""
-        m = self.level
-        if not m.segs:
-            return None
-        for j in range(ssector.seg_count):
-            seg = m.segs.get(ssector.first_seg + j)
-            if seg is None:
-                continue
-            sector_idx = self._sector_for_seg(seg)
-            if sector_idx is not None:
-                return sector_idx
-        return None
-
-    def _clip_by_segs(
-        self, poly: list[tuple[float, float]], ssector: Any
-    ) -> list[tuple[float, float]]:
-        """Clip *poly* against each seg's half-plane to remove bleeding outside walls.
-
-        The subsector always lies to the RIGHT of each seg's start→end direction
-        (cross >= 0), so we keep the right side of every seg's half-plane.
-        """
-        m = self.level
-        if not (m.segs and m.vertices):
-            return poly
-        for j in range(ssector.seg_count):
-            seg = m.segs.get(ssector.first_seg + j)
-            if seg is None:
-                continue
-            if getattr(seg, "linedef", None) == 0xFFFF:
-                continue  # mini-seg: no real wall, skip clipping
-            v1 = m.vertices.get(seg.start_vertex)
-            v2 = m.vertices.get(seg.end_vertex)
-            if v1 is None or v2 is None:
-                continue
-            dx, dy = float(v2.x - v1.x), float(v2.y - v1.y)
-            if dx == 0.0 and dy == 0.0:
-                continue
-            poly = _clip_poly(poly, float(v1.x), float(v1.y), dx, dy, keep_right=True)
-            if len(poly) < 3:
-                return []
-        return poly
-
-    def _collect_all_ssector_polys(self) -> dict[int, list[tuple[float, float]]]:
-        """Walk the BSP tree ONCE and collect every subsector's clipped polygon.
-
-        This is O(N) in the number of BSP nodes, vs the naive O(N log N) approach
-        of doing a separate root-to-leaf walk for every subsector.
-        """
-        m = self.level
-        if not m.nodes:
-            return {}
-        initial_poly: list[tuple[float, float]] = [
-            (float(self._min_x), float(self._min_y)),
-            (float(self._max_x), float(self._min_y)),
-            (float(self._max_x), float(self._max_y)),
-            (float(self._min_x), float(self._max_y)),
-        ]
-        result: dict[int, list[tuple[float, float]]] = {}
-        root_idx = len(m.nodes) - 1
-        self._bsp_collect(root_idx, initial_poly, result)
-        return result
-
-    def _bsp_collect(
-        self,
-        child_idx: int,
-        poly: list[tuple[float, float]],
-        result: dict[int, list[tuple[float, float]]],
-    ) -> None:
-        """Recursive BSP traversal that accumulates polygons for all subsectors."""
-        if child_idx & SSECTOR_FLAG:
-            result[child_idx & ~SSECTOR_FLAG] = poly
-            return
-        m = self.level
-        node = m.nodes.get(child_idx) if m.nodes else None
-        if node is None:
-            return
-        nx, ny, ndx, ndy = float(node.x), float(node.y), float(node.dx), float(node.dy)
-        right_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=True)
-        left_poly = _clip_poly(poly, nx, ny, ndx, ndy, keep_right=False)
-        if len(right_poly) >= 3:
-            self._bsp_collect(node.right_child, right_poly, result)
-        if len(left_poly) >= 3:
-            self._bsp_collect(node.left_child, left_poly, result)
-
-    def _fill_ssector_polygon(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-        self,
-        ssector_idx: int,  # pylint: disable=unused-argument
-        ssector: Any,
-        poly: list[tuple[float, float]],
-        tile_cache: dict[tuple[str, int], Image.Image | None],
-        tiled_canvas_cache: dict[tuple[str, int], Image.Image],
-    ) -> None:
-        """Render the floor flat for one subsector using a pre-computed BSP polygon."""
-        m = self.level
-        sector_idx = self._sector_from_ssector(ssector)
-        if sector_idx is None:
-            return
-        sector = m.sectors.get(sector_idx) if m.sectors else None
-        if sector is None:
-            return
-        flat_name = sector.floor_texture.strip("\x00").rstrip().upper()
-        if not flat_name or flat_name == "-":
-            return
-        light_level = getattr(sector, "light_level", 255)
-        key = (flat_name, light_level)
-        if key not in tile_cache:
-            tile_cache[key] = self._build_flat_tile(flat_name, light_level)
-        tile = tile_cache[key]
-        if tile is None:
-            return
-        if key not in tiled_canvas_cache:
-            tiled_canvas_cache[key] = self._tile_canvas(tile)
-        tiled = tiled_canvas_cache[key]
-        refined = self._clip_by_segs(poly, ssector)
-        if len(refined) < 3:
-            return
-        points = [self._px(int(x), int(y)) for x, y in refined]
-        mask = Image.new("L", self._im.size, 0)
-        ImageDraw(mask).polygon(points, fill=255, outline=255)
-        self._im.paste(tiled, (0, 0), mask=mask)
 
     def _draw_floors(self) -> None:
-        m = self.level
-        if not (m.ssectors and m.segs and m.vertices and m.sectors):
-            return
-        if self._wad is None or self._palette is None:
-            return
-        # Single O(N) BSP traversal collects every subsector polygon at once.
-        all_polys = self._collect_all_ssector_polys()
-        tile_cache: dict[tuple[str, int], Image.Image | None] = {}
-        tiled_canvas_cache: dict[tuple[str, int], Image.Image] = {}
-        for i, ssector in enumerate(m.ssectors):
-            poly = all_polys.get(i)
-            if poly is None or len(poly) < 3:
-                continue
-            self._fill_ssector_polygon(i, ssector, poly, tile_cache, tiled_canvas_cache)
+        draw_floors(self)
 
     # ------------------------------------------------------------------
     # Linedef rendering
