@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from struct import pack
 from typing import ClassVar
 
 from .base import BaseLump
@@ -53,6 +54,25 @@ class Node:
     @property
     def left_is_subsector(self) -> bool:
         return bool(self.left_child & SSECTOR_FLAG)
+
+    def to_bytes(self) -> bytes:
+        return pack(
+            NODE_FORMAT,
+            self.x,
+            self.y,
+            self.dx,
+            self.dy,
+            self.right_top,
+            self.right_bottom,
+            self.right_left,
+            self.right_right,
+            self.left_top,
+            self.left_bottom,
+            self.left_left,
+            self.left_right,
+            self.right_child,
+            self.left_child,
+        )
 
 
 class Nodes(BaseLump[Node]):

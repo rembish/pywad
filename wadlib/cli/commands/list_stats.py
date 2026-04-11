@@ -4,8 +4,8 @@ import argparse
 import json
 from collections import Counter
 
-from ...doom_types import ThingCategory, get_category
 from ...lumps.map import BaseMapEntry
+from ...types import ThingCategory, get_category
 from .._wad_args import open_wad
 
 

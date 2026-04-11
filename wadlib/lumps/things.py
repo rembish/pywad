@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import IntFlag
+from struct import pack
 from typing import ClassVar
 
 from .base import BaseLump
@@ -29,6 +30,9 @@ class Thing:
 
     def __post_init__(self) -> None:
         self.flags = Flags(self.flags)
+
+    def to_bytes(self) -> bytes:
+        return pack(DOOM_FORMAT, self.x, self.y, self.direction, self.type, int(self.flags))
 
 
 class Things(BaseLump[Thing]):

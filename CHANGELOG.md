@@ -5,6 +5,147 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.82] - 2026-04-11
+
+### Added
+
+- **UDMF map format** (`wadlib/lumps/udmf.py`): full parser and serializer for
+  the Universal Doom Map Format.  Parses TEXTMAP lumps into typed dataclasses
+  (`UdmfThing`, `UdmfVertex`, `UdmfLinedef`, `UdmfSidedef`, `UdmfSector`).
+  Supports all standard properties plus arbitrary extended props.
+  `serialize_udmf()` writes back to valid TEXTMAP. Round-trip verified.
+
+## [0.0.81] - 2026-04-11
+
+### Added
+
+- **BLOCKMAP builder** (`build_blockmap()`): generate a BLOCKMAP lump from
+  vertices and linedefs.  128x128 block grid, Bresenham-style line
+  rasterisation, standard Doom blocklist format with terminators.
+
+## [0.0.80] - 2026-04-11
+
+### Added
+
+- **ANIMATED/SWITCHES** (`wadlib/lumps/animated.py`): Boom binary animation
+  format.  `AnimatedLump` for flat/texture animation cycles (23-byte records),
+  `SwitchesLump` for wall switch on/off pairs (20-byte records).
+  `animated_to_bytes()` / `switches_to_bytes()` for serialization.
+- **Demo parser** (`wadlib/lumps/demo.py`): parse Doom demo `.lmp` recordings.
+  Header (version, skill, episode, map, players), per-tic inputs (forwardmove,
+  sidemove, angleturn, buttons), longtics support (v111+, 16-bit angle),
+  `player_path()` for trajectory reconstruction, duration computation.
+
+## [0.0.79] - 2026-04-11
+
+### Added
+
+- **pk3/ZIP support** (`wadlib/pk3.py`): `Pk3Archive` with r/w/a modes for
+  ZIP-based WAD archives (GZDoom format).  `wad_to_pk3()` and `pk3_to_wad()`
+  for bidirectional conversion with automatic directory organisation
+  (flats/, sprites/, maps/, sounds/, etc.).
+
+## [0.0.78] - 2026-04-11
+
+### Added
+
+- **Shell completion** for bash and zsh (`completion/wadcli.bash`,
+  `completion/wadcli.zsh`).  Covers all wadcli subcommands, options, file type
+  filtering (`.wad`, `.deh`), context-aware argument hints (font names, export
+  flags), and wadmount completion.
+
+## [0.0.77] - 2026-04-11
+
+### Added
+
+- **FUSE filesystem** (`wadlib/fuse.py`): mount any WAD as a virtual directory
+  with auto-format conversion.  `wadmount DOOM2.WAD /mnt/doom2` exposes lumps
+  organised by type (flats, sprites, sounds, music, maps, patches, lumps) with
+  on-the-fly conversion: flats/sprites as PNG, sounds as WAV, music as MIDI.
+- **Write support**: drop standard files into the mounted directory and they
+  auto-convert back — WAV to DMX, MIDI to MUS, PNG to flat/picture.
+  Changes are flushed to the WAD on unmount.
+- **`wadmount` CLI command** with `--readonly` and `--background` flags.
+- Optional `[fuse]` dependency group: `pip install wadlib[fuse]`.
+
+## [0.0.76] - 2026-04-11
+
+### Added
+
+- **`wav_to_dmx()`** (`wadlib/lumps/sound.py`): parse WAV files (8-bit/16-bit,
+  mono/stereo) and convert to DMX sound lumps.  Handles bit-depth conversion
+  (16-bit signed -> 8-bit unsigned) and stereo downmix automatically.
+- **`build_colormap()`** (`wadlib/lumps/colormap.py`): generate a full 34-table
+  COLORMAP from a palette.  32 progressive darkening levels + invulnerability
+  greyscale tint + all-black table.  Accepts hex colour strings for the
+  invulnerability tint (e.g. `invuln_tint="#FFD700"`).
+- **Hex colour utilities**: `hex_to_rgb()` and `rgb_to_hex()` in
+  `wadlib/lumps/colormap.py`.  Supports `"#RRGGBB"`, `"RRGGBB"`, `"#RGB"`,
+  and `"RGB"` formats.
+
+## [0.0.75] - 2026-04-11
+
+### Added
+
+- **`WadArchive`** — unified `zipfile.ZipFile`-style interface for WAD files
+  with `"r"` / `"w"` / `"a"` modes.  `namelist()`, `infolist()`, `read()`,
+  `writestr()`, `write()`, `replace()`, `remove()`, `extract()`, `extractall()`,
+  iteration, membership tests.  `LumpInfo` dataclass analogous to `ZipInfo`.
+
+## [0.0.74] - 2026-04-11
+
+### Added
+
+- **Lump validation** (`wadlib/validate.py`) — catches errors on write:
+  - Name validation (charset, length 1-8)
+  - Record-size checks for map lumps (THINGS 10/20, LINEDEFS 14/16, etc.)
+  - Fixed-size checks (COLORMAP 8704, ENDOOM 4000, PLAYPAL multiple of 768)
+  - Flat size (4096 bytes), picture header validation
+  - Structural checks: namespace marker pairing, orphan map data lumps
+  - Hexen format awareness (20-byte things, 16-byte linedefs)
+  - Integrated into `WadArchive` write path; pass `validate=False` to bypass.
+- `InvalidLumpError` exception raised on validation failure.
+
+## [0.0.73] - 2026-04-11
+
+### Added
+
+- **MIDI to MUS converter** (`wadlib/lumps/mid2mus.py`): `midi_to_mus()` converts
+  Standard MIDI Files (format 0 and 1) to Doom's MUS format.  Full MIDI parser
+  with running status, VLQ timing, all channel events.  Round-trip verified
+  against real freedoom2.wad music lumps.
+
+## [0.0.72] - 2026-04-11
+
+### Changed
+
+- **`wadlib.types` package** — game type modules (`doom_types`, `heretic_types`,
+  `hexen_types`, `strife_types`, `thing_types`) unified into `wadlib/types/`
+  package.  Shared `GameModule` base class eliminates duplicated dispatch
+  functions.  Import paths: `from wadlib.types import detect_game, ThingCategory`
+  or `from wadlib.types.doom import THING_TYPES`.
+
+## [0.0.71] - 2026-04-11
+
+### Added
+
+- **`WadWriter`** — low-level WAD creation and modification.  Create new
+  IWAD/PWAD from scratch, round-trip existing WADs (`WadWriter.from_wad()`),
+  add/insert/replace/remove lumps, namespace helpers (`add_flat()`,
+  `add_sprite()`, `add_patch()`), and `add_map()` for building complete maps
+  from typed Python objects.
+- **Binary serialization** — `to_bytes()` on all map data types: `Thing`,
+  `Vertex`, `LineDefinition`, `SideDef`, `Sector`, `Seg`, `SubSector`, `Node`,
+  `HexenThing`, `HexenLineDef`.  Byte-exact round-trip verified against real WADs.
+- **Format encoders** for the write path:
+  - `encode_picture(image, palette)` — PIL RGBA image to Doom column-RLE picture format
+  - `encode_flat(image, palette)` — PIL image to 64x64 palette-indexed flat
+  - `encode_dmx(pcm, rate)` — raw 8-bit PCM to DMX sound lump
+  - `palette_to_bytes()` / `palettes_to_bytes()` — palette serialization
+  - `pnames_to_bytes()` / `texturelist_to_bytes()` — texture definition serialization
+  - `Reject.build()` / `Reject.from_bytes()` — REJECT table construction
+- `WadWriter` and `WadArchive` exported from `wadlib.__init__`.
+
 ## [0.0.70] - 2026-04-10
 
 ### Added

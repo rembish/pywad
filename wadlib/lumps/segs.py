@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from struct import pack
 from typing import ClassVar
 
 from .base import BaseLump
@@ -16,11 +17,25 @@ class Seg:
     direction: int  # 0 = same as linedef, 1 = opposite
     offset: int  # distance along linedef to start of seg
 
+    def to_bytes(self) -> bytes:
+        return pack(
+            SEG_FORMAT,
+            self.start_vertex,
+            self.end_vertex,
+            self.angle,
+            self.linedef,
+            self.direction,
+            self.offset,
+        )
+
 
 @dataclass
 class SubSector:
     seg_count: int
     first_seg: int  # index into SEGS
+
+    def to_bytes(self) -> bytes:
+        return pack(SSECTOR_FORMAT, self.seg_count, self.first_seg)
 
 
 class Segs(BaseLump[Seg]):

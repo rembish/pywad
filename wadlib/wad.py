@@ -211,10 +211,10 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
         return [seen[n] for n in sorted(order, key=_map_sort_key)]
 
-    def _find_lump(self, name: str) -> "DirectoryEntry | None":
+    def find_lump(self, name: str) -> "DirectoryEntry | None":
         """Return the highest-priority directory entry with the given name.
 
-        PWADs are checked newest-first, then the base WAD — mirroring how
+        PWADs are checked newest-first, then the base WAD -- mirroring how
         the Doom engine resolves lump names when multiple WADs are loaded.
         """
         for wad in self._all_wads:
@@ -226,31 +226,31 @@ class WadFile:  # pylint: disable=too-many-public-methods
     @cached_property
     def playpal(self) -> PlayPal | None:
         """Return the PLAYPAL lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("PLAYPAL")
+        entry = self.find_lump("PLAYPAL")
         return PlayPal(entry) if entry else None
 
     @cached_property
     def colormap(self) -> ColormapLump | None:
         """Return the COLORMAP lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("COLORMAP")
+        entry = self.find_lump("COLORMAP")
         return ColormapLump(entry) if entry else None
 
     @cached_property
     def pnames(self) -> PNames | None:
         """Return the PNAMES lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("PNAMES")
+        entry = self.find_lump("PNAMES")
         return PNames(entry) if entry else None
 
     @cached_property
     def texture1(self) -> TextureList | None:
         """Return the TEXTURE1 lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("TEXTURE1")
+        entry = self.find_lump("TEXTURE1")
         return TextureList(entry) if entry else None
 
     @cached_property
     def texture2(self) -> TextureList | None:
         """Return the TEXTURE2 lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("TEXTURE2")
+        entry = self.find_lump("TEXTURE2")
         return TextureList(entry) if entry else None
 
     @cached_property
@@ -277,12 +277,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     def get_picture(self, name: str) -> Picture | None:
         """Return a named lump as a Picture (PWAD-aware), or None."""
-        entry = self._find_lump(name.upper())
+        entry = self.find_lump(name.upper())
         return Picture(entry) if entry else None
 
     def get_lump(self, name: str) -> BaseLump[Any] | None:
         """Return the first directory lump with the given name (PWAD-aware), or None."""
-        entry = self._find_lump(name.upper())
+        entry = self.find_lump(name.upper())
         return BaseLump(entry) if entry else None
 
     def get_lumps(self, name: str) -> list[BaseLump[Any]]:
@@ -366,43 +366,43 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     @cached_property
     def endoom(self) -> Endoom | None:
-        entry = self._find_lump("ENDOOM")
+        entry = self.find_lump("ENDOOM")
         return Endoom(entry) if entry else None
 
     @cached_property
     def sndinfo(self) -> SndInfo | None:
         """Return the SNDINFO lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("SNDINFO")
+        entry = self.find_lump("SNDINFO")
         return SndInfo(entry) if entry else None
 
     @cached_property
     def sndseq(self) -> SndSeqLump | None:
         """Return the SNDSEQ lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("SNDSEQ")
+        entry = self.find_lump("SNDSEQ")
         return SndSeqLump(entry) if entry else None
 
     @cached_property
     def mapinfo(self) -> MapInfoLump | None:
         """Return the MAPINFO lump (Hexen format, PWAD-aware), or None if not present."""
-        entry = self._find_lump("MAPINFO")
+        entry = self.find_lump("MAPINFO")
         return MapInfoLump(entry) if entry else None
 
     @cached_property
     def zmapinfo(self) -> ZMapInfoLump | None:
         """Return the ZMAPINFO lump (ZDoom format, PWAD-aware), or None if not present."""
-        entry = self._find_lump("ZMAPINFO")
+        entry = self.find_lump("ZMAPINFO")
         return ZMapInfoLump(entry) if entry else None
 
     @cached_property
     def language(self) -> LanguageLump | None:
         """Return the LANGUAGE lump (ZDoom localisation, PWAD-aware), or None if not present."""
-        entry = self._find_lump("LANGUAGE")
+        entry = self.find_lump("LANGUAGE")
         return LanguageLump(entry) if entry else None
 
     @cached_property
     def animdefs(self) -> AnimDefsLump | None:
         """Return the ANIMDEFS lump (PWAD-aware), or None if not present."""
-        entry = self._find_lump("ANIMDEFS")
+        entry = self.find_lump("ANIMDEFS")
         return AnimDefsLump(entry) if entry else None
 
     @cached_property
@@ -472,7 +472,7 @@ class WadFile:  # pylint: disable=too-many-public-methods
         An external ``.deh`` file takes priority if one was loaded via
         :meth:`load_deh`.
         """
-        entry = self._find_lump("DEHACKED")
+        entry = self.find_lump("DEHACKED")
         return DehackedLump(entry) if entry else None
 
     def load_deh(self, path: str) -> None:

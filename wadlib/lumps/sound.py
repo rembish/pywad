@@ -1,4 +1,4 @@
-"""DMX digitized sound lump decoder."""
+"""DMX digitized sound lump decoder/encoder."""
 
 from __future__ import annotations
 
@@ -47,3 +47,83 @@ class DmxSound(BaseLump[Any]):
         fmt_chunk = struct.pack("<4sIHHIIHH", b"fmt ", 16, 1, 1, rate, rate, 1, 8)
         data_chunk = struct.pack("<4sI", b"data", len(samples)) + samples
         return riff + fmt_chunk + data_chunk
+
+
+def encode_dmx(pcm_samples: bytes, rate: int = 11025) -> bytes:
+    """Encode raw 8-bit unsigned PCM samples into a DMX sound lump.
+
+    *rate* is the sample rate in Hz (typically 11025 for Doom sounds).
+    """
+    num_samples = len(pcm_samples) + _PADDING
+    header = struct.pack(_HEADER_FMT, _DMX_FORMAT, rate, num_samples)
+    padding = b"\x80" * _PADDING  # silence (0x80 = zero crossing for unsigned 8-bit)
+    return header + padding + pcm_samples
+
+
+def wav_to_dmx(wav_data: bytes) -> bytes:
+    """Parse a WAV file and convert it to a DMX sound lump.
+
+    Supports 8-bit unsigned and 16-bit signed mono PCM WAV files.
+    Multi-channel WAV files are downmixed to mono (first channel only).
+
+    Raises ``ValueError`` if the WAV file is not a supported format.
+    """
+    if wav_data[:4] != b"RIFF" or wav_data[8:12] != b"WAVE":
+        raise ValueError("Not a WAV file (missing RIFF/WAVE header)")
+
+    # Parse chunks
+    pos = 12
+    fmt_parsed = False
+    channels = 1
+    rate = 11025
+    bits_per_sample = 8
+    pcm_data = b""
+
+    while pos < len(wav_data) - 8:
+        chunk_id = wav_data[pos : pos + 4]
+        chunk_size = struct.unpack("<I", wav_data[pos + 4 : pos + 8])[0]
+        chunk_body = wav_data[pos + 8 : pos + 8 + chunk_size]
+
+        if chunk_id == b"fmt ":
+            if len(chunk_body) < 16:
+                raise ValueError("WAV fmt chunk too short")
+            audio_fmt, channels, rate, _byte_rate, _block_align, bits_per_sample = struct.unpack(
+                "<HHIIHH", chunk_body[:16]
+            )
+            if audio_fmt != 1:
+                raise ValueError(f"Unsupported WAV format {audio_fmt} (only PCM=1 supported)")
+            if bits_per_sample not in (8, 16):
+                raise ValueError(
+                    f"Unsupported bit depth {bits_per_sample} (only 8 or 16 supported)"
+                )
+            fmt_parsed = True
+
+        elif chunk_id == b"data":
+            pcm_data = chunk_body
+
+        # Advance to next chunk (chunks are word-aligned)
+        pos += 8 + chunk_size
+        if chunk_size % 2:
+            pos += 1
+
+    if not fmt_parsed:
+        raise ValueError("WAV file missing fmt chunk")
+    if not pcm_data:
+        raise ValueError("WAV file missing data chunk")
+
+    # Convert to 8-bit unsigned mono
+    if bits_per_sample == 16:
+        # 16-bit signed LE → 8-bit unsigned
+        sample_count = len(pcm_data) // (2 * channels)
+        samples = bytearray(sample_count)
+        for i in range(sample_count):
+            offset = i * 2 * channels  # take first channel
+            val = struct.unpack("<h", pcm_data[offset : offset + 2])[0]
+            samples[i] = (val >> 8) + 128  # signed 16 → unsigned 8
+        pcm_data = bytes(samples)
+    elif channels > 1:
+        # 8-bit multi-channel → mono (first channel)
+        sample_count = len(pcm_data) // channels
+        pcm_data = bytes(pcm_data[i * channels] for i in range(sample_count))
+
+    return encode_dmx(pcm_data, rate)
