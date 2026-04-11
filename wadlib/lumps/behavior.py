@@ -349,3 +349,135 @@ def disassemble_acs(
             break
 
     return "\n".join(lines)
+
+
+# Reverse lookup: name -> (opcode, argc)
+_ACS_NAME_TO_OPCODE: dict[str, tuple[int, int]] = {
+    name.lower(): (opcode, argc) for opcode, (name, argc) in _ACS_OPCODES.items()
+}
+
+
+def assemble_acs(text: str) -> bytes:
+    """Assemble ACS p-code text into raw bytecode.
+
+    Accepts the same format produced by :func:`disassemble_acs`::
+
+        bytecode = assemble_acs('''
+            BeginPrint
+            PushNumber 0
+            PrintString
+            EndPrint
+            Terminate
+        ''')
+
+    Lines starting with ``#`` or ``;`` are comments.  Arguments after
+    ``;`` on instruction lines are stripped (inline comments).
+    """
+    result = bytearray()
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith(";"):
+            continue
+
+        # Strip inline comments (after ;)
+        if ";" in line:
+            line = line[: line.index(";")].strip()
+        if not line:
+            continue
+
+        parts = line.split()
+        mnemonic = parts[0].lower()
+
+        if mnemonic not in _ACS_NAME_TO_OPCODE:
+            raise ValueError(f"Unknown ACS instruction: {parts[0]!r}")
+
+        opcode, _argc = _ACS_NAME_TO_OPCODE[mnemonic]
+        result += struct.pack("<I", opcode)
+
+        # Parse arguments
+        arg_parts = parts[1:] if len(parts) > 1 else []
+        # Handle comma-separated args
+        arg_strs = []
+        for p in arg_parts:
+            arg_strs.extend(p.rstrip(",").split(","))
+        arg_strs = [a.strip() for a in arg_strs if a.strip()]
+
+        for arg_str in arg_strs:
+            result += struct.pack("<i", int(arg_str))
+
+    return bytes(result)
+
+
+def build_behavior(
+    scripts: list[tuple[int, int, int, bytes]],
+    strings: list[str] | None = None,
+) -> bytes:
+    """Build a complete ACS0 BEHAVIOR lump from scripts and strings.
+
+    Parameters:
+        scripts:  List of ``(number, script_type, arg_count, bytecode)`` tuples.
+                  script_type: 0=closed, 1=open, 2=respawn, etc.
+        strings:  Optional list of strings for the string table.
+
+    Returns:
+        Raw bytes for a BEHAVIOR lump ready to embed in a WAD.
+
+    Example::
+
+        from wadlib.lumps.behavior import assemble_acs, build_behavior
+
+        code = assemble_acs('''
+            BeginPrint
+            PushNumber 0
+            PrintString
+            EndPrint
+            Terminate
+        ''')
+        behavior = build_behavior(
+            scripts=[(1, 1, 0, code)],  # script 1, open, 0 args
+            strings=["Hello World"],
+        )
+    """
+    strings = strings or []
+
+    # Layout: magic(4) + dir_offset(4) + bytecode... + directory + strings
+    header_size = 8  # magic + dir_offset
+
+    # Accumulate bytecode and record offsets
+    bytecode_blob = bytearray()
+    script_entries: list[tuple[int, int, int]] = []  # (number, offset, arg_count)
+
+    for number, stype, argc, code in scripts:
+        offset = header_size + len(bytecode_blob)
+        # Encode script type in number (ACS0 convention: open = number + 1000)
+        encoded_number = number + 1000 if stype == 1 else number
+        script_entries.append((encoded_number, offset, argc))
+        bytecode_blob += code
+
+    dir_offset = header_size + len(bytecode_blob)
+
+    # Build directory
+    dir_data = struct.pack("<I", len(script_entries))
+    for num, off, argc in script_entries:
+        dir_data += struct.pack("<IIi", num, off, argc)
+
+    # Build string table
+    str_count = len(strings)
+    str_data = struct.pack("<I", str_count)
+
+    # String offsets are relative to... the start of the lump
+    # First compute where string data starts
+    str_table_start = dir_offset + len(dir_data) + 4 + str_count * 4  # after count + offsets
+    encoded_strings = [s.encode("latin-1") + b"\x00" for s in strings]
+
+    str_offset = str_table_start
+    for es in encoded_strings:
+        str_data += struct.pack("<I", str_offset)
+        str_offset += len(es)
+
+    str_data += b"".join(encoded_strings)
+
+    # Assemble
+    header = _ACS0_MAGIC + struct.pack("<I", dir_offset)
+    return header + bytes(bytecode_blob) + dir_data + str_data

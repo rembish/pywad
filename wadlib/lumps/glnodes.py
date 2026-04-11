@@ -126,6 +126,58 @@ def parse_gl_ssectors(data: bytes) -> list[GlSubSector]:
     return result
 
 
+def gl_verts_to_bytes(verts: list[GlVertex], version: int = 2) -> bytes:
+    """Serialize GL vertices to a GL_VERT lump.
+
+    *version* 1 uses 16-bit integers, 2 uses 32-bit fixed-point (recommended).
+    """
+    if version >= 2:
+        result = bytearray(_GL_VERT_MAGIC)
+        for v in verts:
+            result += struct.pack("<ii", int(v.x * 65536), int(v.y * 65536))
+        return bytes(result)
+    result = bytearray()
+    for v in verts:
+        result += struct.pack("<hh", int(v.x), int(v.y))
+    return bytes(result)
+
+
+def gl_segs_to_bytes(segs: list[GlSeg]) -> bytes:
+    """Serialize GL segs to a GL_SEGS lump."""
+    result = bytearray()
+    for s in segs:
+        result += struct.pack(
+            "<HHHHH", s.start_vertex, s.end_vertex, s.linedef, s.side, s.partner_seg
+        )
+    return bytes(result)
+
+
+def gl_ssectors_to_bytes(ssectors: list[GlSubSector]) -> bytes:
+    """Serialize GL subsectors to a GL_SSECT lump."""
+    result = bytearray()
+    for ss in ssectors:
+        result += struct.pack("<HH", ss.seg_count, ss.first_seg)
+    return bytes(result)
+
+
+def gl_nodes_to_bytes(nodes: list[GlNode]) -> bytes:
+    """Serialize GL nodes to a GL_NODES lump."""
+    result = bytearray()
+    for n in nodes:
+        result += struct.pack(
+            "<hhhhhhhhhhhhHH",
+            n.x,
+            n.y,
+            n.dx,
+            n.dy,
+            *n.right_bbox,
+            *n.left_bbox,
+            n.right_child,
+            n.left_child,
+        )
+    return bytes(result)
+
+
 def parse_gl_nodes(data: bytes) -> list[GlNode]:
     """Parse a GL_NODES lump (same format as regular NODES)."""
     result: list[GlNode] = []
