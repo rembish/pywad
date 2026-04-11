@@ -1,31 +1,10 @@
-"""Doom thing type catalog — names and rendering categories for well-known type IDs.
+"""Doom thing type catalog — Doom 1, Ultimate Doom, and Doom 2.
 
-Covers Doom 1, Ultimate Doom, and Doom 2 thing types only.  Heretic and Hexen
-share numeric ranges but map IDs to completely different entities; they are
-handled by heretic_types.py and hexen_types.py respectively.
-
-# Done:    DEHACKED "ID # = N" custom types parsed by DehackedLump.things.
-# TODO:    DECORATE/ZScript lumps — GZDoom PWADs can define actors with new
-#          DoomEdNums directly in the WAD; parsing these would complete coverage.
+Covers all standard Doom thing types plus the MBF Helper Dog (#888).
 """
 
-from enum import Enum
+from .base import GameModule, ThingCategory
 
-
-class ThingCategory(Enum):
-    PLAYER = "player"
-    MONSTER = "monster"
-    WEAPON = "weapon"
-    AMMO = "ammo"
-    HEALTH = "health"
-    ARMOR = "armor"
-    KEY = "key"
-    POWERUP = "powerup"
-    DECORATION = "decoration"
-    UNKNOWN = "unknown"
-
-
-# (type_id, display_name, category)
 _TABLE: list[tuple[int, str, ThingCategory]] = [
     # ---- Player spawns ---------------------------------------------------------
     (1, "Player 1 Start", ThingCategory.PLAYER),
@@ -55,7 +34,7 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (72, "Commander Keen", ThingCategory.MONSTER),
     (84, "Wolfenstein SS", ThingCategory.MONSTER),
     (88, "Boss Brain", ThingCategory.MONSTER),
-    (888, "MBF Helper Dog", ThingCategory.MONSTER),  # MBF source port extension
+    (888, "MBF Helper Dog", ThingCategory.MONSTER),
     # ---- Keys ------------------------------------------------------------------
     (5, "Blue Keycard", ThingCategory.KEY),
     (6, "Yellow Keycard", ThingCategory.KEY),
@@ -144,7 +123,7 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (61, "Hanging Torso Looking Down", ThingCategory.DECORATION),
     (62, "Hanging Torso Open Brain", ThingCategory.DECORATION),
     (63, "Hanging Torso Brain Out", ThingCategory.DECORATION),
-    (70, "Burning Barrel", ThingCategory.DECORATION),  # Doom 2
+    (70, "Burning Barrel", ThingCategory.DECORATION),
     (73, "Hanging Victim Guts Removed", ThingCategory.DECORATION),
     (74, "Hanging Victim Guts and Brain Removed", ThingCategory.DECORATION),
     (75, "Hanging Torso Looking Down", ThingCategory.DECORATION),
@@ -164,57 +143,40 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
 
 THING_TYPES: dict[int, tuple[str, ThingCategory]] = {row[0]: (row[1], row[2]) for row in _TABLE}
 
-# Thing type IDs that have no in-game visual representation (invisible game-mechanics
-# markers such as deathmatch spawns, teleport destinations, and boss brain targets).
-# The renderer skips these by default.
-INVISIBLE_TYPES: frozenset[int] = frozenset(
-    {
-        0,  # Null/corrupt editor placeholder — not a real thing
-        11,  # Deathmatch Start
-        14,  # Teleport Landing
-        87,  # Spawn Spot (boss brain target)
-        89,  # Spawn Shooter
-    }
-)
+INVISIBLE_TYPES: frozenset[int] = frozenset({0, 11, 14, 87, 89})
 
-# Maps thing type ID to the 4-char WAD sprite lump prefix (first frame = "A0" or "A1").
-# Only Doom 1/2 things are listed; Heretic/Hexen entries are omitted (different WADs).
-_SPRITE_PREFIXES: dict[int, str] = {
-    # Player spawns
+SPRITE_PREFIXES: dict[int, str] = {
     1: "PLAY",
     2: "PLAY",
     3: "PLAY",
     4: "PLAY",
-    # Monsters
-    3004: "POSS",  # Zombieman
-    9: "SPOS",  # Shotgun Guy
-    65: "CPOS",  # Chaingunner
-    3001: "TROO",  # Imp
-    3002: "SARG",  # Demon
-    58: "SARG",  # Spectre (invisible, uses same sprite)
-    3003: "BOSS",  # Baron of Hell
-    3005: "HEAD",  # Cacodemon
-    3006: "SKUL",  # Lost Soul
-    7: "SPID",  # Spider Mastermind
-    16: "CYBR",  # Cyberdemon
-    64: "VILE",  # Arch-Vile
-    66: "SKEL",  # Revenant
-    67: "FATT",  # Mancubus
-    68: "BSPI",  # Arachnotron
-    69: "BOS2",  # Hell Knight
-    71: "PAIN",  # Pain Elemental
-    72: "KEEN",  # Commander Keen
-    84: "SSWV",  # Wolfenstein SS
-    88: "BBRN",  # Boss Brain
-    888: "DOGS",  # MBF Helper Dog
-    # Keys
+    3004: "POSS",
+    9: "SPOS",
+    65: "CPOS",
+    3001: "TROO",
+    3002: "SARG",
+    58: "SARG",
+    3003: "BOSS",
+    3005: "HEAD",
+    3006: "SKUL",
+    7: "SPID",
+    16: "CYBR",
+    64: "VILE",
+    66: "SKEL",
+    67: "FATT",
+    68: "BSPI",
+    69: "BOS2",
+    71: "PAIN",
+    72: "KEEN",
+    84: "SSWV",
+    88: "BBRN",
+    888: "DOGS",
     5: "BKEY",
     6: "YKEY",
     13: "RKEY",
     38: "RSKU",
     39: "YSKU",
     40: "BSKU",
-    # Weapons
     82: "SGN2",
     2001: "SHOT",
     2002: "MGUN",
@@ -222,7 +184,6 @@ _SPRITE_PREFIXES: dict[int, str] = {
     2004: "PLAS",
     2005: "CSAW",
     2006: "BFUG",
-    # Ammo
     2007: "CLIP",
     2008: "SHEL",
     2010: "ROCK",
@@ -232,16 +193,13 @@ _SPRITE_PREFIXES: dict[int, str] = {
     2047: "CELP",
     2048: "AMMO",
     2049: "SBOX",
-    # Health
     2011: "STIM",
     2012: "MEDI",
     2013: "SOUL",
     2014: "BON1",
-    # Armor
     2015: "BON2",
     2018: "ARM1",
     2019: "ARM2",
-    # Powerups
     83: "MEGA",
     2022: "PINV",
     2023: "PSTR",
@@ -249,57 +207,47 @@ _SPRITE_PREFIXES: dict[int, str] = {
     2025: "SUIT",
     2026: "PMAP",
     2045: "PVIS",
-    # Dead decorations — same prefixes as the live entity; use death-frame suffix
-    10: "PLAY",  # Bloody Mess
-    12: "PLAY",  # Pool of Blood and Flesh
-    15: "PLAY",  # Dead Player
-    18: "POSS",  # Dead Zombieman
-    19: "SPOS",  # Dead Shotgun Guy
-    20: "TROO",  # Dead Imp
-    21: "SARG",  # Dead Demon
-    22: "HEAD",  # Dead Cacodemon
-    23: "SKUL",  # Dead Lost Soul
-    # Impaled bodies / skull poles (Doom 1 & 2)
-    25: "POL1",  # Impaled Human
-    26: "POL6",  # Twitching Impaled Human
-    27: "POL4",  # Skull on a Pole
-    28: "POL3",  # Five Skulls (Pile)
-    29: "POL5",  # Pile of Skulls and Bones
-    # Misc gore decorations
-    41: "CEYE",  # Evil Eye
-    42: "FSKU",  # Floating Skulls
-    # Hanging corpses (Doom 2) — non-blocking
-    49: "GOR1",  # Hanging body
-    50: "GOR2",  # Hanging body (arms out)
-    51: "GOR3",  # Hanging pair of legs
-    52: "GOR4",  # Hanging victim (1-legged)
-    53: "GOR5",  # Hanging leg
-    # Hanging corpses (Doom 2) — blocking variants use same sprites
+    10: "PLAY",
+    12: "PLAY",
+    15: "PLAY",
+    18: "POSS",
+    19: "SPOS",
+    20: "TROO",
+    21: "SARG",
+    22: "HEAD",
+    23: "SKUL",
+    25: "POL1",
+    26: "POL6",
+    27: "POL4",
+    28: "POL3",
+    29: "POL5",
+    41: "CEYE",
+    42: "FSKU",
+    49: "GOR1",
+    50: "GOR2",
+    51: "GOR3",
+    52: "GOR4",
+    53: "GOR5",
     59: "GOR1",
     60: "GOR3",
     61: "GOR5",
     62: "GOR2",
     63: "GOR4",
-    # Burning barrel (Doom 2)
     70: "FCAN",
-    # Hanging torsos (Doom 2) — HDB series (types 73-78)
-    73: "HDB1",  # Hanging victim, guts removed
-    74: "HDB2",  # Hanging victim, guts and brain removed
-    75: "HDB3",  # Hanging torso, looking down
-    76: "HDB4",  # Hanging torso, open skull
-    77: "HDB5",  # Hanging torso, looking up
-    78: "HDB6",  # Hanging torso, brain removed
-    # Blood pools (Doom 2)
-    24: "POL5",  # Pool of blood and flesh
-    79: "POB1",  # Pool of blood
-    80: "POB2",  # Pool of blood (small)
-    81: "BRS1",  # Pool of brains
-    # Explosive barrel (Doom 2)
+    73: "HDB1",
+    74: "HDB2",
+    75: "HDB3",
+    76: "HDB4",
+    77: "HDB5",
+    78: "HDB6",
+    24: "POL5",
+    79: "POB1",
+    80: "POB2",
+    81: "BRS1",
     2035: "BAR1",
-    # Static decorations — "A0" idle is correct
-    34: "CAND",  # Candle
-    35: "CBRA",  # Candelabra
-    48: "ELEC",  # Techno Column
+    34: "CAND",
+    35: "CBRA",
+    48: "ELEC",
     30: "COL1",
     31: "COL2",
     32: "COL3",
@@ -314,46 +262,27 @@ _SPRITE_PREFIXES: dict[int, str] = {
     55: "SMBT",
     56: "SMGT",
     57: "SMRT",
-    47: "SMIT",  # Stalagmite
+    47: "SMIT",
     85: "TLMP",
     86: "TLP2",
-    2028: "COLU",  # Floor lamp
+    2028: "COLU",
 }
 
-
-# For dead-character decorations the last death frame ("N0") is the correct
-# static pose.  Everything else uses the default idle rotation ("A0", "A1").
 _SPRITE_SUFFIX_OVERRIDES: dict[int, tuple[str, ...]] = {
-    10: ("N0",),  # Bloody Mess
-    12: ("N0",),  # Pool of Blood and Flesh
-    15: ("N0",),  # Dead Player
-    18: ("N0",),  # Dead Zombieman
-    19: ("N0",),  # Dead Shotgun Guy
-    20: ("N0",),  # Dead Imp
-    21: ("N0",),  # Dead Demon
-    22: ("N0",),  # Dead Cacodemon
-    23: ("N0",),  # Dead Lost Soul
+    10: ("N0",),
+    12: ("N0",),
+    15: ("N0",),
+    18: ("N0",),
+    19: ("N0",),
+    20: ("N0",),
+    21: ("N0",),
+    22: ("N0",),
+    23: ("N0",),
 }
-_DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
 
-
-def get_sprite_suffixes(type_id: int) -> tuple[str, ...]:
-    """Return the sprite frame suffixes to try for *type_id* (most preferred first)."""
-    return _SPRITE_SUFFIX_OVERRIDES.get(type_id, _DEFAULT_SPRITE_SUFFIXES)
-
-
-def get_name(type_id: int) -> str:
-    """Return the display name for a thing type, or 'Unknown (#id)'."""
-    entry = THING_TYPES.get(type_id)
-    return entry[0] if entry else f"Unknown (#{type_id})"
-
-
-def get_category(type_id: int) -> ThingCategory:
-    """Return the ThingCategory for a thing type, or UNKNOWN."""
-    entry = THING_TYPES.get(type_id)
-    return entry[1] if entry else ThingCategory.UNKNOWN
-
-
-def get_sprite_prefix(type_id: int) -> str | None:
-    """Return the 4-char WAD sprite lump prefix for *type_id*, or None if unknown."""
-    return _SPRITE_PREFIXES.get(type_id)
+MODULE = GameModule(
+    thing_types=THING_TYPES,
+    invisible_types=INVISIBLE_TYPES,
+    sprite_prefixes=SPRITE_PREFIXES,
+    sprite_suffix_overrides=_SPRITE_SUFFIX_OVERRIDES,
+)

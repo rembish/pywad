@@ -7,7 +7,7 @@ Never mix with doom_types or heretic_types tables.
 # TODO: DECORATE/ZScript lumps — GZDoom PWADs can define actors with new DoomEdNums.
 """
 
-from .doom_types import ThingCategory
+from .base import GameModule, ThingCategory
 
 _TABLE: list[tuple[int, str, ThingCategory]] = [
     # ---- Player spawns --------------------------------------------------------
@@ -103,7 +103,7 @@ _TABLE: list[tuple[int, str, ThingCategory]] = [
     (83, "Wings of Wrath", ThingCategory.POWERUP),
     (84, "Icon of the Defender", ThingCategory.POWERUP),
     (86, "Dark Servant", ThingCategory.POWERUP),
-    (8000, "Fléchette", ThingCategory.POWERUP),
+    (8000, "Flechette", ThingCategory.POWERUP),
     (8002, "Boots of Speed", ThingCategory.POWERUP),
     (8003, "Krater of Might", ThingCategory.POWERUP),
     (8041, "Dragonskin Bracers", ThingCategory.POWERUP),
@@ -292,7 +292,7 @@ INVISIBLE_TYPES: frozenset[int] = frozenset(
     }
 )
 
-_SPRITE_PREFIXES: dict[int, str] = {
+SPRITE_PREFIXES: dict[int, str] = {
     # Player spawns
     1: "PLAY",
     2: "PLAY",
@@ -524,22 +524,8 @@ _SPRITE_PREFIXES: dict[int, str] = {
     10503: "FFLG",
 }
 
-_DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
-
-
-def get_sprite_suffixes(_type_id: int) -> tuple[str, ...]:
-    return _DEFAULT_SPRITE_SUFFIXES
-
-
-def get_name(type_id: int) -> str:
-    entry = THING_TYPES.get(type_id)
-    return entry[0] if entry else f"Unknown (#{type_id})"
-
-
-def get_category(type_id: int) -> ThingCategory:
-    entry = THING_TYPES.get(type_id)
-    return entry[1] if entry else ThingCategory.UNKNOWN
-
-
-def get_sprite_prefix(type_id: int) -> str | None:
-    return _SPRITE_PREFIXES.get(type_id)
+MODULE = GameModule(
+    thing_types=THING_TYPES,
+    invisible_types=INVISIBLE_TYPES,
+    sprite_prefixes=SPRITE_PREFIXES,
+)

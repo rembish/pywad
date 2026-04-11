@@ -1,12 +1,12 @@
 """Heretic thing type catalog — names and rendering categories.
 
 Type IDs are INCOMPATIBLE with Doom: e.g. type 5 = Fire Gargoyle (Heretic)
-but type 5 = Blue Keycard (Doom).  Never mix with doom_types tables.
+but type 5 = Blue Keycard (Doom).  Never mix with Doom tables.
 
 # TODO: DECORATE/ZScript lumps — GZDoom PWADs can define actors with new DoomEdNums.
 """
 
-from .doom_types import ThingCategory
+from .base import GameModule, ThingCategory
 
 _TABLE: list[tuple[int, str, ThingCategory]] = [
     # ---- Player spawns --------------------------------------------------------
@@ -140,7 +140,7 @@ INVISIBLE_TYPES: frozenset[int] = frozenset(
     }
 )
 
-_SPRITE_PREFIXES: dict[int, str] = {
+SPRITE_PREFIXES: dict[int, str] = {
     # Player spawns
     1: "PLAY",
     2: "PLAY",
@@ -232,22 +232,8 @@ _SPRITE_PREFIXES: dict[int, str] = {
     2035: "PPOD",
 }
 
-_DEFAULT_SPRITE_SUFFIXES: tuple[str, ...] = ("A0", "A1")
-
-
-def get_sprite_suffixes(_type_id: int) -> tuple[str, ...]:
-    return _DEFAULT_SPRITE_SUFFIXES
-
-
-def get_name(type_id: int) -> str:
-    entry = THING_TYPES.get(type_id)
-    return entry[0] if entry else f"Unknown (#{type_id})"
-
-
-def get_category(type_id: int) -> ThingCategory:
-    entry = THING_TYPES.get(type_id)
-    return entry[1] if entry else ThingCategory.UNKNOWN
-
-
-def get_sprite_prefix(type_id: int) -> str | None:
-    return _SPRITE_PREFIXES.get(type_id)
+MODULE = GameModule(
+    thing_types=THING_TYPES,
+    invisible_types=INVISIBLE_TYPES,
+    sprite_prefixes=SPRITE_PREFIXES,
+)

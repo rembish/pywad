@@ -1,50 +1,40 @@
-"""Game-aware thing type dispatch.
+"""Game-aware thing type system.
 
-Selects the correct per-game type table (Doom, Heretic, or Hexen) based on
-WAD content, then delegates all type lookups to that table.
+Provides per-game thing type catalogs (names, categories, sprites) and
+automatic game detection from WAD content.
 
 Usage::
+
+    from wadlib.types import detect_game, get_category, get_sprite_prefix
 
     game = detect_game(wad)
     cat  = get_category(thing.type, game)
     pfx  = get_sprite_prefix(thing.type, game)
 
-Game detection heuristics (in priority order):
+Each game module (``doom``, ``heretic``, ``hexen``, ``strife``) is also
+importable directly::
 
-1. Hexen  — things have action / arg0 / tid / z fields (Hexen THINGS format)
-2. Heretic — WAD sprite namespace contains the ``IMPX`` prefix (Fire Gargoyle),
-             which is unique to Heretic
-3. Doom   — default
+    from wadlib.types.doom import THING_TYPES, SPRITE_PREFIXES
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
-from . import doom_types, heretic_types, hexen_types, strife_types
-from .doom_types import ThingCategory
-from .lumps.dehacked import DehackedThing
+from .base import ThingCategory
+from .dehacked import DehackedThing
 
 if TYPE_CHECKING:
-    from .wad import WadFile
+    from ..wad import WadFile
 
-
-class _GameModule(Protocol):
-    """Structural interface that every per-game type module must satisfy."""
-
-    INVISIBLE_TYPES: frozenset[int]
-
-    def get_name(self, type_id: int) -> str: ...
-    def get_category(self, type_id: int) -> ThingCategory: ...
-    def get_sprite_prefix(self, type_id: int) -> str | None: ...
-    def get_sprite_suffixes(self, type_id: int) -> tuple[str, ...]: ...
-
+from . import doom, heretic, hexen, strife
+from .base import GameModule
 
 __all__ = [
     "DehackedThing",
     "GameType",
-    "ThingCategory",  # re-export for convenience
+    "ThingCategory",
     "detect_game",
     "get_category",
     "get_invisible_types",
@@ -61,11 +51,11 @@ class GameType(Enum):
     STRIFE = "strife"
 
 
-_MODULES: dict[GameType, _GameModule] = {
-    GameType.DOOM: doom_types,
-    GameType.HERETIC: heretic_types,
-    GameType.HEXEN: hexen_types,
-    GameType.STRIFE: strife_types,
+_MODULES: dict[GameType, GameModule] = {
+    GameType.DOOM: doom.MODULE,
+    GameType.HERETIC: heretic.MODULE,
+    GameType.HEXEN: hexen.MODULE,
+    GameType.STRIFE: strife.MODULE,
 }
 
 
@@ -81,18 +71,15 @@ def detect_game(wad: WadFile) -> GameType:
       does not appear in Doom, Hexen, or Strife WADs.
     - Doom: default when none of the above markers are found.
     """
-    # Hexen detection: check the first map that has things
     for m in wad.maps:
         if m.things:
             if hasattr(m.things[0], "arg0"):
                 return GameType.HEXEN
-            break  # Doom/Heretic/Strife format confirmed; no need to check further maps
+            break
 
-    # Strife detection: AGRD sprite (Acolyte Guard) is unique to Strife
     if any(name.startswith("AGRD") for name in wad.sprites):
         return GameType.STRIFE
 
-    # Heretic detection: IMPX sprite exists only in Heretic
     if any(name.startswith("IMPX") for name in wad.sprites):
         return GameType.HERETIC
 
@@ -100,10 +87,9 @@ def detect_game(wad: WadFile) -> GameType:
 
 
 # ---------------------------------------------------------------------------
-# Public dispatch API — mirrors the per-module function signatures
+# Public dispatch API
 # ---------------------------------------------------------------------------
 
-# Optional DEHACKED overlay: dict[type_id, DehackedThing] from wad.dehacked.things
 _DehOverlay = dict[int, DehackedThing] | None
 
 
@@ -138,9 +124,6 @@ def get_sprite_prefix(
     game: GameType = GameType.DOOM,
     _deh: _DehOverlay = None,
 ) -> str | None:
-    # DEHACKED doesn't give us a 4-letter sprite name without full frame-table
-    # cross-reference; fall through to the standard table so we at least get
-    # the sprite for redefined stock types.
     return _MODULES[game].get_sprite_prefix(type_id)
 
 
@@ -153,4 +136,4 @@ def get_sprite_suffixes(
 
 
 def get_invisible_types(game: GameType = GameType.DOOM) -> frozenset[int]:
-    return _MODULES[game].INVISIBLE_TYPES
+    return _MODULES[game].invisible_types

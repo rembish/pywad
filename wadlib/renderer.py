@@ -26,7 +26,7 @@ from .lumps.dehacked import DehackedThing
 from .lumps.map import BaseMapEntry
 from .lumps.nodes import SSECTOR_FLAG
 from .lumps.playpal import Palette
-from .thing_types import (
+from .types import (
     GameType,
     ThingCategory,
     detect_game,

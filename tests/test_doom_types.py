@@ -1,6 +1,15 @@
 """Tests for the Doom thing type catalog."""
 
-from wadlib.doom_types import ThingCategory, get_category, get_name
+from wadlib.types import ThingCategory
+from wadlib.types.doom import MODULE
+
+
+def get_category(type_id: int) -> ThingCategory:
+    return MODULE.get_category(type_id)
+
+
+def get_name(type_id: int) -> str:
+    return MODULE.get_name(type_id)
 
 
 def test_player_start_category() -> None:
