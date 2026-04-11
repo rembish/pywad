@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .wad import WadFile
+    from .writer import WadWriter
 
 
 class CompLevel(IntEnum):
@@ -290,3 +291,360 @@ def check_upgrade(wad: WadFile, target: CompLevel) -> list[str]:
         )
 
     return suggestions
+
+
+# ---------------------------------------------------------------------------
+# Conversion actions
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ConvertAction:
+    """A single conversion step when changing compatibility level."""
+
+    description: str
+    auto: bool  # True = can be applied automatically; False = needs manual work
+    lossy: bool  # True = information is lost
+
+
+@dataclass
+class ConvertResult:
+    """Result of a compatibility level conversion attempt."""
+
+    source_level: CompLevel
+    target_level: CompLevel
+    applied: list[str]
+    skipped: list[ConvertAction]
+
+
+def plan_downgrade(wad: WadFile, target: CompLevel) -> list[ConvertAction]:
+    """Plan the steps needed to downgrade a WAD to *target* comp level.
+
+    Returns a list of actions.  Actions with ``auto=True`` can be applied
+    by :func:`convert_complevel`.  Actions with ``auto=False`` need manual
+    intervention or external tools.
+    """
+    features = detect_features(wad)
+    actions: list[ConvertAction] = []
+
+    for feat in features:
+        if feat.level <= target:
+            continue
+
+        reason = feat.reason
+
+        # --- Strippable lumps (auto, lossy metadata) ---
+        if "ANIMATED lump" in reason:
+            actions.append(ConvertAction("Remove ANIMATED lump", auto=True, lossy=True))
+        elif "SWITCHES lump" in reason:
+            actions.append(ConvertAction("Remove SWITCHES lump", auto=True, lossy=True))
+        elif "ZMAPINFO lump" in reason:
+            actions.append(ConvertAction("Remove ZMAPINFO lump", auto=True, lossy=True))
+        elif "LANGUAGE lump" in reason:
+            actions.append(ConvertAction("Remove LANGUAGE lump", auto=True, lossy=True))
+        elif "SNDINFO lump" in reason:
+            actions.append(ConvertAction("Remove SNDINFO lump", auto=True, lossy=True))
+        elif "GLDEFS lump" in reason:
+            actions.append(ConvertAction("Remove GLDEFS lump", auto=True, lossy=True))
+
+        # --- Thing flag stripping (auto, lossy) ---
+        elif "NOT_DEATHMATCH flag" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Clear NOT_DEATHMATCH flags in {reason.split(' in ')[-1]}",
+                    auto=True,
+                    lossy=True,
+                )
+            )
+        elif "NOT_COOP flag" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Clear NOT_COOP flags in {reason.split(' in ')[-1]}",
+                    auto=True,
+                    lossy=True,
+                )
+            )
+        elif "FRIENDLY flag" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Clear FRIENDLY flags in {reason.split(' in ')[-1]}",
+                    auto=True,
+                    lossy=True,
+                )
+            )
+        elif "MBF Helper Dog" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Remove MBF Helper Dog things in {reason.split(' in ')[-1]}",
+                    auto=True,
+                    lossy=True,
+                )
+            )
+
+        # --- UDMF → binary (auto, lossy) ---
+        elif "TEXTMAP lump" in reason:
+            actions.append(
+                ConvertAction(
+                    "Convert UDMF TEXTMAP to binary Doom map format "
+                    "(loses floating-point precision and extended properties)",
+                    auto=True,
+                    lossy=True,
+                )
+            )
+
+        # --- Cannot auto-convert ---
+        elif "generalized linedef" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Generalized linedef specials have no vanilla equivalent: {reason}",
+                    auto=False,
+                    lossy=True,
+                )
+            )
+        elif "ZNODES" in reason:
+            actions.append(
+                ConvertAction(
+                    f"ZNODES need external node builder to rebuild as vanilla BSP: {reason}",
+                    auto=False,
+                    lossy=False,
+                )
+            )
+        elif "DECORATE" in reason or "ZSCRIPT" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Cannot downgrade scripted actors: {reason}",
+                    auto=False,
+                    lossy=True,
+                )
+            )
+        elif "exceeds vanilla limit" in reason:
+            actions.append(
+                ConvertAction(
+                    f"Map geometry exceeds vanilla limits: {reason}",
+                    auto=False,
+                    lossy=False,
+                )
+            )
+        else:
+            actions.append(
+                ConvertAction(
+                    f"Unknown feature needs manual review: {reason}",
+                    auto=False,
+                    lossy=False,
+                )
+            )
+
+    return actions
+
+
+def convert_complevel(
+    wad: WadFile,
+    target: CompLevel,
+    output_path: str,
+) -> ConvertResult:
+    """Attempt to convert a WAD to a lower compatibility level.
+
+    Applies all auto-convertible actions and saves the result to
+    *output_path*.  Returns a ``ConvertResult`` with details of what
+    was applied and what was skipped.
+
+    Example::
+
+        from wadlib.compat import convert_complevel, CompLevel
+        from wadlib.wad import WadFile
+
+        with WadFile("mod.wad") as wad:
+            result = convert_complevel(wad, CompLevel.VANILLA, "mod_vanilla.wad")
+            for action in result.applied:
+                print(f"  Applied: {action}")
+            for action in result.skipped:
+                print(f"  SKIPPED: {action.description}")
+    """
+    from .writer import WadWriter
+
+    source_level = detect_complevel(wad)
+    actions = plan_downgrade(wad, target)
+    writer = WadWriter.from_wad(wad)
+
+    applied: list[str] = []
+    skipped: list[ConvertAction] = []
+
+    for action in actions:
+        if not action.auto:
+            skipped.append(action)
+            continue
+
+        desc = action.description
+
+        # Strip lumps
+        for lump_name in ("ANIMATED", "SWITCHES", "ZMAPINFO", "LANGUAGE", "SNDINFO", "GLDEFS"):
+            if f"Remove {lump_name} lump" == desc:
+                if writer.remove_lump(lump_name):
+                    applied.append(desc)
+                break
+        else:
+            # Thing flag operations
+            if "Clear NOT_DEATHMATCH flags" in desc:
+                _clear_thing_flags(writer, 0x0020)
+                applied.append(desc)
+            elif "Clear NOT_COOP flags" in desc:
+                _clear_thing_flags(writer, 0x0040)
+                applied.append(desc)
+            elif "Clear FRIENDLY flags" in desc:
+                _clear_thing_flags(writer, 0x0080)
+                applied.append(desc)
+            elif "Remove MBF Helper Dog" in desc:
+                _remove_thing_type(writer, 888)
+                applied.append(desc)
+            elif "Convert UDMF TEXTMAP" in desc:
+                if _convert_udmf_to_binary(writer):
+                    applied.append(desc)
+                else:
+                    skipped.append(action)
+            else:
+                skipped.append(action)
+
+    writer.save(output_path)
+    return ConvertResult(
+        source_level=source_level,
+        target_level=target,
+        applied=applied,
+        skipped=skipped,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Conversion helpers
+# ---------------------------------------------------------------------------
+
+
+def _clear_thing_flags(writer: WadWriter, flag_mask: int) -> None:
+    """Clear a flag bit from all THINGS lumps in the writer."""
+    import struct
+
+    keep_mask = 0xFFFF & ~flag_mask
+    for i, entry in enumerate(writer._lumps):
+        if entry.name != "THINGS" or not entry.data:
+            continue
+        data = bytearray(entry.data)
+        # Each thing is 10 bytes; flags at offset 8 (uint16)
+        for pos in range(0, len(data) - 9, 10):
+            flags = struct.unpack_from("<H", data, pos + 8)[0]
+            flags &= keep_mask
+            struct.pack_into("<H", data, pos + 8, flags)
+        writer._lumps[i].data = bytes(data)
+
+
+def _remove_thing_type(writer: WadWriter, type_id: int) -> None:
+    """Remove all things of a given type from THINGS lumps."""
+    import struct
+
+    for i, entry in enumerate(writer._lumps):
+        if entry.name != "THINGS" or not entry.data:
+            continue
+        data = entry.data
+        new_data = bytearray()
+        for pos in range(0, len(data) - 9, 10):
+            thing_type = struct.unpack_from("<H", data, pos + 6)[0]
+            if thing_type != type_id:
+                new_data.extend(data[pos : pos + 10])
+        writer._lumps[i].data = bytes(new_data)
+
+
+def _convert_udmf_to_binary(writer: WadWriter) -> bool:
+    """Convert UDMF TEXTMAP lumps to binary Doom format in the writer."""
+    import struct
+
+    from .lumps.udmf import parse_udmf
+
+    # Find TEXTMAP lumps and their map markers
+    idx = 0
+    converted_any = False
+    while idx < len(writer._lumps):
+        entry = writer._lumps[idx]
+        if entry.name != "TEXTMAP":
+            idx += 1
+            continue
+
+        # Parse UDMF
+        try:
+            udmf = parse_udmf(entry.data.decode("utf-8", errors="replace"))
+        except Exception:
+            idx += 1
+            continue
+
+        # Remove TEXTMAP and ENDMAP
+        writer._lumps.pop(idx)  # remove TEXTMAP
+        # Check if next is ENDMAP
+        if idx < len(writer._lumps) and writer._lumps[idx].name == "ENDMAP":
+            writer._lumps.pop(idx)
+
+        # Build binary lumps at the same position
+        # THINGS
+        things_data = bytearray()
+        for t in udmf.things:
+            things_data += struct.pack("<hhHHH", int(t.x), int(t.y), t.angle, t.type, 0x0007)
+        writer._lumps.insert(idx, type(entry)("THINGS", bytes(things_data)))
+        idx += 1
+
+        # LINEDEFS
+        lines_data = bytearray()
+        for ld in udmf.linedefs:
+            lines_data += struct.pack(
+                "<HHHHHhh",
+                ld.v1,
+                ld.v2,
+                int(ld.props.get("blocking", False)),
+                ld.special,
+                0,
+                ld.sidefront,
+                ld.sideback,
+            )
+        writer._lumps.insert(idx, type(entry)("LINEDEFS", bytes(lines_data)))
+        idx += 1
+
+        # SIDEDEFS
+        sides_data = bytearray()
+        for sd in udmf.sidedefs:
+            sides_data += struct.pack(
+                "<hh8s8s8sH",
+                sd.offsetx,
+                sd.offsety,
+                sd.texturetop.encode("ascii")[:8].ljust(8, b"\x00"),
+                sd.texturebottom.encode("ascii")[:8].ljust(8, b"\x00"),
+                sd.texturemiddle.encode("ascii")[:8].ljust(8, b"\x00"),
+                sd.sector,
+            )
+        writer._lumps.insert(idx, type(entry)("SIDEDEFS", bytes(sides_data)))
+        idx += 1
+
+        # VERTEXES
+        verts_data = bytearray()
+        for v in udmf.vertices:
+            verts_data += struct.pack("<hh", int(v.x), int(v.y))
+        writer._lumps.insert(idx, type(entry)("VERTEXES", bytes(verts_data)))
+        idx += 1
+
+        # SECTORS
+        sectors_data = bytearray()
+        for sec in udmf.sectors:
+            sectors_data += struct.pack(
+                "<hh8s8sHHH",
+                sec.heightfloor,
+                sec.heightceiling,
+                sec.texturefloor.encode("ascii")[:8].ljust(8, b"\x00"),
+                sec.textureceiling.encode("ascii")[:8].ljust(8, b"\x00"),
+                sec.lightlevel,
+                sec.special,
+                sec.id,
+            )
+        writer._lumps.insert(idx, type(entry)("SECTORS", bytes(sectors_data)))
+        idx += 1
+
+        # BSP lumps are omitted — they need an external node builder
+        # (e.g. zdbsp, glbsp) to be regenerated from the geometry.
+        # The WAD reader handles missing BSP lumps gracefully (set to None).
+
+        converted_any = True
+
+    return converted_any
