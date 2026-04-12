@@ -66,6 +66,7 @@ class WadArchive:
         self._filename: str = file
         self._mode: str = mode
         self._closed: bool = False
+        self._iter_index: int = 0
 
         if mode == "r":
             self._reader: WadFile | None = WadFile(file)
@@ -149,7 +150,7 @@ class WadArchive:
         assert self._writer is not None
         return [
             LumpInfo(name=e.name, size=len(e.data), index=i)
-            for i, e in enumerate(self._writer._lumps)
+            for i, e in enumerate(self._writer.lumps)
         ]
 
     def getinfo(self, name: str) -> LumpInfo:

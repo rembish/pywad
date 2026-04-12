@@ -523,7 +523,7 @@ def _clear_thing_flags(writer: WadWriter, flag_mask: int) -> None:
     import struct
 
     keep_mask = 0xFFFF & ~flag_mask
-    for i, entry in enumerate(writer._lumps):
+    for i, entry in enumerate(writer.lumps):
         if entry.name != "THINGS" or not entry.data:
             continue
         data = bytearray(entry.data)
@@ -532,14 +532,14 @@ def _clear_thing_flags(writer: WadWriter, flag_mask: int) -> None:
             flags = struct.unpack_from("<H", data, pos + 8)[0]
             flags &= keep_mask
             struct.pack_into("<H", data, pos + 8, flags)
-        writer._lumps[i].data = bytes(data)
+        writer.lumps[i].data = bytes(data)
 
 
 def _remove_thing_type(writer: WadWriter, type_id: int) -> None:
     """Remove all things of a given type from THINGS lumps."""
     import struct
 
-    for i, entry in enumerate(writer._lumps):
+    for i, entry in enumerate(writer.lumps):
         if entry.name != "THINGS" or not entry.data:
             continue
         data = entry.data
@@ -548,7 +548,7 @@ def _remove_thing_type(writer: WadWriter, type_id: int) -> None:
             thing_type = struct.unpack_from("<H", data, pos + 6)[0]
             if thing_type != type_id:
                 new_data.extend(data[pos : pos + 10])
-        writer._lumps[i].data = bytes(new_data)
+        writer.lumps[i].data = bytes(new_data)
 
 
 def _convert_udmf_to_binary(writer: WadWriter) -> bool:
@@ -560,8 +560,8 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
     # Find TEXTMAP lumps and their map markers
     idx = 0
     converted_any = False
-    while idx < len(writer._lumps):
-        entry = writer._lumps[idx]
+    while idx < len(writer.lumps):
+        entry = writer.lumps[idx]
         if entry.name != "TEXTMAP":
             idx += 1
             continue
@@ -574,17 +574,17 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
             continue
 
         # Remove TEXTMAP and ENDMAP
-        writer._lumps.pop(idx)  # remove TEXTMAP
+        writer.lumps.pop(idx)  # remove TEXTMAP
         # Check if next is ENDMAP
-        if idx < len(writer._lumps) and writer._lumps[idx].name == "ENDMAP":
-            writer._lumps.pop(idx)
+        if idx < len(writer.lumps) and writer.lumps[idx].name == "ENDMAP":
+            writer.lumps.pop(idx)
 
         # Build binary lumps at the same position
         # THINGS
         things_data = bytearray()
         for t in udmf.things:
             things_data += struct.pack("<hhHHH", int(t.x), int(t.y), t.angle, t.type, 0x0007)
-        writer._lumps.insert(idx, type(entry)("THINGS", bytes(things_data)))
+        writer.lumps.insert(idx, type(entry)("THINGS", bytes(things_data)))
         idx += 1
 
         # LINEDEFS
@@ -600,7 +600,7 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
                 ld.sidefront,
                 ld.sideback,
             )
-        writer._lumps.insert(idx, type(entry)("LINEDEFS", bytes(lines_data)))
+        writer.lumps.insert(idx, type(entry)("LINEDEFS", bytes(lines_data)))
         idx += 1
 
         # SIDEDEFS
@@ -615,14 +615,14 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
                 sd.texturemiddle.encode("ascii")[:8].ljust(8, b"\x00"),
                 sd.sector,
             )
-        writer._lumps.insert(idx, type(entry)("SIDEDEFS", bytes(sides_data)))
+        writer.lumps.insert(idx, type(entry)("SIDEDEFS", bytes(sides_data)))
         idx += 1
 
         # VERTEXES
         verts_data = bytearray()
         for v in udmf.vertices:
             verts_data += struct.pack("<hh", int(v.x), int(v.y))
-        writer._lumps.insert(idx, type(entry)("VERTEXES", bytes(verts_data)))
+        writer.lumps.insert(idx, type(entry)("VERTEXES", bytes(verts_data)))
         idx += 1
 
         # SECTORS
@@ -638,7 +638,7 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
                 sec.special,
                 sec.id,
             )
-        writer._lumps.insert(idx, type(entry)("SECTORS", bytes(sectors_data)))
+        writer.lumps.insert(idx, type(entry)("SECTORS", bytes(sectors_data)))
         idx += 1
 
         # BSP lumps are omitted — they need an external node builder

@@ -14,18 +14,23 @@ _wadcli() {
     commands=(
         'info:show WAD header and summary stats'
         'check:sanity-check a WAD for authoring errors'
+        'complevel:detect compatibility level'
+        'convert:convert between formats'
         'diff:compare two WADs and report differences'
         'list:list WAD contents'
         'export:export WAD contents to files'
+        'scan:analyse WAD resource usage'
     )
 
     list_cmds=(
+        'actors:list DECORATE actor definitions'
         'animations:list ANIMDEFS animation sequences'
         'flats:list floor/ceiling flat names'
         'lumps:list all directory entries'
         'maps:list maps with thing/linedef counts'
         'music:list music lumps'
         'patches:list patch names from PNAMES'
+        'scripts:list ACS scripts'
         'sounds:list DMX sound lumps'
         'sprites:list sprite lumps'
         'stats:aggregate statistics across all maps'
@@ -41,12 +46,27 @@ _wadcli() {
         'lump:dump raw lump bytes to file'
         'map:render a map to PNG'
         'music:export music as MIDI'
+        'obj:export a map as 3D OBJ mesh'
         'palette:render PLAYPAL as colour swatch'
         'patch:render a patch to PNG'
         'sound:export a DMX sound as WAV'
         'sprite:render a sprite to PNG'
         'texture:render a wall texture to PNG'
     )
+
+    local -a scan_cmds convert_cmds complevel_names
+
+    scan_cmds=(
+        'textures:report texture and flat usage'
+    )
+
+    convert_cmds=(
+        'pk3:convert WAD to pk3 archive'
+        'wad:convert pk3 to WAD'
+        'complevel:downgrade to target compatibility level'
+    )
+
+    complevel_names=(vanilla boom mbf mbf21 zdoom udmf)
 
     font_names=(stcfn fonta fontb)
 
@@ -122,6 +142,13 @@ _wadcli() {
                                     '2:output file:_files -g "*.png"' \
                                     '--all[export all sprites]'
                                 ;;
+                            obj)
+                                _arguments \
+                                    '1:map name:' \
+                                    '2:output file:_files -g "*.obj"' \
+                                    '--scale[scale factor]:scale:' \
+                                    '--materials[generate .mtl file]'
+                                ;;
                             flat|texture|patch|colormap|animation|lump)
                                 _arguments \
                                     '1:name:' \
@@ -130,8 +157,43 @@ _wadcli() {
                         esac
                     fi
                     ;;
+                scan)
+                    if (( CURRENT == 2 )); then
+                        _describe -t scan_cmds 'scan subcommand' scan_cmds
+                    else
+                        _arguments \
+                            '--json[output as JSON]' \
+                            '--unused[show only unused textures/flats]'
+                    fi
+                    ;;
+                convert)
+                    if (( CURRENT == 2 )); then
+                        _describe -t convert_cmds 'convert subcommand' convert_cmds
+                    else
+                        case "$words[2]" in
+                            complevel)
+                                _arguments \
+                                    '1:target level:(vanilla boom mbf mbf21 zdoom udmf)' \
+                                    '2:output file:_files -g "*.wad"'
+                                ;;
+                            pk3)
+                                _arguments '1:output file:_files -g "*.pk3"'
+                                ;;
+                            wad)
+                                _arguments \
+                                    '1:input pk3:_files -g "*.{pk3,PK3}"' \
+                                    '2:output file:_files -g "*.wad"'
+                                ;;
+                        esac
+                    fi
+                    ;;
                 info|check)
                     _arguments '--json[output as JSON]'
+                    ;;
+                complevel)
+                    _arguments \
+                        '--json[output as JSON]' \
+                        '--check[check compatibility]:level:(vanilla boom mbf mbf21 zdoom udmf)'
                     ;;
                 diff)
                     _arguments \

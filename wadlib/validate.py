@@ -305,7 +305,7 @@ def validate_wad(writer: WadWriter) -> list[ValidationIssue]:
     names = writer.lump_names
 
     # Name and size validation per lump
-    for entry in writer._lumps:
+    for entry in writer.lumps:
         issues.extend(validate_name(entry.name))
         if entry.data:
             issues.extend(validate_lump(entry.name, entry.data))

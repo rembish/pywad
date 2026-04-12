@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.88] - 2026-04-11
+
+### Added
+
+- **ZDoom TEXTURES lump** (`wadlib/lumps/texturex.py`): text-based texture
+  definitions.  Supports Texture, Flat, Sprite, WallTexture, Graphic blocks
+  with patch properties (FlipX/FlipY, Rotate, Alpha, Style), texture
+  properties (Offset, XScale/YScale, WorldPanning, NoDecals).
+  `parse_textures()` and `serialize_textures()` for round-trip.
+- **Texture usage scanner** (`wadlib/scanner.py`): scan all maps for
+  texture/flat/thing references.  `scan_usage()` produces a per-map breakdown.
+  `find_unused_textures()` and `find_unused_flats()` identify dead assets.
+
+### Changed
+
+- `WadWriter.lumps` is now a public attribute (was `_lumps`).
+- `WadFile.find_lump()` is now public (was `_find_lump()`).
+- `WadArchive._iter_index` properly initialized in `__init__`.
+
+## [0.0.86] - 2026-04-11
+
+### Changed
+
+- **dehacked.py** split into `wadlib/lumps/dehacked/` package:
+  `types.py` (dataclasses), `data.py` (stock tables), `parser.py` (logic).
+- **renderer.py** split into `wadlib/renderer/` package:
+  `geometry.py` (BSP clipping), `floors.py` (floor rendering), `core.py` (main class).
+- All external import paths preserved.
+
+## [0.0.85] - 2026-04-11
+
+### Added
+
+- **Full DEHACKED parser**: all block types — Thing (all properties),
+  Frame/State (sprite number, duration, next frame), Weapon (ammo type,
+  frame references), Ammo (max, per pickup), Sound, Misc (game settings).
+  Text replacements, BEX [STRINGS], [CODEPTR], MBF flag extensions.
+  Stock Doom sprite table (138 entries) for frame → sprite resolution.
+
+## [0.0.84] - 2026-04-11
+
+### Added
+
+- **Semi-auto compatibility level conversion** (`convert_complevel()`):
+  auto-strips ANIMATED/SWITCHES/ZMAPINFO/SNDINFO lumps, clears Boom/MBF
+  thing flags, removes MBF Helper Dogs, converts UDMF to binary map format.
+  Reports non-convertible features (generalized linedefs, ZNODES, DECORATE).
+- `plan_downgrade()` for dry-run conversion planning.
+
+## [0.0.83] - 2026-04-11
+
+### Added
+
+- **Compatibility level detection** (`wadlib/compat.py`):
+  `CompLevel` enum (VANILLA through UDMF), `detect_features()`,
+  `detect_complevel()`, `check_downgrade()`, `check_upgrade()`.
+
 ## [0.0.82] - 2026-04-11
 
 ### Added

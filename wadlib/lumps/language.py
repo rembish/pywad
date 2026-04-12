@@ -14,6 +14,20 @@ _ENTRY_RE = re.compile(r"^\s*(\w+)\s*=\s*\"((?:[^\"\\]|\\.)*)\"\s*;?\s*$")
 _SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]")
 
 
+def serialize_language(strings: dict[str, str], section: str = "enu default") -> str:
+    """Serialize a string table to LANGUAGE lump text.
+
+    Example::
+
+        text = serialize_language({"HUSTR_1": "Level 1: Entryway"})
+    """
+    parts: list[str] = [f"[{section}]"]
+    for key, value in strings.items():
+        escaped = value.replace('"', '\\"').replace("\n", "\\n")
+        parts.append(f'{key} = "{escaped}";')
+    return "\n".join(parts) + "\n"
+
+
 class LanguageLump(BaseLump[Any]):
     """LANGUAGE lump: ZDoom localisation strings.
 

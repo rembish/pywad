@@ -75,7 +75,7 @@ class WadWriter:
 
     def __init__(self, wad_type: WadType = WadType.PWAD) -> None:
         self.wad_type = wad_type
-        self._lumps: list[WriterEntry] = []
+        self.lumps: list[WriterEntry] = []
 
     @classmethod
     def from_wad(cls, wad: WadFile) -> WadWriter:
@@ -91,7 +91,7 @@ class WadWriter:
                 data = wad.fd.read(entry.size)
             else:
                 data = b""
-            writer._lumps.append(WriterEntry(entry.name, data))
+            writer.lumps.append(WriterEntry(entry.name, data))
         return writer
 
     # -- Lump manipulation ---------------------------------------------------
@@ -99,8 +99,8 @@ class WadWriter:
     def add_lump(self, name: str, data: bytes = b"") -> int:
         """Append a lump. Returns its index."""
         entry = WriterEntry(name, data)
-        self._lumps.append(entry)
-        return len(self._lumps) - 1
+        self.lumps.append(entry)
+        return len(self.lumps) - 1
 
     def add_marker(self, name: str) -> int:
         """Append a zero-length marker lump. Returns its index."""
@@ -108,16 +108,16 @@ class WadWriter:
 
     def insert_lump(self, index: int, name: str, data: bytes = b"") -> None:
         """Insert a lump at *index*, shifting subsequent lumps right."""
-        self._lumps.insert(index, WriterEntry(name, data))
+        self.lumps.insert(index, WriterEntry(name, data))
 
     def replace_lump(self, name: str, data: bytes, *, occurrence: int = 0) -> bool:
         """Replace the *occurrence*-th lump named *name*. Returns True if found."""
         upper = name.upper()
         seen = 0
-        for i, entry in enumerate(self._lumps):
+        for i, entry in enumerate(self.lumps):
             if entry.name == upper:
                 if seen == occurrence:
-                    self._lumps[i] = WriterEntry(upper, data)
+                    self.lumps[i] = WriterEntry(upper, data)
                     return True
                 seen += 1
         return False
@@ -126,10 +126,10 @@ class WadWriter:
         """Remove the *occurrence*-th lump named *name*. Returns True if found."""
         upper = name.upper()
         seen = 0
-        for i, entry in enumerate(self._lumps):
+        for i, entry in enumerate(self.lumps):
             if entry.name == upper:
                 if seen == occurrence:
-                    del self._lumps[i]
+                    del self.lumps[i]
                     return True
                 seen += 1
         return False
@@ -137,8 +137,8 @@ class WadWriter:
     def find_lump(self, name: str, *, start: int = 0) -> int:
         """Return index of first lump named *name* at or after *start*, or -1."""
         upper = name.upper()
-        for i in range(start, len(self._lumps)):
-            if self._lumps[i].name == upper:
+        for i in range(start, len(self.lumps)):
+            if self.lumps[i].name == upper:
                 return i
         return -1
 
@@ -146,7 +146,7 @@ class WadWriter:
         """Return the raw data of the *occurrence*-th lump named *name*, or None."""
         upper = name.upper()
         seen = 0
-        for entry in self._lumps:
+        for entry in self.lumps:
             if entry.name == upper:
                 if seen == occurrence:
                     return entry.data
@@ -155,12 +155,12 @@ class WadWriter:
 
     @property
     def lump_count(self) -> int:
-        return len(self._lumps)
+        return len(self.lumps)
 
     @property
     def lump_names(self) -> list[str]:
         """Return the ordered list of lump names."""
-        return [e.name for e in self._lumps]
+        return [e.name for e in self.lumps]
 
     # -- Namespace helpers ---------------------------------------------------
 
@@ -307,7 +307,7 @@ class WadWriter:
         dir_entries: list[tuple[int, int, str]] = []  # (offset, size, name)
         offset = _HEADER_SIZE
 
-        for entry in self._lumps:
+        for entry in self.lumps:
             size = len(entry.data)
             if size > 0:
                 dir_entries.append((offset, size, entry.name))
@@ -320,7 +320,7 @@ class WadWriter:
         dir_offset = _HEADER_SIZE + len(lump_blob)
 
         # Header
-        header = pack(HEADER_FORMAT, magic, len(self._lumps), dir_offset)
+        header = pack(HEADER_FORMAT, magic, len(self.lumps), dir_offset)
 
         # Directory
         dir_bytes = bytearray()
@@ -337,7 +337,7 @@ class WadWriter:
     # -- Dunder helpers ------------------------------------------------------
 
     def __len__(self) -> int:
-        return len(self._lumps)
+        return len(self.lumps)
 
     def __repr__(self) -> str:
-        return f"<WadWriter {self.wad_type.name} {len(self._lumps)} lumps>"
+        return f"<WadWriter {self.wad_type.name} {len(self.lumps)} lumps>"

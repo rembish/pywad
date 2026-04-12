@@ -4,6 +4,8 @@ import argparse
 
 from .commands import (
     check,
+    complevel,
+    convert,
     diff,
     export_animation,
     export_colormap,
@@ -12,6 +14,7 @@ from .commands import (
     export_font,
     export_map,
     export_music,
+    export_obj,
     export_palette,
     export_patch,
     export_sound,
@@ -19,16 +22,19 @@ from .commands import (
     export_texture,
     extract_lump,  # registered as "export lump"
     info,
+    list_actors,
     list_animations,
     list_flats,
     list_lumps,
     list_maps,
     list_music,
     list_patches,
+    list_scripts,
     list_sounds,
     list_sprites,
     list_stats,
     list_textures,
+    scan_textures,
 )
 
 
@@ -58,19 +64,32 @@ def main() -> None:
 
     subs = parser.add_subparsers(dest="group", metavar="<command>")
 
-    # check (top-level, no subgroup)
+    # check (top-level)
     check.configure(subs.add_parser("check", help="sanity-check a WAD for authoring errors"))
 
-    # diff (top-level, no subgroup)
+    # complevel (top-level)
+    complevel.configure(subs.add_parser("complevel", help="detect compatibility level"))
+
+    # convert (top-level with subcommands)
+    convert.configure(subs.add_parser("convert", help="convert between formats (pk3, complevel)"))
+
+    # diff (top-level)
     diff.configure(subs.add_parser("diff", help="compare two WADs and report differences"))
 
-    # info (top-level, no subgroup)
+    # info (top-level)
     info.configure(subs.add_parser("info", help="show WAD header and summary stats"))
+
+    # scan (top-level with subcommands)
+    scan_p = subs.add_parser("scan", help="analyse WAD resource usage")
+    scan_p.set_defaults(func=lambda _: scan_p.print_help())
+    scan_subs = scan_p.add_subparsers(dest="scan_cmd", metavar="<what>")
+    scan_textures.configure(scan_subs.add_parser("textures", help="report texture/flat usage"))
 
     # list group
     list_p = subs.add_parser("list", help="list WAD contents")
     list_p.set_defaults(func=lambda _: list_p.print_help())
     list_subs = list_p.add_subparsers(dest="list_cmd", metavar="<what>")
+    list_actors.configure(list_subs.add_parser("actors", help="list DECORATE actor definitions"))
     list_animations.configure(
         list_subs.add_parser("animations", help="list ANIMDEFS flat/texture animation sequences")
     )
@@ -79,6 +98,7 @@ def main() -> None:
     list_maps.configure(list_subs.add_parser("maps", help="list maps with thing/linedef counts"))
     list_music.configure(list_subs.add_parser("music", help="list music lumps with sizes"))
     list_patches.configure(list_subs.add_parser("patches", help="list patch names from PNAMES"))
+    list_scripts.configure(list_subs.add_parser("scripts", help="list ACS scripts"))
     list_sounds.configure(list_subs.add_parser("sounds", help="list DMX sound lumps"))
     list_sprites.configure(
         list_subs.add_parser("sprites", help="list sprite lumps with dimensions")
@@ -107,6 +127,7 @@ def main() -> None:
     )
     extract_lump.configure(export_subs.add_parser("lump", help="dump raw lump bytes to a file"))
     export_map.configure(export_subs.add_parser("map", help="render a map to a PNG image"))
+    export_obj.configure(export_subs.add_parser("obj", help="export a map as 3D OBJ mesh"))
     export_music.configure(
         export_subs.add_parser(
             "music", help="export a music lump as MIDI (.mid) or raw MUS (--raw)"

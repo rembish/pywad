@@ -7,12 +7,22 @@ from typing import Any
 from .base import BaseLump
 
 
+def serialize_sndinfo(sounds: dict[str, str]) -> str:
+    """Serialize a sound mapping to SNDINFO text.
+
+    Example::
+
+        text = serialize_sndinfo({"weapons/pistol": "DSPISTOL", "doors/open": "DSDOROPN"})
+    """
+    return "\n".join(f"{name} {lump}" for name, lump in sounds.items()) + "\n"
+
+
 class SndInfo(BaseLump[Any]):
-    """SNDINFO lump: logical-name → lump-name sound mapping."""
+    """SNDINFO lump: logical-name -> lump-name sound mapping."""
 
     @property
     def sounds(self) -> dict[str, str]:
-        """Return mapping of logical sound name → WAD lump name (uppercase)."""
+        """Return mapping of logical sound name -> WAD lump name (uppercase)."""
         result: dict[str, str] = {}
         text = self.raw().decode("latin-1")
         for line in text.splitlines():

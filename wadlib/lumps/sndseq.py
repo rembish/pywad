@@ -27,6 +27,23 @@ class SndSeq:
     commands: list[SndSeqCommand] = field(default_factory=list)
 
 
+def serialize_sndseq(sequences: list[SndSeq]) -> str:
+    """Serialize a list of SndSeq to SNDSEQ text."""
+    parts: list[str] = []
+    for seq in sequences:
+        parts.append(f":{seq.name}")
+        for cmd in seq.commands:
+            line = f"  {cmd.command}"
+            if cmd.sound:
+                line += f" {cmd.sound}"
+            if cmd.tics is not None:
+                line += f" {cmd.tics}"
+            parts.append(line)
+        parts.append("  end")
+        parts.append("")
+    return "\n".join(parts)
+
+
 class SndSeqLump(BaseLump[Any]):
     """SNDSEQ lump: scripted ambient/door/platform sound sequences."""
 

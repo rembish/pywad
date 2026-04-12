@@ -27,6 +27,20 @@ class AnimDef:
         return any(f.max_tics != f.min_tics for f in self.frames)
 
 
+def serialize_animdefs(animations: list[AnimDef]) -> str:
+    """Serialize a list of AnimDef to ANIMDEFS text."""
+    parts: list[str] = []
+    for a in animations:
+        parts.append(f"{a.kind} {a.name}")
+        for f in a.frames:
+            if f.max_tics != f.min_tics:
+                parts.append(f"  pic {f.pic} rand {f.min_tics} {f.max_tics}")
+            else:
+                parts.append(f"  pic {f.pic} tics {f.min_tics}")
+        parts.append("")
+    return "\n".join(parts)
+
+
 class AnimDefsLump(BaseLump[Any]):
     """ANIMDEFS lump: flat and texture animation sequences."""
 

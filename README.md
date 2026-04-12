@@ -192,7 +192,8 @@ Every format the library can read, it can also write:
 | Music (MUS) | `Mus.to_midi()` -> MIDI bytes | `midi_to_mus(midi_bytes)` |
 | Palettes | `PlayPal.get_palette()` -> RGB tuples | `palette_to_bytes(palette)` |
 | Colormaps | `ColormapLump.get(level)` -> 256 bytes | `build_colormap(palette)` |
-| Textures | `TextureList.textures` -> TextureDef list | `texturelist_to_bytes(textures)` |
+| Textures (binary) | `TextureList.textures` -> TextureDef list | `texturelist_to_bytes(textures)` |
+| Textures (ZDoom) | `TexturesLump.definitions` -> TexturesDef list | `serialize_textures(defs)` |
 | Patch names | `PNames.names` -> string list | `pnames_to_bytes(names)` |
 
 ### Textures
@@ -273,6 +274,30 @@ issues = validate_lump("FLOOR1", data, is_flat=True)  # checks 4096 bytes
 issues = validate_wad(writer)  # namespace pairing, orphan lumps
 ```
 
+### Compatibility levels
+
+```python
+from wadlib.compat import detect_complevel, check_downgrade, convert_complevel, CompLevel
+
+with WadFile("mod.wad") as wad:
+    level = detect_complevel(wad)           # CompLevel.BOOM
+    issues = check_downgrade(wad, CompLevel.VANILLA)
+    # Semi-auto downgrade (strips lumps, clears flags, converts UDMF)
+    result = convert_complevel(wad, CompLevel.VANILLA, "vanilla_mod.wad")
+```
+
+### Texture usage scanning
+
+```python
+from wadlib.scanner import scan_usage, find_unused_textures
+
+with WadFile("mymod.wad") as wad:
+    usage = scan_usage(wad)
+    print(f"{usage.total_unique_textures} textures used across {len(usage.per_map)} maps")
+    unused = find_unused_textures(wad)
+    print(f"{len(unused)} textures defined but never referenced")
+```
+
 ---
 
 ## `wadcli` -- command-line tool
@@ -293,28 +318,39 @@ default filename is derived from the lump/map name when omitted.
 wadcli [--wad PATH] [--pwad PATH]... [--deh PATH] <command> ...
 
 wadcli info [--json]
+wadcli check [--json]
+wadcli complevel [--json] [--check LEVEL]
+wadcli diff <WAD_B> [--json]
+wadcli list actors     [--json]
+wadcli list animations [--json]
+wadcli list flats      [--filter NAME] [--json]
 wadcli list lumps      [--filter NAME] [--json]
 wadcli list maps       [--json]
-wadcli list flats      [--filter NAME] [--json]
-wadcli list sprites    [--json]
-wadcli list textures   [--filter NAME] [--json]
-wadcli list sounds     [--json]
 wadcli list music      [--json]
 wadcli list patches    [--filter NAME] [--json]
-wadcli list animations [--json]
-wadcli export map       <MAP>  [out.png]  [--floors] [--alpha] [--scale N]
+wadcli list scripts    [--json]
+wadcli list sounds     [--json]
+wadcli list sprites    [--json]
+wadcli list stats      [--json]
+wadcli list textures   [--filter NAME] [--json]
+wadcli export animation <NAME> [out.gif]
+wadcli export colormap  [out.png]
+wadcli export endoom    [out.txt]         [--ansi]
 wadcli export flat      <NAME> [out.png]
-wadcli export sprite    <NAME> [out.png]
-wadcli export texture   <NAME> [out.png]
+wadcli export font      <stcfn|fonta|fontb> [out.png]
+wadcli export lump      <NAME> [out.bin]
+wadcli export map       <MAP>  [out.png]  [--floors] [--alpha] [--scale N]
+wadcli export music     <NAME> [out.mid]  [--raw]
+wadcli export obj       <MAP>  [out.obj]  [--scale N] [--materials]
+wadcli export palette   [out.png]         [--palette N]
 wadcli export patch     <NAME> [out.png]
 wadcli export sound     <NAME> [out.wav]  [--raw]
-wadcli export music     <NAME> [out.mid]  [--raw]
-wadcli export colormap  [out.png]
-wadcli export palette   [out.png]         [--palette N]
-wadcli export font      <stcfn|fonta|fontb> [out.png]
-wadcli export animation <NAME> [out.gif]
-wadcli export lump      <NAME> [out.bin]
-wadcli export endoom    [out.txt]         [--ansi]
+wadcli export sprite    <NAME> [out.png]
+wadcli export texture   <NAME> [out.png]
+wadcli scan textures [--json] [--unused]
+wadcli convert pk3      [out.pk3]
+wadcli convert wad      <pk3> [out.wad]
+wadcli convert complevel <LEVEL> [out.wad]
 ```
 
 ### Examples

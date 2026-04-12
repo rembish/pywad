@@ -27,6 +27,33 @@ class MapInfoEntry:
     fadetable: str | None = None
 
 
+def serialize_mapinfo(entries: list[MapInfoEntry]) -> str:
+    """Serialize a list of MapInfoEntry to MAPINFO text (Hexen format)."""
+    parts: list[str] = []
+    for e in entries:
+        parts.append(f'map {e.map_num} "{e.title}"')
+        if e.warptrans is not None:
+            parts.append(f"warptrans {e.warptrans}")
+        if e.next is not None:
+            parts.append(f"next {e.next}")
+        if e.cluster is not None:
+            parts.append(f"cluster {e.cluster}")
+        if e.sky1 is not None:
+            parts.append(f'sky1 "{e.sky1}" 0')
+        if e.sky2 is not None:
+            parts.append(f'sky2 "{e.sky2}" 0')
+        if e.cdtrack is not None:
+            parts.append(f"cdtrack {e.cdtrack}")
+        if e.lightning:
+            parts.append("lightning")
+        if e.doublesky:
+            parts.append("doublesky")
+        if e.fadetable is not None:
+            parts.append(f'fadetable "{e.fadetable}"')
+        parts.append("")
+    return "\n".join(parts)
+
+
 class MapInfoLump(BaseLump[Any]):
     """MAPINFO lump: per-map metadata for Hexen WADs."""
 

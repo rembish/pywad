@@ -67,6 +67,23 @@ class ColormapLump(BaseLump[Any]):
         """Remap *palette_index* through colormap *colormap_index*."""
         return self.get(colormap_index)[palette_index]
 
+    def as_table(self, index: int) -> list[int]:
+        """Return colormap *index* as a list of 256 remapped palette indices."""
+        return list(self.get(index))
+
+    def decode(self, index: int, palette: Palette) -> list[tuple[int, int, int]]:
+        """Decode colormap *index* to 256 RGB colours using *palette*.
+
+        Shows what each palette entry looks like after this light level
+        is applied.
+        """
+        table = self.get(index)
+        return [palette[table[i]] for i in range(256)]
+
+    def all_tables(self) -> list[list[int]]:
+        """Return all colormaps as a list of 256-int lists."""
+        return [self.as_table(i) for i in range(self.count)]
+
 
 # ---------------------------------------------------------------------------
 # Colormap builder
