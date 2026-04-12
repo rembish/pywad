@@ -83,12 +83,12 @@ class _DirNode(_VNode):
         self.children: dict[str, _VNode] = {}
 
 
-class _FileNode(_VNode):
+class _FileNode(_VNode):  # pylint: disable=too-few-public-methods
     """A virtual file with content generated on access."""
 
     def __init__(self, data_fn: Any, size: int) -> None:
         self.data_fn = data_fn  # callable() -> bytes
-        self.size = size
+        self.size = size  # may be updated lazily on first access
 
 
 class _WritableFileNode(_VNode):

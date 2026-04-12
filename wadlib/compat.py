@@ -569,7 +569,7 @@ def _convert_udmf_to_binary(writer: WadWriter) -> bool:
         # Parse UDMF
         try:
             udmf = parse_udmf(entry.data.decode("utf-8", errors="replace"))
-        except Exception:
+        except (ValueError, KeyError, IndexError):
             idx += 1
             continue
 
