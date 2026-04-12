@@ -9,7 +9,7 @@ import tempfile
 import pytest
 
 from wadlib.enums import WadType
-from wadlib.lumps.blockmap import BlockMap, Reject
+from wadlib.lumps.blockmap import Reject
 from wadlib.lumps.flat import FLAT_BYTES, encode_flat
 from wadlib.lumps.hexen import HexenLineDef, HexenThing
 from wadlib.lumps.lines import LineDefinition
@@ -163,12 +163,12 @@ class TestNamespaceHelpers:
 
     def test_add_sprite_creates_namespace(self) -> None:
         w = WadWriter()
-        w.add_sprite("TROO", b"\xFF")
+        w.add_sprite("TROO", b"\xff")
         assert w.lump_names == ["S_START", "TROO", "S_END"]
 
     def test_add_patch_creates_namespace(self) -> None:
         w = WadWriter()
-        w.add_patch("WALL01", b"\xAA")
+        w.add_patch("WALL01", b"\xaa")
         assert w.lump_names == ["P_START", "WALL01", "P_END"]
 
 
@@ -218,18 +218,18 @@ class TestWadBinaryFormat:
         assert numlumps == 2
 
         # First dir entry: marker (size 0)
-        off1, sz1, _ = struct.unpack("<II8s", data[diroffset : diroffset + 16])
+        _off1, sz1, _ = struct.unpack("<II8s", data[diroffset : diroffset + 16])
         assert sz1 == 0
 
         # Second dir entry: THINGS
-        off2, sz2, _ = struct.unpack("<II8s", data[diroffset + 16 : diroffset + 32])
+        _off2, sz2, _ = struct.unpack("<II8s", data[diroffset + 16 : diroffset + 32])
         assert sz2 == 10
 
     def test_save_and_reload(self) -> None:
         w = WadWriter(WadType.PWAD)
         w.add_lump("PLAYPAL", b"\x00" * 768)
         w.add_marker("MAP01")
-        w.add_lump("THINGS", b"\xFF" * 20)
+        w.add_lump("THINGS", b"\xff" * 20)
 
         with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
             path = f.name
@@ -291,7 +291,7 @@ class TestLineDefSerialization:
         )
         raw = ld.to_bytes()
         assert len(raw) == 14  # Doom linedef = 14 bytes
-        sv, fv, fl, st, stag, rsd, lsd = struct.unpack("<HHHHHhh", raw)
+        sv, fv, fl, _st, _stag, _rsd, lsd = struct.unpack("<HHHHHhh", raw)
         assert sv == 0
         assert fv == 1
         assert fl == 1
@@ -310,7 +310,7 @@ class TestSideDefSerialization:
         )
         raw = sd.to_bytes()
         assert len(raw) == 30  # Doom sidedef = 30 bytes
-        xo, yo, ut, lt, mt, sec = struct.unpack("<hh8s8s8sH", raw)
+        _xo, _yo, ut, _lt, mt, _sec = struct.unpack("<hh8s8s8sH", raw)
         assert mt.rstrip(b"\x00") == b"BRICK1"
         assert ut.rstrip(b"\x00") == b"-"
 
@@ -334,7 +334,7 @@ class TestSectorSerialization:
         )
         raw = s.to_bytes()
         assert len(raw) == 26  # Doom sector = 26 bytes
-        fh, ch, ft, ct, ll, sp, tg = struct.unpack("<hh8s8sHHH", raw)
+        fh, ch, ft, ct, ll, _sp, _tg = struct.unpack("<hh8s8sHHH", raw)
         assert fh == 0
         assert ch == 128
         assert ft.rstrip(b"\x00") == b"FLAT1"
@@ -362,10 +362,20 @@ class TestSubSectorSerialization:
 class TestNodeSerialization:
     def test_round_trip(self) -> None:
         n = Node(
-            x=0, y=0, dx=64, dy=0,
-            right_top=64, right_bottom=0, right_left=0, right_right=64,
-            left_top=0, left_bottom=-64, left_left=0, left_right=64,
-            right_child=0, left_child=0x8001,
+            x=0,
+            y=0,
+            dx=64,
+            dy=0,
+            right_top=64,
+            right_bottom=0,
+            right_left=0,
+            right_right=64,
+            left_top=0,
+            left_bottom=-64,
+            left_left=0,
+            left_right=64,
+            right_child=0,
+            left_child=0x8001,
         )
         raw = n.to_bytes()
         assert len(raw) == 28  # Doom node = 28 bytes
@@ -377,8 +387,19 @@ class TestNodeSerialization:
 class TestHexenThingSerialization:
     def test_round_trip(self) -> None:
         t = HexenThing(
-            tid=1, x=100, y=200, z=0, angle=90, type=1, flags=Flags(7),
-            action=0, arg0=0, arg1=0, arg2=0, arg3=0, arg4=0,
+            tid=1,
+            x=100,
+            y=200,
+            z=0,
+            angle=90,
+            type=1,
+            flags=Flags(7),
+            action=0,
+            arg0=0,
+            arg1=0,
+            arg2=0,
+            arg3=0,
+            arg4=0,
         )
         raw = t.to_bytes()
         assert len(raw) == 20  # Hexen thing = 20 bytes
@@ -387,9 +408,17 @@ class TestHexenThingSerialization:
 class TestHexenLineDefSerialization:
     def test_round_trip(self) -> None:
         ld = HexenLineDef(
-            start_vertex=0, finish_vertex=1, flags=1, special_type=0,
-            arg0=0, arg1=0, arg2=0, arg3=0, arg4=0,
-            right_sidedef=0, left_sidedef=-1,
+            start_vertex=0,
+            finish_vertex=1,
+            flags=1,
+            special_type=0,
+            arg0=0,
+            arg1=0,
+            arg2=0,
+            arg3=0,
+            arg4=0,
+            right_sidedef=0,
+            left_sidedef=-1,
         )
         raw = ld.to_bytes()
         assert len(raw) == 16  # Hexen linedef = 16 bytes
@@ -414,7 +443,7 @@ class TestRejectSerialization:
         assert r.can_see(0, 0, 4)
 
     def test_from_bytes(self) -> None:
-        data = b"\xFF\xFF"
+        data = b"\xff\xff"
         r = Reject.from_bytes(data)
         assert r.to_bytes() == data
 
@@ -438,7 +467,7 @@ class TestTextureSerialization:
             patches=[PatchDescriptor(0, 0, 0)],
         )
         raw = td.to_bytes()
-        # Header: 8+4+2+2+4+2 = 22, plus 1 patch × 10 = 32
+        # Header: 8+4+2+2+4+2 = 22, plus 1 patch x 10 = 32
         assert len(raw) == 32
 
     def test_pnames_round_trip(self) -> None:
@@ -617,7 +646,7 @@ class TestAddMap:
         w.add_map("MAP01", things=things)
         things_data = w.get_lump("THINGS")
         assert things_data is not None
-        assert len(things_data) == 20  # 2 things × 10 bytes
+        assert len(things_data) == 20  # 2 things x 10 bytes
 
 
 # ---------------------------------------------------------------------------
@@ -643,8 +672,7 @@ class TestRoundTrip:
             for i, entry in enumerate(wad.directory):
                 writer_data = writer.lumps[i].data
                 assert len(writer_data) == entry.size, (
-                    f"Size mismatch at index {i} ({entry.name}): "
-                    f"{len(writer_data)} != {entry.size}"
+                    f"Size mismatch at index {i} ({entry.name}): {len(writer_data)} != {entry.size}"
                 )
 
     def test_round_trip_reload(self) -> None:

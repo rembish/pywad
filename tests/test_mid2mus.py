@@ -7,7 +7,7 @@ import struct
 
 import pytest
 
-from wadlib.lumps.mid2mus import MidiEvent, _parse_midi, midi_to_mus
+from wadlib.lumps.mid2mus import _parse_midi, midi_to_mus
 from wadlib.lumps.mus import Mus
 from wadlib.wad import WadFile
 
@@ -62,10 +62,12 @@ class TestMidiParser:
         assert events == []
 
     def test_parse_note_on_off(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0x90, 60, 100])),    # note on, C4, vel 100
-            (70, bytes([0x80, 60, 0])),      # note off after 70 ticks
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0x90, 60, 100])),  # note on, C4, vel 100
+                (70, bytes([0x80, 60, 0])),  # note off after 70 ticks
+            ]
+        )
         events = _parse_midi(midi)
         assert len(events) == 2
         assert events[0].tick == 0
@@ -74,18 +76,22 @@ class TestMidiParser:
         assert events[1].status == 0x80
 
     def test_parse_program_change(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0xC0, 42])),  # program change to 42
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0xC0, 42])),  # program change to 42
+            ]
+        )
         events = _parse_midi(midi)
         assert len(events) == 1
         assert events[0].status == 0xC0
         assert events[0].data == bytes([42])
 
     def test_parse_pitch_bend(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0xE0, 0, 64])),  # pitch bend center
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0xE0, 0, 64])),  # pitch bend center
+            ]
+        )
         events = _parse_midi(midi)
         assert len(events) == 1
         assert events[0].status == 0xE0
@@ -107,10 +113,12 @@ class TestMidiToMus:
         assert mus[:4] == b"MUS\x1a"
 
     def test_single_note(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0x90, 60, 100])),   # note on
-            (70, bytes([0x80, 60, 0])),     # note off
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0x90, 60, 100])),  # note on
+                (70, bytes([0x80, 60, 0])),  # note off
+            ]
+        )
         mus = midi_to_mus(midi)
         assert mus[:4] == b"MUS\x1a"
         # Parse header
@@ -119,14 +127,16 @@ class TestMidiToMus:
         assert score_start >= 16
 
     def test_program_change(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0xC0, 42])),         # program change
-            (0, bytes([0x90, 60, 100])),     # note on
-            (70, bytes([0x80, 60, 0])),      # note off
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0xC0, 42])),  # program change
+                (0, bytes([0x90, 60, 100])),  # note on
+                (70, bytes([0x80, 60, 0])),  # note off
+            ]
+        )
         mus = midi_to_mus(midi)
         # Should have instrument 42 in the instrument list
-        _, _, score_start, _, _, num_instr, _ = struct.unpack("<4sHHHHHH", mus[:16])
+        _, _, _score_start, _, _, num_instr, _ = struct.unpack("<4sHHHHHH", mus[:16])
         assert num_instr == 1
         instr_start = 16
         (instr,) = struct.unpack("<H", mus[instr_start : instr_start + 2])
@@ -134,10 +144,12 @@ class TestMidiToMus:
 
     def test_percussion_channel_mapping(self) -> None:
         """MIDI channel 9 (percussion) should map to MUS channel 15."""
-        midi = _build_midi([
-            (0, bytes([0x99, 36, 100])),   # note on, channel 9 (percussion)
-            (70, bytes([0x89, 36, 0])),     # note off
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0x99, 36, 100])),  # note on, channel 9 (percussion)
+                (70, bytes([0x89, 36, 0])),  # note off
+            ]
+        )
         mus = midi_to_mus(midi)
         # Parse score data to verify channel 15 is used
         _, _, score_start, _, _, _, _ = struct.unpack("<4sHHHHHH", mus[:16])
@@ -146,18 +158,22 @@ class TestMidiToMus:
         assert (descriptor & 0x0F) == 15
 
     def test_control_change_volume(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0xB0, 7, 80])),  # CC 7 = volume
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0xB0, 7, 80])),  # CC 7 = volume
+            ]
+        )
         mus = midi_to_mus(midi)
         assert mus[:4] == b"MUS\x1a"
 
     def test_note_on_velocity_zero_is_note_off(self) -> None:
         """MIDI note-on with velocity 0 should become MUS note-off."""
-        midi = _build_midi([
-            (0, bytes([0x90, 60, 100])),  # note on
-            (70, bytes([0x90, 60, 0])),   # note on vel=0 → note off
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0x90, 60, 100])),  # note on
+                (70, bytes([0x90, 60, 0])),  # note on vel=0 → note off
+            ]
+        )
         mus = midi_to_mus(midi)
         _, _, score_start, _, _, _, _ = struct.unpack("<4sHHHHHH", mus[:16])
         # Find the second event — should be type 0 (release note)
@@ -183,9 +199,11 @@ class TestMidiToMus:
         assert etype2 == 0  # release note
 
     def test_pitch_bend_conversion(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0xE0, 0, 64])),  # center bend (8192 / 64 = 128)
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0xE0, 0, 64])),  # center bend (8192 / 64 = 128)
+            ]
+        )
         mus = midi_to_mus(midi)
         _, _, score_start, _, _, _, _ = struct.unpack("<4sHHHHHH", mus[:16])
         descriptor = mus[score_start]
@@ -195,12 +213,14 @@ class TestMidiToMus:
         assert bend_val == 128  # center
 
     def test_multi_channel(self) -> None:
-        midi = _build_midi([
-            (0, bytes([0x90, 60, 100])),    # ch 0
-            (0, bytes([0x91, 64, 100])),    # ch 1
-            (70, bytes([0x80, 60, 0])),
-            (0, bytes([0x81, 64, 0])),
-        ])
+        midi = _build_midi(
+            [
+                (0, bytes([0x90, 60, 100])),  # ch 0
+                (0, bytes([0x91, 64, 100])),  # ch 1
+                (70, bytes([0x80, 60, 0])),
+                (0, bytes([0x81, 64, 0])),
+            ]
+        )
         mus = midi_to_mus(midi)
         _, _, _, prim, sec, _, _ = struct.unpack("<4sHHHHHH", mus[:16])
         assert prim + sec >= 2
@@ -230,7 +250,7 @@ class TestRealMidi:
             assert mus_data[:4] == b"MUS\x1a"
 
             # Verify MUS header
-            _, score_len, score_start, prim, sec, num_instr, _ = struct.unpack(
+            _, score_len, score_start, prim, sec, _num_instr, _ = struct.unpack(
                 "<4sHHHHHH", mus_data[:16]
             )
             assert score_len > 0
@@ -250,9 +270,7 @@ class TestRealMidi:
                 mus_data = midi_to_mus(midi_data)
                 assert mus_data[:4] == b"MUS\x1a", f"Failed for {name}"
                 # Verify score end event
-                _, score_len, score_start, _, _, _, _ = struct.unpack(
-                    "<4sHHHHHH", mus_data[:16]
-                )
+                _, score_len, score_start, _, _, _, _ = struct.unpack("<4sHHHHHH", mus_data[:16])
                 last_desc = mus_data[score_start + score_len - 1]
                 assert (last_desc >> 4) & 0x07 == 6, f"Missing score end for {name}"
                 count += 1
@@ -277,8 +295,9 @@ class TestRealMidi:
             mus_data = midi_to_mus(orig_midi)
 
             # Create a Mus lump from the raw bytes to convert back
-            from wadlib.directory import DirectoryEntry
             from io import BytesIO
+
+            from wadlib.directory import DirectoryEntry
 
             # Build a minimal WadFile-like object for DirectoryEntry
             class _FakeWad:

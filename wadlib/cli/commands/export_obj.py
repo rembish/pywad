@@ -31,14 +31,14 @@ def run(args: argparse.Namespace) -> None:
             assert isinstance(result, tuple)
             obj_text, mtl_text = result
             mtl_path = output.rsplit(".", 1)[0] + ".mtl"
-            with open(output, "w") as f:
+            with open(output, "w", encoding="utf-8") as f:
                 f.write(obj_text)
-            with open(mtl_path, "w") as f:
+            with open(mtl_path, "w", encoding="utf-8") as f:
                 f.write(mtl_text)
             print(f"Exported {target} -> {output} + {mtl_path}")
         else:
             result_str = map_to_obj(m, scale=args.scale)
             assert isinstance(result_str, str)
-            with open(output, "w") as f:
+            with open(output, "w", encoding="utf-8") as f:
                 f.write(result_str)
             print(f"Exported {target} -> {output}")

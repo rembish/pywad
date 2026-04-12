@@ -5,11 +5,12 @@ from __future__ import annotations
 import os
 import tempfile
 
+import pytest
+
 from wadlib.archive import WadArchive
 from wadlib.compat import (
     CompLevel,
     CompLevelFeature,
-    ConvertAction,
     check_downgrade,
     check_upgrade,
     convert_complevel,
@@ -17,7 +18,7 @@ from wadlib.compat import (
     detect_features,
     plan_downgrade,
 )
-from wadlib.lumps.animated import animated_to_bytes, AnimatedEntry
+from wadlib.lumps.animated import AnimatedEntry, animated_to_bytes
 from wadlib.wad import WadFile
 
 FREEDOOM2 = "wads/freedoom2.wad"
@@ -74,9 +75,11 @@ class TestDetectBoom:
         with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
             path = f.name
         try:
-            anim_data = animated_to_bytes([
-                AnimatedEntry("flat", "NUKAGE1", "NUKAGE3", 8),
-            ])
+            anim_data = animated_to_bytes(
+                [
+                    AnimatedEntry("flat", "NUKAGE1", "NUKAGE3", 8),
+                ]
+            )
             with WadArchive(path, "w") as wad:
                 wad.writestr("ANIMATED", anim_data, validate=False)
             with WadFile(path) as wad:
@@ -304,7 +307,7 @@ class TestConvertComplevel:
             with WadFile(out_path) as wad:
                 m = wad.maps[0]
                 assert m.things is not None
-                t = list(m.things)[0]
+                t = next(iter(m.things))
                 assert not (int(t.flags) & 0x0020)
                 # Original flags should still be present
                 assert int(t.flags) & 0x0007
@@ -318,14 +321,14 @@ class TestConvertComplevel:
         with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
             out_path = f.name
         try:
-            textmap = b'''namespace = "doom";
+            textmap = b"""namespace = "doom";
 thing { x = 64.0; y = 128.0; type = 1; angle = 90; }
 vertex { x = 0.0; y = 0.0; }
 vertex { x = 256.0; y = 0.0; }
 linedef { v1 = 0; v2 = 1; sidefront = 0; }
 sidedef { sector = 0; texturemiddle = "BRICK1"; }
 sector { heightfloor = 0; heightceiling = 128; texturefloor = "FLAT1"; textureceiling = "CEIL3_5"; lightlevel = 160; }
-'''
+"""
             with WadArchive(path, "w") as wad:
                 wad.writemarker("MAP01")
                 wad.writestr("TEXTMAP", textmap, validate=False)
@@ -342,7 +345,7 @@ sector { heightfloor = 0; heightceiling = 128; texturefloor = "FLAT1"; texturece
                 assert wad.find_lump("ENDMAP") is None
                 m = wad.maps[0]
                 assert m.things is not None
-                t = list(m.things)[0]
+                t = next(iter(m.things))
                 assert t.x == 64
                 assert t.y == 128
                 assert t.type == 1
@@ -374,9 +377,6 @@ sector { heightfloor = 0; heightceiling = 128; texturefloor = "FLAT1"; texturece
         finally:
             os.unlink(path)
             os.unlink(out_path)
-
-
-import pytest
 
 
 @pytest.mark.skipif(not _has_wad(FREEDOOM2), reason="freedoom2.wad not available")

@@ -13,7 +13,7 @@ from wadlib.lumps.udmf import (
     serialize_udmf,
 )
 
-_SIMPLE_MAP = '''
+_SIMPLE_MAP = """
 namespace = "zdoom";
 
 thing { x = 64.0; y = -128.0; type = 1; angle = 90; }
@@ -41,7 +41,7 @@ sector {
     textureceiling = "CEIL3_5";
     lightlevel = 192;
 }
-'''
+"""
 
 
 class TestParseUdmf:
@@ -88,46 +88,46 @@ class TestParseUdmf:
 
 class TestUdmfComments:
     def test_line_comments(self) -> None:
-        text = '''
+        text = """
 namespace = "doom";
 // This is a comment
 thing { x = 1.0; y = 2.0; type = 1; }
-'''
+"""
         m = parse_udmf(text)
         assert len(m.things) == 1
 
     def test_block_comments(self) -> None:
-        text = '''
+        text = """
 namespace = "doom";
 /* Multi-line
    comment */
 thing { x = 1.0; y = 2.0; type = 1; }
-'''
+"""
         m = parse_udmf(text)
         assert len(m.things) == 1
 
 
 class TestUdmfExtendedProps:
     def test_boolean_props(self) -> None:
-        text = '''
+        text = """
 namespace = "zdoom";
 thing { x = 0.0; y = 0.0; type = 1; skill1 = true; skill2 = false; }
-'''
+"""
         m = parse_udmf(text)
         assert m.things[0].props.get("skill1") is True
         assert m.things[0].props.get("skill2") is False
 
     def test_custom_linedef_props(self) -> None:
-        text = '''
+        text = """
 namespace = "zdoom";
 linedef { v1 = 0; v2 = 1; sidefront = 0; blocking = true; arg0 = 42; }
-'''
+"""
         m = parse_udmf(text)
         assert m.linedefs[0].props.get("blocking") is True
         assert m.linedefs[0].props.get("arg0") == 42
 
     def test_sector_with_extra_props(self) -> None:
-        text = '''
+        text = """
 namespace = "zdoom";
 sector {
     heightfloor = 0; heightceiling = 128;
@@ -136,7 +136,7 @@ sector {
     xpanningfloor = 32.0;
     lightcolor = 16777215;
 }
-'''
+"""
         m = parse_udmf(text)
         assert m.sectors[0].props.get("xpanningfloor") == 32.0
         assert m.sectors[0].props.get("lightcolor") == 16777215
@@ -207,7 +207,11 @@ class TestUdmfFromScratch:
             UdmfLinedef(v1=3, v2=0, sidefront=3),
         ]
         m.sidedefs = [UdmfSidedef(sector=0, texturemiddle="BRICK1") for _ in range(4)]
-        m.sectors = [UdmfSector(heightfloor=0, heightceiling=128, texturefloor="FLAT1", textureceiling="CEIL3_5")]
+        m.sectors = [
+            UdmfSector(
+                heightfloor=0, heightceiling=128, texturefloor="FLAT1", textureceiling="CEIL3_5"
+            )
+        ]
 
         text = serialize_udmf(m)
         m2 = parse_udmf(text)

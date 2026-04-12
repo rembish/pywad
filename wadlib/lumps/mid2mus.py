@@ -82,7 +82,7 @@ def _read_vlq(data: bytes, pos: int) -> tuple[int, int]:
         b = data[pos]
         pos += 1
         value = (value << 7) | (b & 0x7F)
-        if not (b & 0x80):
+        if not b & 0x80:
             break
     return value, pos
 

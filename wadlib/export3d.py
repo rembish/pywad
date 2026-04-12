@@ -242,7 +242,7 @@ def map_to_obj(  # pylint: disable=too-many-locals,too-many-branches,too-many-st
     return obj_text
 
 
-def _add_wall_quad(
+def _add_wall_quad(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     faces: list[tuple[str, list[int]]],
     mtl_names: set[str],
     texture: str,

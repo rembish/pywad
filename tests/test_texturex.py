@@ -2,15 +2,15 @@
 
 from wadlib.lumps.texturex import TexturesDef, TexturesPatch, parse_textures, serialize_textures
 
-_SIMPLE = '''
+_SIMPLE = """
 Texture "MYBRICK", 128, 64
 {
     Patch "WALL00_1", 0, 0
     Patch "WALL00_2", 64, 0
 }
-'''
+"""
 
-_WITH_PROPS = '''
+_WITH_PROPS = """
 Texture "FANCY", 256, 128
 {
     Offset 10, 20
@@ -25,22 +25,22 @@ Texture "FANCY", 256, 128
         Style Translucent
     }
 }
-'''
+"""
 
-_FLAT = '''
+_FLAT = """
 Flat "MYFLOOR", 64, 64
 {
     Patch "FLAT01", 0, 0
 }
-'''
+"""
 
-_SPRITE = '''
+_SPRITE = """
 Sprite "MYSPRITE", 32, 56
 {
     Offset 16, 55
     Patch "TROOA1", 0, 0
 }
-'''
+"""
 
 
 class TestParse:
@@ -90,14 +90,14 @@ class TestParse:
         assert len(defs) == 3
 
     def test_comments(self) -> None:
-        text = '''
+        text = """
 // This is a comment
 Texture "TEST", 64, 64
 {
     // Another comment
     Patch "P1", 0, 0
 }
-'''
+"""
         defs = parse_textures(text)
         assert len(defs) == 1
 
@@ -128,7 +128,10 @@ class TestSerialize:
 
     def test_serialize_from_scratch(self) -> None:
         d = TexturesDef(
-            kind="texture", name="NEW", width=64, height=64,
+            kind="texture",
+            name="NEW",
+            width=64,
+            height=64,
             patches=[TexturesPatch(name="P1", x=0, y=0)],
         )
         text = serialize_textures([d])

@@ -31,7 +31,7 @@ from .base import BaseLump
 
 _ACS0_MAGIC = b"ACS\x00"
 _ACSE_MAGIC = b"ACSE"
-_ACSe_MAGIC = b"ACSe"
+_ACSE_LOWER_MAGIC = b"ACSe"
 
 
 @dataclass
@@ -67,7 +67,7 @@ def parse_behavior(data: bytes) -> BehaviorInfo:
     magic = data[:4]
     if magic == _ACS0_MAGIC:
         return _parse_acs0(data)
-    if magic in (_ACSE_MAGIC, _ACSe_MAGIC):
+    if magic in (_ACSE_MAGIC, _ACSE_LOWER_MAGIC):
         return _parse_acse(data, magic.decode("ascii"))
     raise ValueError(f"Unknown BEHAVIOR format: {magic!r}")
 

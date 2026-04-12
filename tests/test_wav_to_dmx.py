@@ -8,7 +8,7 @@ import struct
 import pytest
 
 from wadlib.lumps.colormap import build_colormap, hex_to_rgb, rgb_to_hex
-from wadlib.lumps.sound import encode_dmx, wav_to_dmx
+from wadlib.lumps.sound import wav_to_dmx
 from wadlib.wad import WadFile
 
 FREEDOOM2 = "wads/freedoom2.wad"
@@ -28,7 +28,9 @@ def _build_wav(pcm: bytes, rate: int = 11025, bits: int = 8, channels: int = 1) 
     byte_rate = rate * channels * (bits // 8)
     block_align = channels * (bits // 8)
     riff = struct.pack("<4sI4s", b"RIFF", 36 + len(pcm), b"WAVE")
-    fmt_chunk = struct.pack("<4sIHHIIHH", b"fmt ", 16, 1, channels, rate, byte_rate, block_align, bits)
+    fmt_chunk = struct.pack(
+        "<4sIHHIIHH", b"fmt ", 16, 1, channels, rate, byte_rate, block_align, bits
+    )
     data_chunk = struct.pack("<4sI", b"data", len(pcm)) + pcm
     return riff + fmt_chunk + data_chunk
 
@@ -102,7 +104,7 @@ class TestWavRoundTrip:
     def test_dmx_to_wav_to_dmx(self) -> None:
         """DMX → WAV → DMX should preserve the audio data."""
         with WadFile(FREEDOOM2) as wad:
-            sound = list(wad.sounds.values())[0]
+            sound = next(iter(wad.sounds.values()))
             wav = sound.to_wav()
             dmx = wav_to_dmx(wav)
             # Compare sample rates

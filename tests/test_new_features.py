@@ -6,11 +6,19 @@ import struct
 
 import pytest
 
+from wadlib.lumps.behavior import AcsScript, parse_behavior
+from wadlib.lumps.decorate import parse_decorate
+from wadlib.lumps.demo import DemoTic, parse_demo
+from wadlib.lumps.glnodes import (
+    parse_gl_nodes,
+    parse_gl_segs,
+    parse_gl_ssectors,
+    parse_gl_verts,
+)
+
 # ---------------------------------------------------------------------------
 # Demo serialization
 # ---------------------------------------------------------------------------
-
-from wadlib.lumps.demo import Demo, DemoHeader, DemoTic, parse_demo
 
 
 class TestDemoSerialization:
@@ -69,12 +77,10 @@ class TestDemoSerialization:
 # DECORATE parser
 # ---------------------------------------------------------------------------
 
-from wadlib.lumps.decorate import DecorateActor, parse_decorate
-
 
 class TestDecorate:
     def test_simple_actor(self) -> None:
-        text = '''
+        text = """
 actor MyMonster 20000
 {
     Health 100
@@ -94,7 +100,7 @@ actor MyMonster 20000
         Loop
     }
 }
-'''
+"""
         actors = parse_decorate(text)
         assert len(actors) == 1
         a = actors[0]
@@ -108,52 +114,52 @@ actor MyMonster 20000
         assert "See" in a.states
 
     def test_actor_with_parent(self) -> None:
-        text = 'actor BigImp : DoomImp 20001 { Health 200 }'
+        text = "actor BigImp : DoomImp 20001 { Health 200 }"
         actors = parse_decorate(text)
         assert actors[0].parent == "DoomImp"
         assert actors[0].doomednum == 20001
 
     def test_actor_replaces(self) -> None:
-        text = 'actor SuperShotgun : Shotgun replaces Shotgun { }'
+        text = "actor SuperShotgun : Shotgun replaces Shotgun { }"
         actors = parse_decorate(text)
         assert actors[0].replaces == "Shotgun"
 
     def test_multiple_actors(self) -> None:
-        text = '''
+        text = """
 actor Monster1 10001 { Health 50 }
 actor Monster2 10002 { Health 100 }
 actor Item1 10003 { +COUNTITEM }
-'''
+"""
         actors = parse_decorate(text)
         assert len(actors) == 3
         assert actors[2].is_item
 
     def test_comments_stripped(self) -> None:
-        text = '''
+        text = """
 // This is a comment
 actor Test 99999
 {
     /* block comment */
     Health 50
 }
-'''
+"""
         actors = parse_decorate(text)
         assert len(actors) == 1
         assert actors[0].health == 50
 
     def test_no_ednum(self) -> None:
-        text = 'actor InternalActor { Health 10 }'
+        text = "actor InternalActor { Health 10 }"
         actors = parse_decorate(text)
         assert actors[0].doomednum is None
 
     def test_antiflags(self) -> None:
-        text = 'actor Test 1 { -SOLID +NOGRAVITY }'
+        text = "actor Test 1 { -SOLID +NOGRAVITY }"
         actors = parse_decorate(text)
         assert "SOLID" in actors[0].antiflags
         assert "NOGRAVITY" in actors[0].flags
 
     def test_monster_property(self) -> None:
-        text = 'actor Test 1 { Monster }'
+        text = "actor Test 1 { Monster }"
         actors = parse_decorate(text)
         assert actors[0].is_monster
 
@@ -161,8 +167,6 @@ actor Test 99999
 # ---------------------------------------------------------------------------
 # ACS BEHAVIOR parser
 # ---------------------------------------------------------------------------
-
-from wadlib.lumps.behavior import AcsScript, BehaviorInfo, parse_behavior
 
 
 class TestBehavior:
@@ -224,17 +228,6 @@ class TestBehavior:
 # GL nodes
 # ---------------------------------------------------------------------------
 
-from wadlib.lumps.glnodes import (
-    GlNode,
-    GlSeg,
-    GlSubSector,
-    GlVertex,
-    parse_gl_nodes,
-    parse_gl_segs,
-    parse_gl_ssectors,
-    parse_gl_verts,
-)
-
 
 class TestGlNodes:
     def test_gl_verts_v1(self) -> None:
@@ -273,11 +266,22 @@ class TestGlNodes:
         assert ssectors[1].first_seg == 4
 
     def test_gl_nodes(self) -> None:
-        data = struct.pack("<hhhhhhhhhhhhHH",
-            0, 0, 64, 0,  # partition
-            64, 0, 0, 64,  # right bbox
-            0, -64, 0, 64,  # left bbox
-            0, 0x8001,  # children
+        data = struct.pack(
+            "<hhhhhhhhhhhhHH",
+            0,
+            0,
+            64,
+            0,  # partition
+            64,
+            0,
+            0,
+            64,  # right bbox
+            0,
+            -64,
+            0,
+            64,  # left bbox
+            0,
+            0x8001,  # children
         )
         nodes = parse_gl_nodes(data)
         assert len(nodes) == 1

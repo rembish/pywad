@@ -60,12 +60,15 @@ class TestAnimatedEntry:
 
 class TestAnimatedLump:
     def test_parse_flats(self) -> None:
-        raw = _build_animated_raw([
-            (0, "NUKAGE3", "NUKAGE1", 8),
-            (0, "FWATER4", "FWATER1", 8),
-        ])
-        from wadlib.directory import DirectoryEntry
+        raw = _build_animated_raw(
+            [
+                (0, "NUKAGE3", "NUKAGE1", 8),
+                (0, "FWATER4", "FWATER1", 8),
+            ]
+        )
         from io import BytesIO
+
+        from wadlib.directory import DirectoryEntry
 
         class _FW:
             def __init__(self, d: bytes) -> None:
@@ -82,12 +85,15 @@ class TestAnimatedLump:
         assert len(lump.textures) == 0
 
     def test_parse_mixed(self) -> None:
-        raw = _build_animated_raw([
-            (0, "NUKAGE3", "NUKAGE1", 8),
-            (1, "BLODGR4", "BLODGR1", 8),
-        ])
-        from wadlib.directory import DirectoryEntry
+        raw = _build_animated_raw(
+            [
+                (0, "NUKAGE3", "NUKAGE1", 8),
+                (1, "BLODGR4", "BLODGR1", 8),
+            ]
+        )
         from io import BytesIO
+
+        from wadlib.directory import DirectoryEntry
 
         class _FW:
             def __init__(self, d: bytes) -> None:
@@ -108,12 +114,15 @@ class TestSwitchEntry:
 
 class TestSwitchesLump:
     def test_parse(self) -> None:
-        raw = _build_switches_raw([
-            ("SW1BRCOM", "SW2BRCOM", 1),
-            ("SW1GARG", "SW2GARG", 2),
-        ])
-        from wadlib.directory import DirectoryEntry
+        raw = _build_switches_raw(
+            [
+                ("SW1BRCOM", "SW2BRCOM", 1),
+                ("SW1GARG", "SW2GARG", 2),
+            ]
+        )
         from io import BytesIO
+
+        from wadlib.directory import DirectoryEntry
 
         class _FW:
             def __init__(self, d: bytes) -> None:
@@ -135,8 +144,9 @@ class TestRoundTrip:
         ]
         raw = animated_to_bytes(entries)
         # Parse back
-        from wadlib.directory import DirectoryEntry
         from io import BytesIO
+
+        from wadlib.directory import DirectoryEntry
 
         class _FW:
             def __init__(self, d: bytes) -> None:
@@ -154,8 +164,9 @@ class TestRoundTrip:
             SwitchEntry("SW1GARG", "SW2GARG", 3),
         ]
         raw = switches_to_bytes(entries)
-        from wadlib.directory import DirectoryEntry
         from io import BytesIO
+
+        from wadlib.directory import DirectoryEntry
 
         class _FW:
             def __init__(self, d: bytes) -> None:
