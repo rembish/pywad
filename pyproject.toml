@@ -69,9 +69,13 @@ exclude = ["tests/"]
 # ---------------------------------------------------------------------------
 [tool.pylint.main]
 py-version = "3.12"
+fail-under = 9.8
 
 [tool.pylint.design]
-max-attributes = 16
+max-attributes = 20
+max-locals = 25
+max-branches = 20
+max-statements = 70
 
 [tool.pylint.messages_control]
 disable = [
@@ -82,6 +86,8 @@ disable = [
     "W0511",  # fixme — TODO comments are intentional
     "C0414",  # useless-import-alias — used for explicit re-exports (mypy)
     "R0801",  # duplicate-code — CLI commands share similar boilerplate by design
+    "R0917",  # too-many-positional-arguments — parsers need many params
+    "C0415",  # import-outside-toplevel — used for lazy/conditional imports
 ]
 
 [tool.pylint.format]

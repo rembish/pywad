@@ -12,7 +12,8 @@ The format is a series of blocks::
     vertex { x = 0.0; y = 0.0; }
     linedef { v1 = 0; v2 = 1; sidefront = 0; }
     sidedef { sector = 0; texturemiddle = "BRICK1"; }
-    sector { heightfloor = 0; heightceiling = 128; texturefloor = "FLAT1"; textureceiling = "CEIL3_5"; }
+    sector { heightfloor = 0; heightceiling = 128;
+             texturefloor = "FLAT1"; textureceiling = "CEIL3_5"; }
 
 All values are either integers, floats, strings (quoted), or booleans (true/false).
 

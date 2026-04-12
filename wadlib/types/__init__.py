@@ -22,14 +22,12 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from .base import ThingCategory
+from . import doom, heretic, hexen, strife
+from .base import GameModule, ThingCategory
 from .dehacked import DehackedThing
 
 if TYPE_CHECKING:
     from ..wad import WadFile
-
-from . import doom, heretic, hexen, strife
-from .base import GameModule
 
 __all__ = [
     "DehackedThing",

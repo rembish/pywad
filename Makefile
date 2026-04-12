@@ -11,7 +11,7 @@ help:
 install: ## Create .venv and install package with dev dependencies
 	$(PYTHON) -m venv $(VENV)
 	$(BIN)/pip install --upgrade pip
-	$(BIN)/pip install -e ".[dev]"
+	$(BIN)/pip install -e ".[dev,fuse]"
 
 format: ## Auto-format with ruff
 	$(BIN)/ruff format wadlib tests

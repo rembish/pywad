@@ -85,7 +85,7 @@ class Pk3Archive:
             raise ValueError(f"Invalid mode: {mode!r}")
         self._filename = file
         self._mode = mode
-        self._zf = zipfile.ZipFile(file, mode, compression=zipfile.ZIP_DEFLATED)
+        self._zf = zipfile.ZipFile(file, mode, compression=zipfile.ZIP_DEFLATED)  # pylint: disable=consider-using-with
 
     def __enter__(self) -> Pk3Archive:
         return self

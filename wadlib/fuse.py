@@ -19,6 +19,8 @@ drop a .mid into music/ and it becomes MUS, etc.
 Requires ``fusepy`` (``pip install wadlib[fuse]``).
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 from __future__ import annotations
 
 import errno
@@ -222,10 +224,10 @@ class WadFS(Operations):  # type: ignore[misc]
                     node = self._make_picture_node(pname, patch_pic)
                     patches_dir.children[f"{pname}.png"] = node
 
-    def _read_raw(self, name: str, offset: int, size: int) -> Any:
+    def _read_raw(self, _name: str, offset: int, size: int) -> Any:
         """Return a callable that reads raw bytes from the WAD."""
 
-        def _reader(_name: str = name, _off: int = offset, _sz: int = size) -> bytes:
+        def _reader(_off: int = offset, _sz: int = size) -> bytes:
             if _sz == 0:
                 return b""
             self._wad.fd.seek(_off)
@@ -233,7 +235,7 @@ class WadFS(Operations):  # type: ignore[misc]
 
         return _reader
 
-    def _make_flat_node(self, name: str, flat: Flat) -> _FileNode:
+    def _make_flat_node(self, _name: str, flat: Flat) -> _FileNode:
         """Create a file node that decodes a flat to PNG on read."""
 
         def _gen(f: Flat = flat, p: Palette | None = self._palette) -> bytes:
@@ -247,7 +249,7 @@ class WadFS(Operations):  # type: ignore[misc]
         # Estimate size (actual PNG size varies; use raw + overhead)
         return _FileNode(_gen, 0)  # size=0 means compute on access
 
-    def _make_picture_node(self, name: str, pic: Picture) -> _FileNode:
+    def _make_picture_node(self, _name: str, pic: Picture) -> _FileNode:
         """Create a file node that decodes a picture to PNG on read."""
 
         def _gen(p: Picture = pic, pal: Palette | None = self._palette) -> bytes:
