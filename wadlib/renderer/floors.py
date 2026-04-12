@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """Floor / BSP rendering logic extracted from MapRenderer.
 
 All public functions accept a renderer instance (``MapRenderer``) as their

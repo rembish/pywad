@@ -8,7 +8,7 @@ from .data import MF_COUNTITEM, MF_COUNTKILL, STOCK_SPRITE_NAMES
 
 
 @dataclass
-class DehackedThing:
+class DehackedThing:  # pylint: disable=too-many-instance-attributes
     """A Thing block from a DEHACKED patch."""
 
     index: int
@@ -100,7 +100,7 @@ class DehackedSound:
 
 
 @dataclass
-class DehackedMisc:
+class DehackedMisc:  # pylint: disable=too-many-instance-attributes
     """A Misc block from a DEHACKED patch (global game settings)."""
 
     index: int
