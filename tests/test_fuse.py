@@ -5,7 +5,6 @@ These test the WadFS virtual tree and operations without actually mounting.
 
 from __future__ import annotations
 
-import errno
 import os
 import struct
 import tempfile
@@ -23,7 +22,7 @@ def _has_wad(path: str) -> bool:
 
 
 try:
-    from wadlib.fuse import WadFS, _DirNode, _FileNode
+    from wadlib.fuse import WadFS, _DirNode
 
     HAS_FUSE = True
 except (ImportError, OSError):

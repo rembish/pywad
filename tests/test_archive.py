@@ -215,9 +215,8 @@ class TestReadMode:
     def test_getinfo_missing(self) -> None:
         path = self._make_wad()
         try:
-            with WadArchive(path) as wad:
-                with pytest.raises(KeyError):
-                    wad.getinfo("MISSING")
+            with WadArchive(path) as wad, pytest.raises(KeyError):
+                wad.getinfo("MISSING")
         finally:
             os.unlink(path)
 
@@ -233,9 +232,8 @@ class TestReadMode:
     def test_read_missing(self) -> None:
         path = self._make_wad()
         try:
-            with WadArchive(path) as wad:
-                with pytest.raises(KeyError):
-                    wad.read("MISSING")
+            with WadArchive(path) as wad, pytest.raises(KeyError):
+                wad.read("MISSING")
         finally:
             os.unlink(path)
 
@@ -458,8 +456,8 @@ class TestRealWadArchive:
                 orig_playpal = src.read("PLAYPAL")
 
             # Use writer to make a copy, then append
-            from wadlib.writer import WadWriter
             from wadlib.wad import WadFile
+            from wadlib.writer import WadWriter
 
             with WadFile(FREEDOOM2) as wf:
                 w = WadWriter.from_wad(wf)

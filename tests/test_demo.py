@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import struct
 
-from wadlib.lumps.demo import Demo, DemoHeader, DemoTic, parse_demo
+from wadlib.lumps.demo import parse_demo
 
 
 def _build_demo(
@@ -15,15 +15,23 @@ def _build_demo(
     tics: list[tuple[int, int, int, int]] | None = None,
 ) -> bytes:
     """Build a minimal demo from header values and (fwd, side, turn, buttons) tics."""
-    header = bytes([
-        version, skill, episode, map_num,
-        0,  # singleplayer
-        0,  # no respawn
-        0,  # no fast
-        0,  # no nomonsters
-        0,  # player 0 POV
-        1, 0, 0, 0,  # player 1 present, others absent
-    ])
+    header = bytes(
+        [
+            version,
+            skill,
+            episode,
+            map_num,
+            0,  # singleplayer
+            0,  # no respawn
+            0,  # no fast
+            0,  # no nomonsters
+            0,  # player 0 POV
+            1,
+            0,
+            0,
+            0,  # player 1 present, others absent
+        ]
+    )
     body = b""
     if tics:
         for fwd, side, turn, buttons in tics:
@@ -68,12 +76,14 @@ class TestDemoTics:
         assert demo.tics[0][0].forwardmove == 50
 
     def test_movement(self) -> None:
-        data = _build_demo(tics=[
-            (50, 0, 0, 0),     # forward
-            (-25, 0, 0, 0),    # backward
-            (0, 40, 0, 0),     # strafe right
-            (0, -40, 0, 0),    # strafe left
-        ])
+        data = _build_demo(
+            tics=[
+                (50, 0, 0, 0),  # forward
+                (-25, 0, 0, 0),  # backward
+                (0, 40, 0, 0),  # strafe right
+                (0, -40, 0, 0),  # strafe left
+            ]
+        )
         demo = parse_demo(data)
         assert demo.duration_tics == 4
         assert demo.tics[0][0].forwardmove == 50
@@ -82,12 +92,14 @@ class TestDemoTics:
         assert demo.tics[3][0].sidemove == -40
 
     def test_buttons(self) -> None:
-        data = _build_demo(tics=[
-            (0, 0, 0, 1),   # fire
-            (0, 0, 0, 2),   # use
-            (0, 0, 0, 3),   # fire + use
-            (0, 0, 0, 12),  # weapon 3 (bits 2-3 = 3)
-        ])
+        data = _build_demo(
+            tics=[
+                (0, 0, 0, 1),  # fire
+                (0, 0, 0, 2),  # use
+                (0, 0, 0, 3),  # fire + use
+                (0, 0, 0, 12),  # weapon 3 (bits 2-3 = 3)
+            ]
+        )
         demo = parse_demo(data)
         assert demo.tics[0][0].fire
         assert not demo.tics[0][0].use
@@ -97,10 +109,12 @@ class TestDemoTics:
         assert demo.tics[3][0].weapon == 3
 
     def test_turning(self) -> None:
-        data = _build_demo(tics=[
-            (0, 0, 10, 0),   # turn left
-            (0, 0, -10, 0),  # turn right
-        ])
+        data = _build_demo(
+            tics=[
+                (0, 0, 10, 0),  # turn left
+                (0, 0, -10, 0),  # turn right
+            ]
+        )
         demo = parse_demo(data)
         assert demo.tics[0][0].angleturn == 10
         assert demo.tics[1][0].angleturn == -10

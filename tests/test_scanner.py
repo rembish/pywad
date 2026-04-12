@@ -6,7 +6,12 @@ import os
 
 import pytest
 
-from wadlib.scanner import MapUsage, UsageReport, find_unused_flats, find_unused_textures, scan_usage
+from wadlib.scanner import (
+    MapUsage,
+    find_unused_flats,
+    find_unused_textures,
+    scan_usage,
+)
 from wadlib.wad import WadFile
 
 FREEDOOM2 = "wads/freedoom2.wad"

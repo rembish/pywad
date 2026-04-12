@@ -30,13 +30,13 @@ class TestExport3d:
     def test_vertices_present(self) -> None:
         with WadFile(FREEDOOM2) as wad:
             obj = map_to_obj(wad.maps[0])
-            v_lines = [l for l in obj.splitlines() if l.startswith("v ")]
+            v_lines = [line for line in obj.splitlines() if line.startswith("v ")]
             assert len(v_lines) > 100  # MAP01 has many vertices
 
     def test_faces_present(self) -> None:
         with WadFile(FREEDOOM2) as wad:
             obj = map_to_obj(wad.maps[0])
-            f_lines = [l for l in obj.splitlines() if l.startswith("f ")]
+            f_lines = [line for line in obj.splitlines() if line.startswith("f ")]
             assert len(f_lines) > 50
 
     def test_scale_factor(self) -> None:
@@ -44,8 +44,8 @@ class TestExport3d:
             obj1 = map_to_obj(wad.maps[0], scale=1.0)
             obj2 = map_to_obj(wad.maps[0], scale=0.01)
             # Scaled version should have smaller vertex values
-            v1 = [l for l in obj1.splitlines() if l.startswith("v ")][0]
-            v2 = [l for l in obj2.splitlines() if l.startswith("v ")][0]
+            v1 = next(line for line in obj1.splitlines() if line.startswith("v "))
+            v2 = next(line for line in obj2.splitlines() if line.startswith("v "))
             val1 = float(v1.split()[1])
             val2 = float(v2.split()[1])
             assert abs(val2) < abs(val1) or val1 == 0.0
@@ -99,7 +99,7 @@ class TestExport3d:
         """All face vertex indices must reference valid vertices."""
         with WadFile(FREEDOOM2) as wad:
             obj = map_to_obj(wad.maps[0])
-            v_count = sum(1 for l in obj.splitlines() if l.startswith("v "))
+            v_count = sum(1 for line in obj.splitlines() if line.startswith("v "))
             for line in obj.splitlines():
                 if line.startswith("f "):
                     for p in line.split()[1:]:

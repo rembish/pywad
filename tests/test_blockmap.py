@@ -1,6 +1,6 @@
 """Tests for REJECT and BLOCKMAP lumps."""
 
-from wadlib.lumps.blockmap import BlockMap, Reject
+from wadlib.lumps.blockmap import BlockMap, Reject, build_blockmap
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -85,8 +85,6 @@ def test_blockmap_doom2(freedoom2_wad: WadFile) -> None:
 # BLOCKMAP builder
 # ---------------------------------------------------------------------------
 
-from wadlib.lumps.blockmap import build_blockmap
-
 
 def test_build_blockmap_empty() -> None:
     data = build_blockmap([], [])
@@ -100,7 +98,7 @@ def test_build_blockmap_simple_square() -> None:
     # Should parse back as a valid blockmap
     import struct
 
-    ox, oy, cols, rows = struct.unpack("<hhHH", data[:8])
+    _ox, _oy, cols, rows = struct.unpack("<hhHH", data[:8])
     assert cols > 0
     assert rows > 0
     assert cols * rows > 0

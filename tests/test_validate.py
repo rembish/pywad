@@ -8,17 +8,14 @@ import tempfile
 import pytest
 
 from wadlib.archive import WadArchive
-from wadlib.enums import WadType
 from wadlib.validate import (
     InvalidLumpError,
     Severity,
-    ValidationIssue,
     validate_lump,
     validate_name,
     validate_wad,
 )
 from wadlib.writer import WadWriter
-
 
 # ---------------------------------------------------------------------------
 # Name validation
@@ -46,7 +43,9 @@ class TestValidateName:
 
     def test_invalid_chars(self) -> None:
         issues = validate_name("BAD NAME")  # space
-        assert any(i.severity == Severity.ERROR and "invalid characters" in i.message for i in issues)
+        assert any(
+            i.severity == Severity.ERROR and "invalid characters" in i.message for i in issues
+        )
 
     def test_special_chars_allowed(self) -> None:
         # These are valid in WAD names
@@ -214,9 +213,7 @@ class TestValidatePicture:
 class TestValidateEmptyData:
     def test_empty_is_always_valid(self) -> None:
         # Empty data is valid for markers
-        assert not any(
-            i.severity == Severity.ERROR for i in validate_lump("MAP01", b"")
-        )
+        assert not any(i.severity == Severity.ERROR for i in validate_lump("MAP01", b""))
 
     def test_unknown_lump_no_errors(self) -> None:
         # Unknown lump names with arbitrary data should not error
@@ -249,27 +246,21 @@ class TestValidateWad:
         w.add_lump("FLAT1", b"\x00" * 4096)
         # Missing F_END
         issues = validate_wad(w)
-        assert any(
-            i.severity == Severity.ERROR and "F_END" in i.message for i in issues
-        )
+        assert any(i.severity == Severity.ERROR and "F_END" in i.message for i in issues)
 
     def test_unpaired_namespace_end(self) -> None:
         w = WadWriter()
         w.add_marker("S_END")
         # Missing S_START
         issues = validate_wad(w)
-        assert any(
-            i.severity == Severity.ERROR and "S_START" in i.message for i in issues
-        )
+        assert any(i.severity == Severity.ERROR and "S_START" in i.message for i in issues)
 
     def test_reversed_namespace(self) -> None:
         w = WadWriter()
         w.add_marker("F_END")
         w.add_marker("F_START")
         issues = validate_wad(w)
-        assert any(
-            i.severity == Severity.ERROR and "appears after" in i.message for i in issues
-        )
+        assert any(i.severity == Severity.ERROR and "appears after" in i.message for i in issues)
 
     def test_orphan_map_data(self) -> None:
         w = WadWriter()
@@ -290,9 +281,8 @@ class TestArchiveValidation:
         with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
             path = f.name
         try:
-            with WadArchive(path, "w") as wad:
-                with pytest.raises(InvalidLumpError):
-                    wad.writestr("TOOLONGNAME", b"x")
+            with WadArchive(path, "w") as wad, pytest.raises(InvalidLumpError):
+                wad.writestr("TOOLONGNAME", b"x")
         finally:
             os.unlink(path)
 
@@ -300,9 +290,11 @@ class TestArchiveValidation:
         with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
             path = f.name
         try:
-            with WadArchive(path, "w") as wad:
-                with pytest.raises(InvalidLumpError, match="multiple of 10"):
-                    wad.writestr("THINGS", b"\x00" * 7)
+            with (
+                WadArchive(path, "w") as wad,
+                pytest.raises(InvalidLumpError, match="multiple of 10"),
+            ):
+                wad.writestr("THINGS", b"\x00" * 7)
         finally:
             os.unlink(path)
 
