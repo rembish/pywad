@@ -67,6 +67,7 @@ class WadArchive:
         self._mode: str = mode
         self._closed: bool = False
         self._iter_index: int = 0
+        self._iter_cache: list[LumpInfo] = []
 
         if mode == "r":
             self._reader: WadFile | None = WadFile(file)
@@ -207,14 +208,14 @@ class WadArchive:
 
     def __iter__(self) -> WadArchive:
         self._check_readable()
+        self._iter_cache = self.infolist()
         self._iter_index = 0
         return self
 
     def __next__(self) -> LumpInfo:
-        infos = self.infolist()
-        if self._iter_index >= len(infos):
+        if self._iter_index >= len(self._iter_cache):
             raise StopIteration
-        info = infos[self._iter_index]
+        info = self._iter_cache[self._iter_index]
         self._iter_index += 1
         return info
 

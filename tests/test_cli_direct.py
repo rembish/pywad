@@ -397,6 +397,7 @@ def test_export_map_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     assert exc.value.code == 1
 
 
+@pytest.mark.slow
 def test_export_map_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     from wadlib.cli.commands import export_map
 
@@ -421,6 +422,7 @@ def test_export_map_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert "Exported" in out
 
 
+@pytest.mark.slow
 def test_export_map_all_no_map_arg(tmp_path: Path) -> None:
     """--all with no positional args uses cwd-equivalent (output arg)."""
     from wadlib.cli.commands import export_map
@@ -532,6 +534,7 @@ def test_export_sprite_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert exc.value.code == 1
 
 
+@pytest.mark.slow
 def test_export_sprite_all(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     from wadlib.cli.commands import export_sprite
 

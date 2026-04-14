@@ -459,6 +459,7 @@ def test_wad_fontb_empty_on_doom() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 @needs_f1
 def test_floor_rendering_executes() -> None:
     """Run show_floors=True on a tiny scale to exercise BSP clipping code."""
@@ -476,6 +477,7 @@ def test_floor_rendering_executes() -> None:
         assert img.size[0] > 0 and img.size[1] > 0
 
 
+@pytest.mark.slow
 @needs_f2
 def test_floor_rendering_freedoom2() -> None:
     """Floor rendering on freedoom2 MAP01 at tiny scale."""
@@ -492,6 +494,7 @@ def test_floor_rendering_freedoom2() -> None:
         assert img is not None
 
 
+@pytest.mark.slow
 @needs_f1
 def test_floor_rendering_alpha_mode() -> None:
     """Floor rendering with alpha=True."""

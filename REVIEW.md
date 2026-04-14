@@ -5,18 +5,23 @@ Response date: 2026-04-14
 
 ## Overall Score
 
-**7.0 / 10**
+**7.4 / 10**
 
 This is a serious and useful Doom WAD library, not a toy project. It has a broad
 reader, writer, archive API, CLI, many typed lump parsers, real WAD fixtures, and
 good local quality gates. For vanilla Doom, Doom II, Heretic-style IWAD/PWAD
 inspection and many export workflows, it is already useful.
 
-The score is not higher because the core parser is not yet hardened enough for
-untrusted or heavily non-standard WADs, duplicate lump precedence appears wrong
-for Doom engine semantics, and the architecture has started to mix low-level WAD
-IO, resource lookup, format decoding, source-port support, and CLI-oriented
-features in ways that will make future format coverage harder.
+The score has improved from the initial 7.0 because the response commit fixed
+several high-value issues: basic WAD bounds checks, `WadFile` duplicate lookup
+precedence, atomic writer saves, no commit-on-exception in archive context
+managers, typed package metadata, and basic UDMF map attachment.
+
+The score is not higher because the hardening is still incomplete, some claims
+in the response overstate what is now guaranteed, `WadArchive` still disagrees
+with `WadFile` on duplicate lump lookup, and the architecture still mixes
+low-level WAD IO, resource lookup, format decoding, source-port support, and
+CLI-oriented features in ways that will make future format coverage harder.
 
 As a classic WAD inspection toolkit: **good**.
 As a robust Python library for arbitrary Doom-engine content: **not there yet**.
@@ -48,6 +53,26 @@ Results:
 - Mypy: passed, no issues in 102 source files.
 - Pylint: passed the configured threshold, rating 9.99/10. Remaining findings are mostly complexity warnings in export/render/format parser modules.
 - Full `.venv/bin/pytest` was intentionally stopped around 32% because the suite is large; no `.venv` failures were observed before stopping.
+
+Follow-up verification after the response commit:
+
+```bash
+.venv/bin/pytest tests/test_header.py tests/test_directory.py tests/test_maps.py tests/test_wad_accessors.py tests/test_archive.py tests/test_writer.py --no-cov -q
+.venv/bin/ruff check wadlib tests
+.venv/bin/mypy wadlib
+.venv/bin/pylint wadlib
+```
+
+Results:
+
+- Focused tests: passed.
+- Ruff: passed.
+- Mypy: passed, no issues in 102 source files.
+- Pylint: passed at 9.98/10.
+- Manual adversarial probes still found gaps: non-ASCII malformed magic and
+  non-ASCII directory names raise `UnicodeDecodeError`, and `WadArchive.read`
+  still returns the first duplicate lump while `WadFile.find_lump` returns the
+  last.
 
 ## What Is Good
 
@@ -106,7 +131,7 @@ for round-trip workflows.
 
 ## Major Problems
 
-### 1. Core WAD Parsing Is Not Hardened — FIXED
+### 1. Core WAD Parsing Is Not Hardened — PARTIALLY FIXED
 
 ~~The biggest issue is malformed input handling.~~
 
@@ -132,11 +157,20 @@ not exceed the file size. `WadFile.directory` validates each lump's
 `offset + size` against the file size before creating a `DirectoryEntry`.
 All four new exception classes are exported from the package `__init__`.
 
-Remaining: `BaseLump`-level parsers (picture column offsets, texture patch
-counts) still trust their input. That hardening is tracked under the medium
-priority items below.
+Remaining:
 
-### 2. Duplicate Lump Precedence Is Probably Wrong — FIXED
+- `magic_raw.decode("ascii")` still happens before raw magic validation. A file
+  with non-ASCII magic such as `b"\xffWAD"` raises `UnicodeDecodeError`, not
+  `WadFormatError`.
+- `DirectoryEntry` still decodes lump names with strict ASCII. A directory entry
+  with non-ASCII bytes raises `UnicodeDecodeError`, not `InvalidDirectoryError`.
+- `BaseLump`-level parsers still trust many internal offsets and counts,
+  including picture column offsets and texture patch counts.
+
+So the response fixed important bounds checks, but it did not yet deliver the
+documented guarantee that malformed input consistently raises domain exceptions.
+
+### 2. Duplicate Lump Precedence Is Probably Wrong — PARTIALLY FIXED
 
 ~~Doom-engine lump lookup commonly treats later-loaded lumps as higher priority.
 Within a single WAD, that usually means scanning backward so the last matching
@@ -156,9 +190,15 @@ order (`reversed(wad.directory)`) so the last entry with a given name wins,
 matching Doom's `W_CheckNumForName` semantics. The method docstring documents
 this behavior. All existing tests continue to pass.
 
-`WadArchive.read` still scans forward (it operates on the writer's in-memory
-lump list, where "last added" is already the canonical entry for append
-workflows). Documenting or aligning this is a medium priority task.
+Still open: `WadArchive.read` scans forward in read mode, so it returns the
+first duplicate lump. A manual check with two `DUP` lumps showed:
+
+- `WadFile.find_lump("DUP")` returned the last lump: `b"last"`.
+- `WadArchive.read("DUP")` returned the first lump: `b"first"`.
+
+That inconsistency is surprising because both classes are public ways to read
+WAD lump data. Either align `WadArchive` with Doom lookup semantics or document
+that `WadArchive` intentionally exposes first-entry archive semantics.
 
 ### 3. UDMF and PK3 Support Exists, But Is Not Integrated — PARTIALLY FIXED
 
@@ -177,7 +217,11 @@ same map experience as classic binary maps.~~
 `WadFile.maps` with `map_entry.udmf` populated.
 
 Still missing: `Pk3Archive` does not present the same layered PWAD-compatible
-resource API as `WadFile`. This is a larger architectural item.
+resource API as `WadFile`. Also, `UdmfLump` inherits `BaseLump.__len__`, so
+common user code such as `if map_entry.udmf:` or `repr(map_entry.udmf)` can
+raise `AssertionError` because `UdmfLump` has no `_row_format`. Use
+`is not None` in examples and consider adding a safe `BaseLump.__bool__` or a
+byte-lump base class for non-row lumps.
 
 ### 4. Architecture Is Becoming Too Centralized In `WadFile`
 
@@ -330,14 +374,20 @@ special-case logic in `WadFile`.
 
 ### High Priority
 
-1. ~~Add read-time validation for WAD header, directory table, lump offsets, and
-   lump sizes.~~ **DONE**
-2. ~~Replace incidental parser failures with a small domain exception hierarchy.~~ **DONE**
-3. ~~Fix and document duplicate lump precedence.~~ **DONE**
+1. Add read-time validation for WAD header, directory table, lump offsets, and
+   lump sizes. **PARTIAL:** basic bounds checks are done, but non-ASCII malformed
+   magic and names still escape as `UnicodeDecodeError`.
+2. Replace incidental parser failures with a small domain exception hierarchy.
+   **PARTIAL:** hierarchy exists, but malformed inputs are not consistently
+   wrapped yet.
+3. Fix and document duplicate lump precedence. **PARTIAL:** fixed for `WadFile`,
+   still inconsistent in `WadArchive`.
 4. ~~Make `WadArchive` append/write mode commit only on successful context exit.~~ **DONE**
 5. ~~Use atomic file replacement when saving modified WADs.~~ **DONE**
-6. ~~Integrate UDMF map blocks into `WadFile.maps` or clearly mark UDMF as
-   standalone-only.~~ **DONE** (UDMF maps now integrated via `map_entry.udmf`)
+6. Integrate UDMF map blocks into `WadFile.maps` or clearly mark UDMF as
+   standalone-only. **MOSTLY DONE:** UDMF maps now integrate via
+   `map_entry.udmf`, but the `UdmfLump` truthiness/repr issue should be fixed
+   before calling this polished.
 
 ### Medium Priority
 
@@ -364,10 +414,17 @@ special-case logic in `WadFile`.
 investment, and a surprisingly broad feature set. The project is strongest as a
 developer tool for inspecting, exporting, and round-tripping known-good WADs.
 
-All six high-priority items from this review have been addressed. The main
-remaining gap is the architectural split (items 4 and 3 above) and the absence
-of adversarial read-time tests. With those, this project would be ready to call
-production-grade for arbitrary third-party WADs.
+The response commit materially improved the project. It fully addressed
+transaction-safe context-manager behavior, atomic writer saves, package typing
+metadata, and the README badge. It mostly addressed basic WAD directory
+hardening and UDMF attachment. It partially addressed duplicate lookup
+semantics, but `WadArchive` still needs a decision.
+
+Do not call the hardening complete yet. The project still needs adversarial
+read-time tests for malformed magic, malformed names, truncated directory data,
+out-of-range lump offsets, duplicate lump lookup, and non-row lump truthiness.
+Those tests should be added before claiming predictable domain exceptions for
+malformed WADs.
 
 The project should be considered **approaching release quality** for classic WAD
 workflows, and **beta** for modern GZDoom/UDMF/PK3 content.
