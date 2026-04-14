@@ -1,5 +1,22 @@
-from .archive import LumpInfo as LumpInfo
-from .archive import WadArchive as WadArchive
-from .validate import InvalidLumpError as InvalidLumpError
-from .wad import WadFile as WadFile
-from .writer import WadWriter as WadWriter
+from .archive import LumpInfo, WadArchive
+from .exceptions import (
+    BadHeaderWadException,
+    InvalidDirectoryError,
+    TruncatedWadError,
+    WadFormatError,
+)
+from .validate import InvalidLumpError
+from .wad import WadFile
+from .writer import WadWriter
+
+__all__ = [
+    "BadHeaderWadException",
+    "InvalidDirectoryError",
+    "InvalidLumpError",
+    "LumpInfo",
+    "TruncatedWadError",
+    "WadArchive",
+    "WadFile",
+    "WadFormatError",
+    "WadWriter",
+]

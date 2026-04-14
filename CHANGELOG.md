@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.89] - 2026-04-14
+
+### Added
+
+- **Exception hierarchy**: `WadFormatError`, `TruncatedWadError`,
+  `InvalidDirectoryError` in `wadlib/exceptions.py`; all exported from the
+  package root.  Callers now get predictable domain exceptions instead of
+  incidental `struct.error` / `AssertionError` on malformed input.
+- **Read-time bounds validation**: `WadFile.__init__` checks the file is at
+  least 12 bytes and that the directory table lies within the file before
+  parsing.  `WadFile.directory` validates each lump's `offset + size` against
+  the file size.
+- **UDMF map integration**: `MapData` enum gained `TEXTMAP` and `ENDMAP`.
+  `BaseMapEntry` gained a `udmf: UdmfLump | None` field wired through
+  `_DOOM_DISPATCH`, so UDMF maps opened via `WadFile` now appear in
+  `WadFile.maps` with `map_entry.udmf` populated.
+- `wadlib/py.typed` marker added so downstream type-checkers treat the package
+  as typed.
+- `pyproject.toml`: classifiers, keywords, and `[project.urls]` added.
+
+### Changed
+
+- `WadFile.find_lump` now scans each WAD's directory in **reverse** so the last
+  entry with a given name wins — matching Doom's `W_CheckNumForName` semantics.
+- `WadArchive.__exit__` no longer commits writes when an exception propagates
+  out of the `with` block; the pending writer is discarded instead.
+- `WadWriter.save` is now **atomic**: data is written to a temporary file in the
+  same directory and renamed over the target with `os.replace()`.
+- `wadlib/__init__.py` switched from `import X as X` re-export aliases to plain
+  imports with an explicit `__all__` list.
+- README CI badge URL corrected (`arembish/pywad` → `arembish/wadlib`).
+
 ## [0.0.88] - 2026-04-11
 
 ### Added

@@ -25,3 +25,5 @@ class MapData(ExtendedEnum):
     BLOCKMAP = "Map Blockmap"
     BEHAVIOR = "Map Compiled Script"
     ZNODES = "Map Extended BSP Nodes"
+    TEXTMAP = "UDMF Map Text"
+    ENDMAP = "UDMF Map End Marker"

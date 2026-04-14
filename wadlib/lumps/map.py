@@ -16,6 +16,7 @@ from .sectors import Sectors
 from .segs import Segs, SubSectors
 from .sidedefs import SideDefs
 from .things import Things
+from .udmf import UdmfLump
 from .vertices import Vertices
 from .znodes import ZNodesLump, ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNodVertex
 
@@ -47,6 +48,7 @@ class BaseMapEntry(BaseLump[Any]):
         self.reject: Reject | None = None
         self.blockmap: BlockMap | None = None
         self.behavior: object | None = None  # BehaviorLump if Hexen/ZDoom ACS
+        self.udmf: UdmfLump | None = None  # TEXTMAP lump if UDMF format
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}>"
@@ -106,6 +108,9 @@ class BaseMapEntry(BaseLump[Any]):
 
     def attach_behavior(self, behavior: object) -> None:
         self.behavior = behavior
+
+    def attach_textmap(self, udmf: UdmfLump) -> None:
+        self.udmf = udmf
 
     def attach_znodes(self, znodes: ZNodesLump) -> None:
         """Replace vanilla BSP data with ZNOD/XNOD extended nodes.

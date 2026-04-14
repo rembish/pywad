@@ -4,12 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wadlib"
-version = "0.0.88"
+version = "0.0.89"
 description = "Python library to read, write, and analyse id Doom WAD files"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
 license = { text = "BSD-2-Clause" }
 requires-python = ">=3.12"
 dependencies = ["Pillow>=9.2"]
+keywords = ["doom", "wad", "game", "id-software", "modding"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment :: First Person Shooters",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/arembish/wadlib"
+Repository = "https://github.com/arembish/wadlib"
+"Bug Tracker" = "https://github.com/arembish/wadlib/issues"
 
 [project.scripts]
 wadcli = "wadlib.cli:main"

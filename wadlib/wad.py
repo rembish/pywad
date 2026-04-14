@@ -1,7 +1,7 @@
 import re
 from collections.abc import Callable
 from functools import cached_property
-from io import SEEK_SET
+from io import SEEK_END, SEEK_SET
 from struct import calcsize, unpack
 from typing import Any, BinaryIO
 
@@ -13,7 +13,7 @@ from .constants import (
 )
 from .directory import DirectoryEntry
 from .enums import MapData, WadType
-from .exceptions import BadHeaderWadException
+from .exceptions import BadHeaderWadException, InvalidDirectoryError, TruncatedWadError
 from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
 from .lumps.behavior import BehaviorLump
@@ -52,6 +52,7 @@ from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
+from .lumps.udmf import UdmfLump
 from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
 from .lumps.znodes import ZNodesLump
@@ -72,6 +73,7 @@ _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
     "BLOCKMAP": ("attach_blockmap", BlockMap),
     "ZNODES": ("attach_znodes", ZNodesLump),
     "BEHAVIOR": ("attach_behavior", BehaviorLump),
+    "TEXTMAP": ("attach_textmap", UdmfLump),
 }
 
 # Hexen overrides only differ for THINGS and LINEDEFS
@@ -103,12 +105,31 @@ class WadFile:  # pylint: disable=too-many-public-methods
     def __init__(self, filename: str) -> None:
         self.fd = open(filename, "rb")  # noqa: SIM115  # pylint: disable=consider-using-with
         try:
+            header_size = calcsize(HEADER_FORMAT)
+            raw_header = self.fd.read(header_size)
+            if len(raw_header) < header_size:
+                raise TruncatedWadError(
+                    f"File too short for WAD header: {len(raw_header)} bytes "
+                    f"(expected {header_size})"
+                )
             magic_raw, self.directory_size, self._directory_offset = unpack(
-                HEADER_FORMAT, self.fd.read(calcsize(HEADER_FORMAT))
+                HEADER_FORMAT, raw_header
             )
             magic = magic_raw.decode("ascii")
             if magic not in WadType.names():
                 raise BadHeaderWadException(magic)
+
+            # Validate that the directory table lies within the file.
+            self.fd.seek(0, SEEK_END)
+            file_size = self.fd.tell()
+            dir_end = self._directory_offset + self.directory_size * calcsize(
+                DIRECTORY_ENTRY_FORMAT
+            )
+            if self._directory_offset < 0 or dir_end > file_size:
+                raise InvalidDirectoryError(
+                    f"Directory table out of bounds: offset={self._directory_offset}, "
+                    f"entries={self.directory_size}, file_size={file_size}"
+                )
         except Exception:
             self.fd.close()
             raise
@@ -157,11 +178,25 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     @cached_property
     def directory(self) -> list[DirectoryEntry]:
+        self.fd.seek(0, SEEK_END)
+        file_size = self.fd.tell()
+
         self.fd.seek(self._directory_offset, SEEK_SET)
+        entry_size = calcsize(DIRECTORY_ENTRY_FORMAT)
 
         entries = []
         for _ in range(self.directory_size):
-            lump = unpack(DIRECTORY_ENTRY_FORMAT, self.fd.read(calcsize(DIRECTORY_ENTRY_FORMAT)))
+            raw = self.fd.read(entry_size)
+            if len(raw) < entry_size:
+                raise TruncatedWadError("Unexpected end of file while reading WAD directory")
+            lump = unpack(DIRECTORY_ENTRY_FORMAT, raw)
+            offset, size, name = lump
+            if size > 0 and (offset < 0 or offset + size > file_size):
+                decoded_name = name.rstrip(b"\x00").decode("ascii", errors="replace")
+                raise InvalidDirectoryError(
+                    f"Lump {decoded_name!r} data out of bounds: "
+                    f"offset={offset}, size={size}, file_size={file_size}"
+                )
             entries.append(DirectoryEntry(self, *lump))
         return entries
 
@@ -218,9 +253,11 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
         PWADs are checked newest-first, then the base WAD -- mirroring how
         the Doom engine resolves lump names when multiple WADs are loaded.
+        Within each WAD the directory is scanned in reverse so the last entry
+        with a given name wins, matching Doom's ``W_CheckNumForName`` semantics.
         """
         for wad in self._all_wads:
-            for entry in wad.directory:
+            for entry in reversed(wad.directory):
                 if entry.name == name:
                     return entry
         return None

@@ -1,6 +1,6 @@
 # wadlib
 
-![CI](https://github.com/arembish/pywad/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/arembish/wadlib/actions/workflows/ci.yml/badge.svg)
 
 Python 3.12+ library and CLI toolkit for reading, writing, and analysing
 id Software WAD files (Doom, Doom II, Heretic, Hexen, Strife, and derivative

@@ -13,6 +13,8 @@ WAD binary layout:
 
 from __future__ import annotations
 
+import os
+import tempfile
 from struct import pack
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -330,9 +332,22 @@ class WadWriter:
         return bytes(header) + bytes(lump_blob) + bytes(dir_bytes)
 
     def save(self, filename: str) -> None:
-        """Write the WAD to a file."""
-        with open(filename, "wb") as f:
-            f.write(self.to_bytes())
+        """Write the WAD to *filename* atomically.
+
+        Data is first written to a temporary file in the same directory, then
+        renamed over the target with ``os.replace()``.  If the write fails the
+        original file is left untouched.
+        """
+        data = self.to_bytes()
+        dir_path = os.path.dirname(os.path.abspath(filename))
+        fd, tmp_path = tempfile.mkstemp(dir=dir_path, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            os.replace(tmp_path, filename)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
 
     # -- Dunder helpers ------------------------------------------------------
 

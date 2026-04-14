@@ -103,7 +103,14 @@ class WadArchive:
         return self
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        self.close()
+        if exc_type is not None:
+            # An exception occurred inside the `with` block — discard pending
+            # writes so a half-finished modification is never committed.
+            self._closed = True
+            if self._reader is not None:
+                self._reader.close()
+        else:
+            self.close()
 
     def close(self) -> None:
         """Flush pending writes (if writable) and release resources."""
