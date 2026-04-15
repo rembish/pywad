@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import struct
 
-from wadlib.lumps.behavior import assemble_acs, build_behavior, disassemble_acs, parse_behavior
+from wadlib.lumps.acs import assemble_acs, build_behavior, disassemble_acs
+from wadlib.lumps.behavior import parse_behavior
 from wadlib.lumps.endoom import build_endoom, build_endoom_ansi
 from wadlib.lumps.glnodes import (
     GlNode,

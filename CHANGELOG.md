@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.98] - 2026-04-15
+
+### Added
+
+- **`wadlib/lumps/acs.py`**: new module extracted from `behavior.py` containing
+  the ACS assembler/disassembler tooling (`_ACS_OPCODES`, `disassemble_acs`,
+  `assemble_acs`, `build_behavior`). The lump parser (`parse_behavior`,
+  `BehaviorInfo`, `AcsScript`, `BehaviorLump`) remains in `behavior.py`.
+  `BehaviorLump.disassemble` now lazy-imports `disassemble_acs` from `acs.py`.
+
+### Changed
+
+- **`tests/test_write_gaps.py`**: updated imports — `assemble_acs`,
+  `disassemble_acs`, `build_behavior` now imported from `wadlib.lumps.acs`;
+  `parse_behavior` remains imported from `wadlib.lumps.behavior`.
+- **`docs/api.md`**: added `maps_in_order`, `language`, `decorate` to
+  the WadFile table; new Boom/MBF21, LANGUAGE, and DECORATE API sections;
+  `LineDefinition.generalized` and `Sector.special_name` noted in Data Classes.
+- **`docs/guides.md`**: three new guide sections: Reading DECORATE Actors,
+  Working with LANGUAGE Strings, Decoding Boom Generalized Linedefs.
+
 ## [0.0.97] - 2026-04-15
 
 ### Added
