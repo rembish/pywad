@@ -10,46 +10,25 @@ This section is for the next feature direction after the current correctness,
 docs, and fuzzing cleanup lands. It intentionally skips the short-term fixes
 already in progress.
 
-### Resource stack / `ResourceResolver` v2
-The next large feature should be a first-class resource stack rather than another
-standalone lump parser. Modern Doom content is defined by load order and lookup
-rules as much as by file formats: IWAD + PWAD layers, duplicate names, PK3 paths,
-PK3 namespaces, truncated WAD-style lump names, shadowing, filters, and embedded
-maps.
+### Resource stack / `ResourceResolver` v2 ✓ core done (v0.2.4)
 
-Target goals:
-- One resolver that can combine WAD, PWAD, PK3, and in-memory sources.
-- Explicit constructors for both priority order and Doom load order:
-  - `ResourceResolver.priority_order(*sources)` where first match wins.
-  - `ResourceResolver.doom_load_order(base, *patches)` where later patches
-    shadow earlier/base resources.
-- A resource metadata object, e.g. `ResourceRef`, with:
-  - canonical name
-  - original path or lump name
-  - source path/archive identity
-  - source index/load-order index
-  - directory or ZIP entry index
-  - size
-  - namespace/category (`flats`, `sprites`, `sounds`, `maps`, etc.)
-  - lookup kind (`wad-name`, `pk3-path`, `pk3-lump-name`)
-  - raw byte loader
-  - collision/shadowing information
-- Public APIs that make shadowing and collisions inspectable:
-  - `find(name) -> ResourceRef | None`
-  - `find_all(name) -> list[ResourceRef]`
-  - `read(name) -> bytes | None`
-  - `iter_resources(category=None)`
-  - `shadowed(name)` / `collisions()`
-- Keep PK3 path lookup canonical. WAD-style 8-character lump-name lookup over
-  PK3 entries should be available, but clearly marked as lossy when names collide.
+Core APIs landed:
+- `ResourceResolver(WAD | PK3, ...)` — priority-order constructor (first wins).
+- `ResourceResolver.doom_load_order(base, *patches)` — last patch wins, matching
+  `doom -iwad base -file p1 p2` semantics.
+- `find_all(name) -> list[ResourceRef]` — all matches, highest priority first.
+- `ResourceRef` frozen dataclass: `name`, `archive`, `source`, `read_bytes()`.
+- `read(name) -> bytes | None` and `find_source(name) -> LumpSource | None`.
 
-Acceptance tests should cover:
-- duplicate lumps inside one WAD
-- IWAD + one PWAD + two PWADs with override order
-- WAD + PK3 mixed lookup
-- PK3 entries that collide after uppercasing/truncation
-- path-preserving PK3 lookup
-- `find_all()` returning shadowed resources in deterministic order
+Remaining goals (not yet implemented):
+- `iter_resources(category=None)` — iterate all unique resources across the stack.
+- `shadowed(name)` / `collisions()` — explicit shadowing/collision inspection APIs.
+- Full `ResourceRef` metadata: size, namespace/category, lookup kind
+  (`wad-name`, `pk3-path`, `pk3-lump-name`), load-order index.
+- Collision-safe PK3 APIs: `Pk3Archive.find_resources(name)` returning all matches
+  within a single archive (entries that collide after uppercasing/truncation).
+- Keep PK3 path lookup canonical; WAD-style lump-name lookup should be explicitly
+  marked as lossy when names collide.
 
 ### Unified map assembly over generic resources
 Once resource lookup is source-agnostic, map assembly should work over generic
@@ -137,11 +116,14 @@ Implementing this requires:
 - PNG/TGA/JPG image decoding for flats, sprites, textures ✓ done (v0.1.9)
 - Embedded WAD-format maps inside `maps/MAP01.wad` entries
 
-### UDMF map format ✓ done (v0.0.89)
+### UDMF map format ✓ done (v0.0.89, tokenizer hardened v0.2.2)
 Universal Doom Map Format (text-based, used by myhouse.pk3 and most modern maps).
 `MapData` now includes `TEXTMAP`/`ENDMAP`; UDMF maps attach to `WadFile.maps`
 as `map_entry.udmf` (`UdmfLump`).  Full property parsing (vertices, linedefs,
 sidedefs, sectors, things) via `UdmfLump`.
+Tokenizer hardened in v0.2.2: hex integer literals (`0xFF`, `0x1A`) and escaped
+quotes inside strings (`\"`, `\\`) are now handled correctly.
+Not yet covered: stricter namespace-specific validation, semantic checks.
 
 ### ZNODES compressed BSP ✓ done (v0.0.47)
 Modern PWADs may use `ZNODES` instead of `NODES`/`SSECTORS`/`SEGS`.
@@ -260,11 +242,13 @@ click things to see their type, hover sectors to see their properties.
 and `Demo.player_path()` for reconstructing approximate player movement from
 recorded inputs.  Round-trip `to_bytes()` serialisation is also supported.
 
-### DECORATE / ZScript stub parser ✓ done (v0.0.89+)
+### DECORATE / ZScript stub parser ✓ done (v0.0.89+, inheritance v0.2.2)
 `wadlib/lumps/decorate.py` provides `parse_decorate`, `DecorateActor`
 (name, parent, doomednum, properties, flags, states), and `DecorateLump`.
 `wadcli list actors` surfaces all actors with their DoomEdNums.
-Not yet covered: full ZScript, inheritance resolution, expression evaluation.
+`resolve_inheritance(actors)` added in v0.2.2: fills inherited properties, flags,
+antiflags, states, and doomednum from parent chains; cycles are detected and broken.
+Not yet covered: full ZScript, include handling, expression evaluation.
 
 ### Packaging and publishing
 - Publish to PyPI once API is stable
