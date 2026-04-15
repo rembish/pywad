@@ -94,10 +94,10 @@ class PNames(BaseLump[Any]):
             return []
         try:
             self.seek(0)
-            (count,) = unpack("<I", self.read(4))
+            (count,) = unpack("<I", self.read(4) or b"")
             result: list[str] = []
             for _ in range(count):
-                raw = self.read(8)
+                raw = self.read(8) or b""
                 result.append(raw.rstrip(b"\x00").decode("ascii", errors="replace"))
             return result
         except (struct.error, EOFError) as exc:
@@ -108,7 +108,7 @@ class PNames(BaseLump[Any]):
             return 0
         try:
             self.seek(0)
-            (count,) = unpack("<I", self.read(4))
+            (count,) = unpack("<I", self.read(4) or b"")
             return int(count)
         except (struct.error, EOFError):
             return 0
@@ -120,12 +120,12 @@ class TextureList(BaseLump[Any]):
     def _read_texture_at(self, offset: int) -> TextureDef:  # pylint: disable=too-many-locals
         try:
             self.seek(offset)
-            hdr_raw = self.read(_TEX_HDR_SIZE)
+            hdr_raw = self.read(_TEX_HDR_SIZE) or b""
             name_raw, _masked, width, height, _coldir, patch_count = unpack(_TEX_HDR_FMT, hdr_raw)
             name = name_raw.rstrip(b"\x00").decode("ascii", errors="replace")
             patches: list[PatchDescriptor] = []
             for _ in range(patch_count):
-                pd_raw = self.read(_PATCH_DESC_SIZE)
+                pd_raw = self.read(_PATCH_DESC_SIZE) or b""
                 ox, oy, pidx, _step, _cmap = unpack(_PATCH_DESC_FMT, pd_raw)
                 patches.append(PatchDescriptor(int(ox), int(oy), int(pidx)))
             return TextureDef(name, int(width), int(height), patches)
@@ -139,8 +139,8 @@ class TextureList(BaseLump[Any]):
             return []
         try:
             self.seek(0)
-            (count,) = unpack("<I", self.read(4))
-            offsets = list(unpack(f"<{int(count)}I", self.read(int(count) * 4)))
+            (count,) = unpack("<I", self.read(4) or b"")
+            offsets = list(unpack(f"<{int(count)}I", self.read(int(count) * 4) or b""))
         except (struct.error, EOFError) as exc:
             raise CorruptLumpError(f"{self.name!r}: truncated texture lump") from exc
         return [self._read_texture_at(int(off)) for off in offsets]
@@ -150,7 +150,7 @@ class TextureList(BaseLump[Any]):
             return 0
         try:
             self.seek(0)
-            (count,) = unpack("<I", self.read(4))
+            (count,) = unpack("<I", self.read(4) or b"")
             return int(count)
         except (struct.error, EOFError):
             return 0

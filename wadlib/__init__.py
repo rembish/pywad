@@ -16,15 +16,18 @@ from .lumps.boom import (
     decode_generalized,
 )
 from .lumps.decorate import DecorateActor, DecorateLump
+from .registry import LUMP_REGISTRY, DecoderRegistry
 from .validate import InvalidLumpError
 from .wad import WadFile
 from .writer import WadWriter
 
 __all__ = [
     "DOOM_SECTOR_SPECIALS",
+    "LUMP_REGISTRY",
     "MBF21_LINEDEF_FLAGS",
     "BadHeaderWadException",
     "CorruptLumpError",
+    "DecoderRegistry",
     "DecorateActor",
     "DecorateLump",
     "GeneralizedCategory",

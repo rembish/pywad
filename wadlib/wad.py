@@ -1,5 +1,4 @@
 import re
-from collections.abc import Callable
 from functools import cached_property
 from io import SEEK_END, SEEK_SET
 from struct import calcsize, unpack
@@ -16,21 +15,16 @@ from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException, InvalidDirectoryError, TruncatedWadError
 from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
-from .lumps.behavior import BehaviorLump
-from .lumps.blockmap import BlockMap, Reject
 from .lumps.colormap import ColormapLump
 from .lumps.decorate import DecorateLump
 from .lumps.dehacked import DehackedFile, DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
-from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.language import LanguageLump
-from .lumps.lines import Lines
 from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
 from .lumps.mapinfo import MapInfoLump
 from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
 from .lumps.mus import _MUS_MAGIC, Mus
-from .lumps.nodes import Nodes
 from .lumps.ogg import (
     MIDI_MAGIC,
     MP3_ID3_MAGIC,
@@ -44,60 +38,15 @@ from .lumps.ogg import (
 )
 from .lumps.picture import Picture
 from .lumps.playpal import PlayPal
-from .lumps.sectors import Sectors
-from .lumps.segs import Segs, SubSectors
-from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
 from .lumps.sndseq import SndSeqLump
 from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
-from .lumps.things import Things
-from .lumps.udmf import UdmfLump
-from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
-from .lumps.znodes import ZNodesLump
+from .registry import attach_map_lumps
 
 _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
-
-# Doom-format lump dispatch: name -> (attach method, constructor)
-_DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
-    "THINGS": ("attach_things", Things),
-    "VERTEXES": ("attach_vertices", Vertices),
-    "LINEDEFS": ("attach_linedefs", Lines),
-    "SIDEDEFS": ("attach_sidedefs", SideDefs),
-    "SECTORS": ("attach_sectors", Sectors),
-    "SEGS": ("attach_segs", Segs),
-    "SSECTORS": ("attach_ssectors", SubSectors),
-    "NODES": ("attach_nodes", Nodes),
-    "REJECT": ("attach_reject", Reject),
-    "BLOCKMAP": ("attach_blockmap", BlockMap),
-    "ZNODES": ("attach_znodes", ZNodesLump),
-    "BEHAVIOR": ("attach_behavior", BehaviorLump),
-    "TEXTMAP": ("attach_textmap", UdmfLump),
-}
-
-# Hexen overrides only differ for THINGS and LINEDEFS
-_HEXEN_OVERRIDES: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
-    "THINGS": ("attach_things", HexenThings),
-    "LINEDEFS": ("attach_linedefs", HexenLineDefs),
-}
-
-
-def _attach_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen: bool) -> None:
-    dispatch = dict(_DOOM_DISPATCH)
-    if hexen:
-        dispatch.update(_HEXEN_OVERRIDES)
-
-    for entry in lumps:
-        if entry.name not in MapData.names():
-            continue
-        action = dispatch.get(entry.name)
-        if action:
-            method_name, constructor = action
-            getattr(map_entry, method_name)(constructor(entry))
-        else:
-            map_entry.attach(entry)
 
 
 class WadFile:  # pylint: disable=too-many-public-methods
@@ -232,7 +181,7 @@ class WadFile:  # pylint: disable=too-many-public-methods
             for map_marker, lumps in groups:
                 map_entry = MapEntry(map_marker)
                 hexen = any(e.name == "BEHAVIOR" for e in lumps)
-                _attach_lumps(map_entry, lumps, hexen)
+                attach_map_lumps(map_entry, lumps, hexen)
                 name = str(map_entry)
                 if name not in seen:
                     order.append(name)

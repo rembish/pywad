@@ -13,6 +13,7 @@ Everything else is a bug in the hardening layer.
 
 from __future__ import annotations
 
+import contextlib
 import struct
 import tempfile
 from pathlib import Path
@@ -67,10 +68,8 @@ _LUMP_OK = (CorruptLumpError, ValueError)
 
 def _assert_no_crash(fn, *exc_types):
     """Call *fn()*, allowing listed exception types but re-raising anything else."""
-    try:
+    with contextlib.suppress(*exc_types):
         fn()
-    except exc_types:
-        pass
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-04-15
+
+### Added
+
+- **`wadlib/registry.py`** — new module containing:
+  - `DecoderRegistry`: extensible name → constructor map; `register`,
+    `decode`, `find_and_decode`, `__contains__`, `__len__`, `names` API.
+  - `LUMP_REGISTRY`: default instance pre-populated with all 14 built-in
+    simple lump decoders (PLAYPAL, COLORMAP, PNAMES, TEXTURE1/2, ENDOOM,
+    SNDINFO, SNDSEQ, MAPINFO, ZMAPINFO, LANGUAGE, ANIMDEFS, DECORATE,
+    DEHACKED).
+  - `WadLike` protocol: structural type for anything with `find_lump`.
+  - `attach_map_lumps` (moved from `wad.py`): wires raw directory entries
+    into a `BaseMapEntry` using the Doom / Hexen dispatch tables.
+  - `_DOOM_DISPATCH` and `_HEXEN_OVERRIDES` (moved from `wad.py`).
+- `DecoderRegistry` and `LUMP_REGISTRY` exported from `wadlib.__init__`.
+
+### Changed
+
+- **`wadlib/wad.py`**: removed `_DOOM_DISPATCH`, `_HEXEN_OVERRIDES`, and
+  `_attach_lumps`; all three live in `registry.py` now.  Thirteen lump
+  imports that are no longer needed directly by `wad.py` were removed.
+
 ## [0.1.3] - 2026-04-15
 
 ### Added
