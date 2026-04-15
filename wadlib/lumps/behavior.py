@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Any
 
+from ..exceptions import CorruptLumpError
 from .base import BaseLump
 
 _ACS0_MAGIC = b"ACS\x00"
@@ -62,14 +63,14 @@ class BehaviorInfo:
 def parse_behavior(data: bytes) -> BehaviorInfo:
     """Parse a BEHAVIOR lump and extract script directory + strings."""
     if len(data) < 8:
-        raise ValueError(f"BEHAVIOR lump too short ({len(data)} bytes)")
+        raise CorruptLumpError(f"BEHAVIOR lump too short ({len(data)} bytes)")
 
     magic = data[:4]
     if magic == _ACS0_MAGIC:
         return _parse_acs0(data)
     if magic in (_ACSE_MAGIC, _ACSE_LOWER_MAGIC):
         return _parse_acse(data, magic.decode("ascii"))
-    raise ValueError(f"Unknown BEHAVIOR format: {magic!r}")
+    raise CorruptLumpError(f"Unknown BEHAVIOR format: {magic!r}")
 
 
 def _parse_acs0(data: bytes) -> BehaviorInfo:

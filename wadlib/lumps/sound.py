@@ -5,6 +5,7 @@ from __future__ import annotations
 import struct
 from typing import Any, ClassVar
 
+from ..exceptions import CorruptLumpError
 from .base import BaseLump
 
 _DMX_FORMAT: int = 3
@@ -37,7 +38,12 @@ class DmxSound(BaseLump[Any]):
     def to_wav(self) -> bytes:
         """Convert this DMX sound to a WAV file byte string."""
         data = self.raw()
-        fmt, rate, num_samples = struct.unpack_from(_HEADER_FMT, data)
+        if len(data) < _HEADER_SIZE:
+            raise CorruptLumpError(f"{self.name!r}: DMX sound lump too short ({len(data)} bytes)")
+        try:
+            fmt, rate, num_samples = struct.unpack_from(_HEADER_FMT, data)
+        except struct.error as exc:
+            raise CorruptLumpError(f"{self.name!r}: corrupt DMX header") from exc
         if fmt != _DMX_FORMAT:
             raise ValueError(f"Unsupported DMX format: {fmt}")
         pcm_len = max(0, num_samples - _PADDING)

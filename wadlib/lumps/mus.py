@@ -16,6 +16,7 @@ from __future__ import annotations
 import struct
 from typing import Any, ClassVar
 
+from ..exceptions import CorruptLumpError
 from .base import BaseLump
 
 # ---------------------------------------------------------------------------
@@ -88,8 +89,10 @@ class Mus(BaseLump[Any]):
     def to_midi(self) -> bytes:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """Convert this MUS lump to a Standard MIDI File (SMF type-0) byte string."""
         data = self.raw()
+        if len(data) < _HEADER_SIZE:
+            raise CorruptLumpError(f"{self.name!r}: MUS lump too short ({len(data)} bytes)")
         if data[:4] != _MUS_MAGIC:
-            raise ValueError(f"Not a MUS lump (bad magic: {data[:4]!r})")
+            raise CorruptLumpError(f"{self.name!r}: bad MUS magic {data[:4]!r}")
 
         _, score_len, score_start, _, _, _num_instruments, _ = struct.unpack_from(_HEADER_FMT, data)
         pos = score_start
@@ -108,66 +111,69 @@ class Mus(BaseLump[Any]):
         events.append((0, b"\xff\x51\x03" + tempo_bytes))
 
         end = score_start + score_len
-        while pos < end:
-            descriptor = data[pos]
-            pos += 1
-            last = bool(descriptor & 0x80)
-            etype = (descriptor >> 4) & 0x07
-            mus_ch = descriptor & 0x0F
-            midi_ch = _MUS_TO_MIDI_CHAN[mus_ch]
-
-            if etype == 0:  # release note
-                note = data[pos] & 0x7F
+        try:
+            while pos < end:
+                descriptor = data[pos]
                 pos += 1
-                events.append((current_tick, bytes([0x80 | midi_ch, note, 0])))
+                last = bool(descriptor & 0x80)
+                etype = (descriptor >> 4) & 0x07
+                mus_ch = descriptor & 0x0F
+                midi_ch = _MUS_TO_MIDI_CHAN[mus_ch]
 
-            elif etype == 1:  # play note
-                note_byte = data[pos]
-                pos += 1
-                note = note_byte & 0x7F
-                if note_byte & 0x80:
-                    vol[mus_ch] = data[pos] & 0x7F
+                if etype == 0:  # release note
+                    note = data[pos] & 0x7F
                     pos += 1
-                events.append((current_tick, bytes([0x90 | midi_ch, note, vol[mus_ch]])))
+                    events.append((current_tick, bytes([0x80 | midi_ch, note, 0])))
 
-            elif etype == 2:  # pitch wheel
-                raw = data[pos]
-                pos += 1
-                # Map 0-255 to MIDI 0-16383 centred at 8192.
-                bend = raw * 64
-                lsb = bend & 0x7F
-                msb = (bend >> 7) & 0x7F
-                events.append((current_tick, bytes([0xE0 | midi_ch, lsb, msb])))
-
-            elif etype == 3:  # system event
-                ctrl = data[pos]
-                pos += 1
-                if ctrl in _SYS_MIDI:
-                    events.append((current_tick, bytes([0xB0 | midi_ch, _SYS_MIDI[ctrl], 0])))
-
-            elif etype == 4:  # change controller
-                ctrl = data[pos]
-                pos += 1
-                value = data[pos] & 0x7F
-                pos += 1
-                if ctrl == 0:  # program change
-                    patch[mus_ch] = value
-                    events.append((current_tick, bytes([0xC0 | midi_ch, value])))
-                elif ctrl in _CTRL_MIDI:
-                    events.append((current_tick, bytes([0xB0 | midi_ch, _CTRL_MIDI[ctrl], value])))
-
-            elif etype == 6:  # score end
-                break
-
-            if last:
-                delta = 0
-                while True:
-                    b = data[pos]
+                elif etype == 1:  # play note
+                    note_byte = data[pos]
                     pos += 1
-                    delta = delta * 128 + (b & 0x7F)
-                    if not b & 0x80:
-                        break
-                current_tick += delta
+                    note = note_byte & 0x7F
+                    if note_byte & 0x80:
+                        vol[mus_ch] = data[pos] & 0x7F
+                        pos += 1
+                    events.append((current_tick, bytes([0x90 | midi_ch, note, vol[mus_ch]])))
+
+                elif etype == 2:  # pitch wheel
+                    raw = data[pos]
+                    pos += 1
+                    # Map 0-255 to MIDI 0-16383 centred at 8192.
+                    bend = raw * 64
+                    lsb = bend & 0x7F
+                    msb = (bend >> 7) & 0x7F
+                    events.append((current_tick, bytes([0xE0 | midi_ch, lsb, msb])))
+
+                elif etype == 3:  # system event
+                    ctrl = data[pos]
+                    pos += 1
+                    if ctrl in _SYS_MIDI:
+                        events.append((current_tick, bytes([0xB0 | midi_ch, _SYS_MIDI[ctrl], 0])))
+
+                elif etype == 4:  # change controller
+                    ctrl = data[pos]
+                    pos += 1
+                    value = data[pos] & 0x7F
+                    pos += 1
+                    if ctrl == 0:  # program change
+                        patch[mus_ch] = value
+                        events.append((current_tick, bytes([0xC0 | midi_ch, value])))
+                    elif ctrl in _CTRL_MIDI:
+                        events.append((current_tick, bytes([0xB0 | midi_ch, _CTRL_MIDI[ctrl], value])))
+
+                elif etype == 6:  # score end
+                    break
+
+                if last:
+                    delta = 0
+                    while True:
+                        b = data[pos]
+                        pos += 1
+                        delta = delta * 128 + (b & 0x7F)
+                        if not b & 0x80:
+                            break
+                    current_tick += delta
+        except IndexError as exc:
+            raise CorruptLumpError(f"{self.name!r}: truncated MUS event stream") from exc
 
         # End-of-track meta event.
         events.append((current_tick, b"\xff\x2f\x00"))

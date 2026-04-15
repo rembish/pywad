@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.99] - 2026-04-15
+
+### Changed
+
+- **`wadlib/lumps/textures.py`**: hardened `PNames.names`, `PNames.__len__`,
+  `TextureList._read_texture_at`, `TextureList.textures`, and `TextureList.__len__`
+  — all `assert raw is not None` guards replaced with `try/except (struct.error, EOFError)`
+  raising `CorruptLumpError`.
+- **`wadlib/lumps/mus.py`**: hardened `Mus.to_midi` — added explicit length/magic
+  check raising `CorruptLumpError`, and wrapped the event-parsing loop in
+  `try/except IndexError → CorruptLumpError`.
+- **`wadlib/lumps/behavior.py`**: `parse_behavior` now raises `CorruptLumpError`
+  instead of `ValueError` for too-short lumps and unknown formats.
+- **`wadlib/lumps/sound.py`**: hardened `DmxSound.to_wav` — added explicit length
+  check and `try/except struct.error → CorruptLumpError` around the header unpack.
+
+### Tests
+
+- **`tests/test_hardening.py`**: added 11 new `TestCorruptLump` cases covering
+  truncated PNAMES, truncated TEXTURE1, truncated MUS event stream, bad MUS magic,
+  short DMX sound lump, and `parse_behavior` on too-short / bad-magic data.
+
 ## [0.0.98] - 2026-04-15
 
 ### Added

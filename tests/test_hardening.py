@@ -26,9 +26,13 @@ from wadlib.exceptions import (
     TruncatedWadError,
     WadFormatError,
 )
+from wadlib.lumps.behavior import parse_behavior
 from wadlib.lumps.flat import Flat
+from wadlib.lumps.mus import Mus
 from wadlib.lumps.picture import Picture
 from wadlib.lumps.playpal import PlayPal
+from wadlib.lumps.sound import DmxSound
+from wadlib.lumps.textures import PNames, TextureList
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -358,3 +362,89 @@ class TestCorruptLump:
         lump = self._get_lump(path, PlayPal, "PLAYPAL")
         with pytest.raises(CorruptLumpError):
             lump.get_palette(0)
+
+    # -- PNames --
+
+    def test_pnames_truncated_raises(self, tmp_path: Path) -> None:
+        """A PNAMES with count=3 but only 2 entries raises CorruptLumpError."""
+        data = struct.pack("<I", 3) + b"PATCH1\x00\x00" + b"PATCH2\x00\x00"
+        path = self._wad_with_lump(tmp_path, "PNAMES", data)
+        lump = self._get_lump(path, PNames, "PNAMES")
+        with pytest.raises(CorruptLumpError):
+            _ = lump.names
+
+    def test_pnames_too_short_for_count_raises(self, tmp_path: Path) -> None:
+        """A PNAMES shorter than 4 bytes (no room for count) raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "PNAMES", b"\x02\x00")
+        lump = self._get_lump(path, PNames, "PNAMES")
+        with pytest.raises(CorruptLumpError):
+            _ = lump.names
+
+    # -- TextureList --
+
+    def test_texturelist_truncated_offsets_raises(self, tmp_path: Path) -> None:
+        """A TEXTURE lump with count=2 but only one offset entry raises CorruptLumpError."""
+        data = struct.pack("<I", 2) + struct.pack("<I", 12)  # claims 2 textures, provides 1 offset
+        path = self._wad_with_lump(tmp_path, "TEXTURE1", data)
+        lump = self._get_lump(path, TextureList, "TEXTURE1")
+        with pytest.raises(CorruptLumpError):
+            _ = lump.textures
+
+    def test_texturelist_corrupt_texture_body_raises(self, tmp_path: Path) -> None:
+        """A TEXTURE lump whose offset points to truncated header data raises CorruptLumpError."""
+        # count=1, offset points at byte 8 (right after count+offset_table), but no body there
+        data = struct.pack("<I", 1) + struct.pack("<I", 8)  # offset 8 → past end of 8-byte lump
+        path = self._wad_with_lump(tmp_path, "TEXTURE1", data)
+        lump = self._get_lump(path, TextureList, "TEXTURE1")
+        with pytest.raises(CorruptLumpError):
+            _ = lump.textures
+
+    # -- Mus --
+
+    def test_mus_too_short_raises(self, tmp_path: Path) -> None:
+        """A MUS lump shorter than the 16-byte header raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "D_E1M1", b"MUS\x1a\x00\x00")
+        lump = self._get_lump(path, Mus, "D_E1M1")
+        with pytest.raises(CorruptLumpError):
+            lump.to_midi()
+
+    def test_mus_truncated_event_stream_raises(self, tmp_path: Path) -> None:
+        """A MUS lump with valid header but truncated event stream raises CorruptLumpError."""
+        score_start = struct.calcsize("<4sHHHHHH")  # 16 bytes
+        score_len = 50  # claims 50 bytes of events
+        header = struct.pack("<4sHHHHHH", b"MUS\x1a", score_len, score_start, 0, 0, 0, 0)
+        # Only 1 byte of event data — claim a note-on (etype=1) with no note byte following
+        data = header + b"\x10"  # 0x10 = last=0, etype=1, channel=0; note byte missing
+        path = self._wad_with_lump(tmp_path, "D_E1M1", data)
+        lump = self._get_lump(path, Mus, "D_E1M1")
+        with pytest.raises(CorruptLumpError):
+            lump.to_midi()
+
+    def test_mus_bad_magic_raises(self, tmp_path: Path) -> None:
+        """A MUS lump with wrong magic raises CorruptLumpError."""
+        bad_header = struct.pack("<4sHHHHHH", b"MIDI", 0, 16, 0, 0, 0, 0)
+        path = self._wad_with_lump(tmp_path, "D_E1M1", bad_header)
+        lump = self._get_lump(path, Mus, "D_E1M1")
+        with pytest.raises(CorruptLumpError):
+            lump.to_midi()
+
+    # -- DmxSound --
+
+    def test_dmxsound_too_short_raises(self, tmp_path: Path) -> None:
+        """A DMX sound lump shorter than 8 bytes raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "DSPISTOL", b"\x03\x00\x11\x2b")  # only 4 bytes
+        lump = self._get_lump(path, DmxSound, "DSPISTOL")
+        with pytest.raises(CorruptLumpError):
+            lump.to_wav()
+
+    # -- parse_behavior --
+
+    def test_parse_behavior_too_short_raises(self, tmp_path: Path) -> None:
+        """parse_behavior on data shorter than 8 bytes raises CorruptLumpError."""
+        with pytest.raises(CorruptLumpError):
+            parse_behavior(b"\x00\x00\x00")
+
+    def test_parse_behavior_bad_magic_raises(self, tmp_path: Path) -> None:
+        """parse_behavior on data with unknown magic raises CorruptLumpError."""
+        with pytest.raises(CorruptLumpError):
+            parse_behavior(b"XXXX\x00\x00\x00\x00")

@@ -28,11 +28,13 @@ TEXTURE1 / TEXTURE2 (Doom format):
 
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass
 from functools import cached_property
 from struct import calcsize, pack, unpack
 from typing import Any
 
+from ..exceptions import CorruptLumpError
 from .base import BaseLump
 
 # Correct layout (per Doom source):
@@ -90,73 +92,68 @@ class PNames(BaseLump[Any]):
         """Return all patch names as a list of strings."""
         if not self.readable():
             return []
-        assert self._size is not None
-        self.seek(0)
-        raw_count = self.read(4)
-        assert raw_count is not None
-        (count,) = unpack("<I", raw_count)
-        result: list[str] = []
-        for _ in range(count):
-            raw = self.read(8)
-            assert raw is not None
-            result.append(raw.rstrip(b"\x00").decode("ascii", errors="replace"))
-        return result
+        try:
+            self.seek(0)
+            (count,) = unpack("<I", self.read(4))
+            result: list[str] = []
+            for _ in range(count):
+                raw = self.read(8)
+                result.append(raw.rstrip(b"\x00").decode("ascii", errors="replace"))
+            return result
+        except (struct.error, EOFError) as exc:
+            raise CorruptLumpError(f"{self.name!r}: truncated PNAMES data") from exc
 
     def __len__(self) -> int:
         if not self.readable():
             return 0
-        self.seek(0)
-        raw = self.read(4)
-        if raw is None:
+        try:
+            self.seek(0)
+            (count,) = unpack("<I", self.read(4))
+            return int(count)
+        except (struct.error, EOFError):
             return 0
-        (count,) = unpack("<I", raw)
-        return int(count)
 
 
 class TextureList(BaseLump[Any]):
     """TEXTURE1 or TEXTURE2 lump — list of composite texture definitions."""
 
     def _read_texture_at(self, offset: int) -> TextureDef:  # pylint: disable=too-many-locals
-        self.seek(offset)
-        hdr_raw = self.read(_TEX_HDR_SIZE)
-        assert hdr_raw is not None
-        name_raw, _masked, width, height, _coldir, patch_count = unpack(_TEX_HDR_FMT, hdr_raw)
-        name = name_raw.rstrip(b"\x00").decode("ascii", errors="replace")
-        patches: list[PatchDescriptor] = []
-        for _ in range(patch_count):
-            pd_raw = self.read(_PATCH_DESC_SIZE)
-            assert pd_raw is not None
-            ox, oy, pidx, _step, _cmap = unpack(_PATCH_DESC_FMT, pd_raw)
-            patches.append(PatchDescriptor(int(ox), int(oy), int(pidx)))
-        return TextureDef(name, int(width), int(height), patches)
+        try:
+            self.seek(offset)
+            hdr_raw = self.read(_TEX_HDR_SIZE)
+            name_raw, _masked, width, height, _coldir, patch_count = unpack(_TEX_HDR_FMT, hdr_raw)
+            name = name_raw.rstrip(b"\x00").decode("ascii", errors="replace")
+            patches: list[PatchDescriptor] = []
+            for _ in range(patch_count):
+                pd_raw = self.read(_PATCH_DESC_SIZE)
+                ox, oy, pidx, _step, _cmap = unpack(_PATCH_DESC_FMT, pd_raw)
+                patches.append(PatchDescriptor(int(ox), int(oy), int(pidx)))
+            return TextureDef(name, int(width), int(height), patches)
+        except (struct.error, EOFError) as exc:
+            raise CorruptLumpError(f"{self.name!r}: corrupt texture at offset {offset}") from exc
 
     @cached_property
     def textures(self) -> list[TextureDef]:
         """Parse and return all texture definitions."""
         if not self.readable():
             return []
-        assert self._size is not None
-
-        self.seek(0)
-        raw_count = self.read(4)
-        assert raw_count is not None
-        (count,) = unpack("<I", raw_count)
-
-        raw_offsets = self.read(int(count) * 4)
-        assert raw_offsets is not None
-        offsets = list(unpack(f"<{int(count)}I", raw_offsets))
-
+        try:
+            self.seek(0)
+            (count,) = unpack("<I", self.read(4))
+            offsets = list(unpack(f"<{int(count)}I", self.read(int(count) * 4)))
+        except (struct.error, EOFError) as exc:
+            raise CorruptLumpError(f"{self.name!r}: truncated texture lump") from exc
         return [self._read_texture_at(int(off)) for off in offsets]
 
     def __len__(self) -> int:
         if not self.readable():
             return 0
-        self.seek(0)
-        raw = self.read(4)
-        if raw is None:
+        try:
+            self.seek(0)
+            (count,) = unpack("<I", self.read(4))
+            return int(count)
+        except (struct.error, EOFError):
             return 0
-        (count,) = unpack("<I", raw)
-        return int(count)
 
     def find(self, name: str) -> TextureDef | None:
         """Look up a texture by name (case-insensitive), or return None."""
