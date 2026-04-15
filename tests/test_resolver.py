@@ -8,7 +8,7 @@ import tempfile
 import pytest
 
 from wadlib.pk3 import Pk3Archive
-from wadlib.resolver import ResourceResolver
+from wadlib.resolver import ResourceRef, ResourceResolver
 from wadlib.source import LumpSource, MemoryLumpSource
 from wadlib.wad import WadFile
 
@@ -181,6 +181,174 @@ class TestResourceResolverPriority:
         finally:
             os.unlink(path_a)
             os.unlink(path_b)
+
+
+# ---------------------------------------------------------------------------
+# doom_load_order named constructor
+# ---------------------------------------------------------------------------
+
+
+class TestDoomLoadOrder:
+    """doom_load_order: last patch wins (Doom PWAD override semantics)."""
+
+    def test_last_patch_wins(self) -> None:
+        path_base = _make_pk3({"lumps/DATA.lmp": b"base"})
+        path_p1 = _make_pk3({"lumps/DATA.lmp": b"patch1"})
+        path_p2 = _make_pk3({"lumps/DATA.lmp": b"patch2"})
+        try:
+            with Pk3Archive(path_base) as base, Pk3Archive(path_p1) as p1, Pk3Archive(path_p2) as p2:
+                r = ResourceResolver.doom_load_order(base, p1, p2)
+                assert r.read("DATA") == b"patch2"
+        finally:
+            for p in (path_base, path_p1, path_p2):
+                os.unlink(p)
+
+    def test_base_used_when_patches_dont_have_it(self) -> None:
+        path_base = _make_pk3({"lumps/IWAD.lmp": b"iwad_only"})
+        path_p1 = _make_pk3({"lumps/MOD.lmp": b"mod_only"})
+        try:
+            with Pk3Archive(path_base) as base, Pk3Archive(path_p1) as p1:
+                r = ResourceResolver.doom_load_order(base, p1)
+                assert r.read("IWAD") == b"iwad_only"
+                assert r.read("MOD") == b"mod_only"
+        finally:
+            os.unlink(path_base)
+            os.unlink(path_p1)
+
+    def test_no_patches_returns_base_only(self) -> None:
+        path_base = _make_pk3({"lumps/ONLY.lmp": b"solo"})
+        try:
+            with Pk3Archive(path_base) as base:
+                r = ResourceResolver.doom_load_order(base)
+                assert r.read("ONLY") == b"solo"
+                assert len(r) == 1
+        finally:
+            os.unlink(path_base)
+
+    def test_load_order_vs_priority_order_differ(self) -> None:
+        """Confirms doom_load_order and default constructor give opposite results."""
+        path_a = _make_pk3({"lumps/X.lmp": b"a"})
+        path_b = _make_pk3({"lumps/X.lmp": b"b"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                priority = ResourceResolver(a, b)   # a wins
+                doom = ResourceResolver.doom_load_order(a, b)  # b wins (last patch)
+                assert priority.read("X") == b"a"
+                assert doom.read("X") == b"b"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+
+# ---------------------------------------------------------------------------
+# find_all — all matches, highest priority first
+# ---------------------------------------------------------------------------
+
+
+class TestFindAll:
+    """find_all returns ResourceRef objects for every source that has the name."""
+
+    def test_empty_resolver_returns_empty_list(self) -> None:
+        r = ResourceResolver()
+        assert r.find_all("PLAYPAL") == []
+
+    def test_single_match_returns_one_ref(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"hello"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("DATA")
+            assert len(refs) == 1
+            assert isinstance(refs[0], ResourceRef)
+            assert refs[0].name == "DATA"
+            assert refs[0].read_bytes() == b"hello"
+        finally:
+            os.unlink(path)
+
+    def test_two_sources_both_returned(self) -> None:
+        path_a = _make_pk3({"lumps/DATA.lmp": b"from_a"})
+        path_b = _make_pk3({"lumps/DATA.lmp": b"from_b"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                r = ResourceResolver(a, b)
+                refs = r.find_all("DATA")
+            assert len(refs) == 2
+            # highest priority first
+            assert refs[0].read_bytes() == b"from_a"
+            assert refs[1].read_bytes() == b"from_b"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_archive_field_identifies_origin(self) -> None:
+        path_a = _make_pk3({"lumps/DATA.lmp": b"a"})
+        path_b = _make_pk3({"lumps/DATA.lmp": b"b"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                r = ResourceResolver(a, b)
+                refs = r.find_all("DATA")
+                assert refs[0].archive is a
+                assert refs[1].archive is b
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_no_match_returns_empty_list(self) -> None:
+        path = _make_pk3({"lumps/PRESENT.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                assert r.find_all("ABSENT") == []
+        finally:
+            os.unlink(path)
+
+    def test_name_is_uppercased(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("data")
+                assert refs[0].name == "DATA"
+        finally:
+            os.unlink(path)
+
+    def test_source_field_is_lump_source(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"abc"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("DATA")
+                assert isinstance(refs[0].source, LumpSource)
+        finally:
+            os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# ResourceRef dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestResourceRef:
+    def test_frozen(self) -> None:
+        src = MemoryLumpSource("DATA", b"x")
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = ResourceRef(name="DATA", archive=pk3, source=src)
+                with pytest.raises((AttributeError, TypeError)):
+                    ref.name = "OTHER"  # type: ignore[misc]
+        finally:
+            os.unlink(path)
+
+    def test_read_bytes_delegates_to_source(self) -> None:
+        src = MemoryLumpSource("DATA", b"payload")
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = ResourceRef(name="DATA", archive=pk3, source=src)
+                assert ref.read_bytes() == b"payload"
+        finally:
+            os.unlink(path)
 
 
 # ---------------------------------------------------------------------------

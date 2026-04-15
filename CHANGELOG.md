@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-04-15
+
+### Added
+
+- **`ResourceRef` dataclass** in `wadlib/resolver.py` — frozen dataclass holding
+  `name`, `archive`, and `source` for a single resource hit. `read_bytes()` delegates
+  to the wrapped `LumpSource`. Exported from top-level `wadlib` package.
+- **`ResourceResolver.find_all(name)`** — returns a `list[ResourceRef]` covering
+  every source that contains the named resource, in highest-priority-first order.
+  Callers can use this to inspect shadowed resources.
+- **`ResourceResolver.doom_load_order(base, *patches)`** classmethod — creates a
+  resolver using Doom PWAD override semantics (last patch wins). Equivalent to
+  `doom -iwad base -file patch1 patch2` where `patch2` takes precedence.
+- 12 new tests in `tests/test_resolver.py` covering `doom_load_order` (base fallback,
+  single-patch, multi-patch, priority vs. load-order contrast) and `find_all`
+  (empty resolver, single match, two sources, archive identity, case normalisation,
+  LumpSource interface, `ResourceRef` frozen invariant, `read_bytes` delegation).
+
+## [0.2.3] - 2026-04-15
+
+### Fixed
+
+- **`BaseLump.read(0)`** — a zero-byte read incorrectly raised `EOFError` when
+  the read position was exactly at EOF. Now returns `b""` immediately (a 0-byte
+  read is always valid regardless of position).
+- **`Picture.decode()` column offset table read** — `self.read(width * 4)` was
+  not wrapping `EOFError`, so pictures with a valid header but a truncated offset
+  table leaked a raw `EOFError`. Now raises `CorruptLumpError` as required by the
+  parser contract.
+
+### Added
+
+- **`TestFuzzPictureDecode`** in `tests/test_fuzz_parsers.py` — 4 Hypothesis
+  methods covering arbitrary bytes, valid-header arbitrary tails, structurally-valid
+  single posts, and the out-of-bounds topdelta regression. All four bugs found by
+  fuzzing were in scope for this hardening pass.
+
 ## [0.2.2] - 2026-04-15
 
 ### Added

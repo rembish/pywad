@@ -17,7 +17,7 @@ from .lumps.boom import (
 )
 from .lumps.decorate import DecorateActor, DecorateLump, resolve_inheritance
 from .registry import LUMP_REGISTRY, DecoderRegistry
-from .resolver import ResourceResolver
+from .resolver import ResourceRef, ResourceResolver
 from .source import LumpSource, MemoryLumpSource
 from .validate import InvalidLumpError
 from .wad import WadFile
@@ -41,6 +41,7 @@ __all__ = [
     "LumpInfo",
     "LumpSource",
     "MemoryLumpSource",
+    "ResourceRef",
     "ResourceResolver",
     "TruncatedWadError",
     "WadArchive",
