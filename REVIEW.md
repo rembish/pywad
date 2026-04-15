@@ -1,7 +1,7 @@
 # wadlib Project Review
 
 Review date: 2026-04-14
-Response date: 2026-04-15
+Response dates: 2026-04-15 (hardening), 2026-04-15 (test suite)
 
 ## Overall Score
 
@@ -389,7 +389,12 @@ special-case logic in `WadFile`.
 1. Split raw storage, lookup, map assembly, and decoding responsibilities.
 2. ~~Add read-time validation tests with truncated, overlapping, out-of-range, and
    duplicate-lump WADs.~~ **DONE:** `tests/test_hardening.py`.
-3. Add fuzz/property tests for binary parsers such as pictures, textures,
+3. ~~Reach and hold 80% combined statement+branch coverage.~~ **DONE:** 80.04%
+   measured. `test_export3d` now uses a synthetic 1-sector box WAD for
+   format-validation tests (no `freedoom2.wad` required); `test_sndinfo` uses
+   a synthetic PWAD (no `HEXEN.WAD` required); `TestExceptionSafety` in
+   `test_archive.py` covers the write/validate/double-close edge paths.
+4. Add fuzz/property tests for binary parsers such as pictures, textures,
    PNAMES, BLOCKMAP, ZNODES, and MUS.
 4. Add a documented support matrix for vanilla, Boom, MBF, Hexen, ZDoom, UDMF,
    and PK3.
@@ -409,15 +414,20 @@ special-case logic in `WadFile`.
 investment, and a surprisingly broad feature set. The project is strongest as a
 developer tool for inspecting, exporting, and round-tripping known-good WADs.
 
-Two response commits materially improved the project.  The first addressed
+Three response passes materially improved the project.  The first addressed
 transaction-safe context-manager behavior, atomic writer saves, package typing
 metadata, the README badge, basic WAD directory hardening, UDMF attachment, and
 `WadFile.find_lump` duplicate precedence.  The second closed the remaining
 high-priority gaps: non-ASCII magic/name handling, `WadArchive.read` consistency,
-`BaseLump.__bool__` safety, and 16 adversarial read-time tests.
+`BaseLump.__bool__` safety, and 16 adversarial read-time tests.  The third
+improved test independence and coverage: synthetic WADs replace real-WAD
+dependencies for `test_export3d` and `test_sndinfo`, new `TestExceptionSafety`
+tests cover archive edge paths, and combined statement+branch coverage reached
+80.04% (above the 80% CI threshold).
 
 All six high-priority items are now resolved.  The project's core hardening story
-is complete at the header and directory layers.
+is complete at the header and directory layers.  The 80% coverage threshold is met
+without requiring any proprietary WAD files.
 
 Remaining open work is medium-priority: `BaseLump`-level parser hardening
 (picture column offsets, texture patch counts), `Pk3Archive` resource-API parity,

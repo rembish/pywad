@@ -23,6 +23,7 @@ manager or call `close()` when done.
 | `wad_type` | `WadType.IWAD` or `WadType.PWAD` |
 | `directory` | List of `DirectoryEntry` objects (raw lump directory) |
 | `maps` | List of `BaseMapEntry` objects, sorted by map name |
+| `maps_in_order` | List of `BaseMapEntry` objects in WAD directory order (no sorting) |
 | `playpal` | `PlayPal` -- 14 RGBA palettes, or `None` |
 | `colormap` | `ColormapLump` -- 34 light-level remapping tables, or `None` |
 | `flats` | `dict[str, Flat]` -- floor/ceiling 64x64 textures between F_START/F_END |
@@ -50,6 +51,8 @@ manager or call `close()` when done.
 | `animdefs` | `AnimDefsLump` -- Hexen/ZDoom animation sequences, or `None` |
 | `dehacked` | `DehackedLump` -- embedded DeHackEd patch, or `None` |
 | `load_deh(path)` | Load an external `.deh` file, overriding any embedded DEHACKED |
+| `language` | `LanguageLump` -- ZDoom LANGUAGE string tables, or `None` |
+| `decorate` | `DecorateLump` -- ZDoom DECORATE actor definitions (PWAD-aware), or `None` |
 | `load_pwad(path)` | Dynamically layer another PWAD on top, invalidating all caches |
 
 ---
@@ -216,6 +219,92 @@ from wadlib.compat import (
 
 ---
 
+## Boom / MBF21
+
+Generalized linedef decoder and extended sector/linedef metadata for
+Boom-compatible WADs.
+
+```python
+from wadlib.lumps.boom import (
+    GeneralizedCategory, GeneralizedTrigger, GeneralizedSpeed,
+    GeneralizedLinedef, decode_generalized,
+    DOOM_SECTOR_SPECIALS, MBF21_LINEDEF_FLAGS,
+)
+```
+
+| Name | Description |
+|---|---|
+| `GeneralizedCategory` | IntEnum: `CRUSHER`, `STAIR`, `LIFT`, `LOCKED_DOOR`, `DOOR`, `CEILING`, `FLOOR` -- lower bound of each category's `special_type` range |
+| `GeneralizedTrigger` | IntEnum: `W1`, `WR`, `S1`, `SR`, `G1`, `GR`, `P1`, `PR` -- bits 0-2 of `special_type` |
+| `GeneralizedSpeed` | IntEnum: `SLOW`, `NORMAL`, `FAST`, `TURBO` -- bits 3-4 of `special_type` |
+| `GeneralizedLinedef` | Frozen dataclass: `category`, `trigger`, `speed`, `subtype` |
+| `decode_generalized(special_type)` | Return `GeneralizedLinedef` when `special_type >= 0x2F80`, else `None` |
+| `DOOM_SECTOR_SPECIALS` | `dict[int, str]` mapping vanilla sector special numbers 0-17 to names |
+| `MBF21_LINEDEF_FLAGS` | `dict[int, str]` mapping MBF21 linedef flag bits (`0x0200`/`0x0400`/`0x0800`) to names |
+
+These are also available through the map data classes:
+
+- `LineDefinition.generalized` -- decoded `GeneralizedLinedef | None` for the linedef's `special_type`
+- `Sector.special_name` -- human-readable name for the sector's `special` field
+
+---
+
+## LANGUAGE
+
+ZDoom string localisation tables. The lump is divided into locale sections
+(`[enu]`, `[default]`, `[fra]`, etc.); combined headers like `[enu default]`
+expand to both locales.
+
+```python
+from wadlib.lumps.language import LanguageLump
+
+# via WadFile:
+with WadFile("mod.wad") as wad:
+    lang = wad.language
+    if lang:
+        # All strings merged from [enu] + [default] sections
+        print(lang.lookup("GOTSTUFFMSG"))          # "You got some stuff!"
+        # Per-locale access
+        all_locs = lang.all_locales                # dict[str, dict[str, str]]
+        french = lang.strings_for("fra")           # dict[str, str] or {}
+        # Locale-specific lookup with fallback
+        val = lang.lookup("GOTSTUFFMSG", locale="fra")
+```
+
+| Property / Method | Description |
+|---|---|
+| `all_locales` | `dict[str, dict[str, str]]` -- all locale sections, keyed by lowercase locale name |
+| `strings` | `dict[str, str]` -- merged `[enu]` + `[default]` strings |
+| `strings_for(locale)` | Return `dict[str, str]` for the given locale name, or `{}` if absent |
+| `lookup(key, default="", locale=None)` | Return the string for *key* (uppercased); uses `strings` unless *locale* is given |
+| `serialize()` | Re-encode the lump to bytes |
+
+---
+
+## DECORATE
+
+ZDoom actor definitions. Parses `DoomEdNum`, `Radius`, `Height`, and `States`
+blocks from DECORATE text.
+
+```python
+from wadlib.lumps.decorate import DecorateLump, DecorateActor
+
+# via WadFile (PWAD-aware):
+with WadFile.open("DOOM2.WAD", "mod.wad") as wad:
+    dec = wad.decorate
+    if dec:
+        for actor in dec.actors:
+            print(f"{actor.name}  ednum={actor.editor_number}")
+```
+
+| Class / Property | Description |
+|---|---|
+| `DecorateLump` | Parsed DECORATE lump; `.actors` returns list of `DecorateActor` |
+| `DecorateActor` | Dataclass with fields: `name`, `parent`, `editor_number`, `radius`, `height`, `states` |
+| `parse_decorate(text)` | Parse raw DECORATE text into a list of `DecorateActor` objects |
+
+---
+
 ## Scanner
 
 Scan maps for texture, flat, and thing-type usage. Useful for finding unused
@@ -268,9 +357,9 @@ with a `to_bytes()` method for round-trip serialization.
 |---|---|---|
 | `Thing` | `things` | `x`, `y`, `direction`, `type`, `flags` (10 bytes) |
 | `Vertex` | `vertices` | `x`, `y` (4 bytes) |
-| `LineDefinition` | `lines` | `start_vertex`, `finish_vertex`, `flags`, `special_type`, `sector_tag`, `right_sidedef`, `left_sidedef` (14 bytes) |
+| `LineDefinition` | `lines` | `start_vertex`, `finish_vertex`, `flags`, `special_type`, `sector_tag`, `right_sidedef`, `left_sidedef` (14 bytes); `.generalized` returns `GeneralizedLinedef \| None` |
 | `SideDef` | `sidedefs` | `x_offset`, `y_offset`, `upper_texture`, `lower_texture`, `middle_texture`, `sector` (30 bytes) |
-| `Sector` | `sectors` | `floor_height`, `ceiling_height`, `floor_texture`, `ceiling_texture`, `light_level`, `special`, `tag` (26 bytes) |
+| `Sector` | `sectors` | `floor_height`, `ceiling_height`, `floor_texture`, `ceiling_texture`, `light_level`, `special`, `tag` (26 bytes); `.special_name` returns human-readable special string |
 | `Seg` | `segs` | `start_vertex`, `end_vertex`, `angle`, `linedef`, `direction`, `offset` (12 bytes) |
 | `SubSector` | `segs` | `seg_count`, `first_seg` (4 bytes) |
 | `Node` | `nodes` | `x`, `y`, `dx`, `dy`, right/left bounding boxes, `right_child`, `left_child` (28 bytes) |

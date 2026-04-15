@@ -443,6 +443,95 @@ with WadFile.open("DOOM2.WAD", "rekkr.wad") as wad:
               f"({get_category(thing.type, game, deh=deh).name})")
 ```
 
+## Reading DECORATE Actors
+
+DECORATE lumps define custom actors for ZDoom-based mods. `WadFile.decorate`
+returns a PWAD-aware `DecorateLump` (or `None` if the lump is absent).
+
+```python
+from wadlib import WadFile
+
+with WadFile.open("DOOM2.WAD", "mod.wad") as wad:
+    dec = wad.decorate
+    if dec:
+        for actor in dec.actors:
+            print(f"{actor.name} (parent={actor.parent}, "
+                  f"ednum={actor.editor_number}, "
+                  f"radius={actor.radius}, height={actor.height})")
+
+# Parse a raw DECORATE text string directly
+from wadlib.lumps.decorate import parse_decorate
+
+text = """
+Actor MyMonster : Zombieman 1234 {
+    Radius 20
+    Height 56
+    States { Spawn: POSS A 10 Loop }
+}
+"""
+actors = parse_decorate(text)
+print(actors[0].name)          # "MyMonster"
+print(actors[0].editor_number) # 1234
+print(actors[0].parent)        # "Zombieman"
+```
+
+## Working with LANGUAGE Strings
+
+LANGUAGE lumps store localised UI strings for ZDoom mods. The lump is
+partitioned into locale sections; combined headers like `[enu default]`
+expand to both locales automatically.
+
+```python
+from wadlib import WadFile
+
+with WadFile("mod.wad") as wad:
+    lang = wad.language
+    if lang:
+        # Look up a string in the [enu] / [default] pool
+        msg = lang.lookup("PICKUPMSG", default="You got something!")
+        print(msg)
+
+        # All locales as a nested dict
+        for locale, strings in lang.all_locales.items():
+            print(f"[{locale}] {len(strings)} strings")
+
+        # Per-locale access
+        french = lang.strings_for("fra")
+        msg_fr = lang.lookup("PICKUPMSG", locale="fra")
+```
+
+## Decoding Boom Generalized Linedefs
+
+Boom-compatible WADs use `special_type` values >= `0x2F80` to encode
+floor/ceiling/door/lift effects in bitfields rather than a flat lookup table.
+
+```python
+from wadlib import WadFile
+
+with WadFile("boom_mod.wad") as wad:
+    for m in wad.maps:
+        for line in m.lines:
+            gen = line.generalized       # GeneralizedLinedef | None
+            if gen:
+                print(f"linedef {line.special_type:#06x}: "
+                      f"{gen.category.name} / {gen.trigger.name} "
+                      f"/ speed={gen.speed.name}")
+
+# Decode manually
+from wadlib.lumps.boom import decode_generalized, DOOM_SECTOR_SPECIALS
+
+gen = decode_generalized(0x6003)
+print(gen.category)  # GeneralizedCategory.FLOOR
+print(gen.trigger)   # GeneralizedTrigger.SR
+print(gen.speed)     # GeneralizedSpeed.SLOW
+
+# Human-readable sector special
+with WadFile("DOOM2.WAD") as wad:
+    for sector in wad.maps[0].sectors:
+        if sector.special:
+            print(f"sector {sector.special}: {sector.special_name}")
+```
+
 ## Shell Completion
 
 Tab completion for all `wadcli` subcommands, options, and context-aware
