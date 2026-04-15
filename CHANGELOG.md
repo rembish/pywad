@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.96] - 2026-04-15
+
+### Added
+
+- **`LanguageLump.all_locales`**: new cached property returning
+  `dict[str, dict[str, str]]` — every locale section in the LANGUAGE lump,
+  keyed by locale token (e.g. `"enu"`, `"fra"`, `"deu"`).  A combined header
+  like `[enu default]` populates both the `"enu"` and `"default"` sub-dicts.
+- **`LanguageLump.strings_for(locale)`**: convenience method returning the
+  string dict for a specific locale token (case-insensitive); returns `{}`
+  when the locale is absent.
+- **`LanguageLump.lookup(key, default, locale=None)`**: extended signature —
+  the new optional `locale` parameter targets a specific locale dict instead
+  of the merged English strings.
+
+### Changed
+
+- **`LanguageLump.strings`**: now delegates to `all_locales` (no behaviour
+  change — still returns the merged `"enu"` + `"default"` string dicts).
+
 ## [0.0.95] - 2026-04-15
 
 ### Added
