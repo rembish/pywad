@@ -9,10 +9,10 @@ Ideas collected over the course of development. Roughly ordered by scope.
 ### pk3 / ZIP virtual filesystem
 ZDoom/GZDoom use `.pk3` files (ZIP archives) as a replacement for WADs.
 Implementing this requires:
-- `Pk3File` class that opens a ZIP and presents a WAD-compatible API
-- Namespace mapping: `flats/FOO.png` → flat `FOO`, `sprites/` → sprites, etc.
-- `DirectoryEntry` abstraction to support both offset-based (WAD) and
-  pre-loaded bytes (pk3 ZIP entries) — currently hardwired to file+offset
+- `Pk3File` class that opens a ZIP and presents a WAD-compatible API ✓ done (v0.1.3)
+- Namespace mapping: `flats/FOO.png` → flat `FOO`, `sprites/` → sprites, etc. ✓ done (v0.1.3)
+- `LumpSource` protocol to support both offset-based (WAD) and pre-loaded bytes
+  (pk3 ZIP entries) — `MemoryLumpSource` decouples `BaseLump` from WAD fd ✓ done (v0.1.6)
 - PNG/TGA/JPG image decoding for flats, sprites, textures (Pillow already a dep)
 - Embedded WAD-format maps inside `maps/MAP01.wad` entries
 
@@ -120,11 +120,11 @@ making each lump completely independent of the shared WAD file descriptor.
 `WadFile.load_pwad()` invalidates all cached properties so the updated PWAD
 stack is reflected on next access.
 
-### `type: ignore[assignment]` in `attach_znodes`
+### `type: ignore[assignment]` in `attach_znodes` ✓ done
 `ZNodList[ZNodSeg/SubSector/Node/Vertex]` assigned to vanilla-typed fields
-produces four `type: ignore[assignment]` suppressions.  Fix with Union types or
-a shared `NodeLike` Protocol so mypy accepts both vanilla and ZNOD lumps in
-those slots without suppression.
+previously required four `type: ignore[assignment]` suppressions.  Resolved
+via Union types; `mypy --strict` now passes with zero suppressions in the
+znodes/map layer.
 
 ---
 
@@ -134,14 +134,16 @@ those slots without suppression.
 A small Flask/FastAPI server that serves map renders and lets you pan/zoom,
 click things to see their type, hover sectors to see their properties.
 
-### Doom demo (`.lmp`) parser
-Doom demo files record player input at tic resolution.  Parsing them would
-let you replay or visualise routes through maps.
+### Doom demo (`.lmp`) parser ✓ done (v0.0.89+)
+`wadlib/lumps/demo.py` provides `parse_demo`, `Demo`, `DemoHeader`, `DemoTic`,
+and `Demo.player_path()` for reconstructing approximate player movement from
+recorded inputs.  Round-trip `to_bytes()` serialisation is also supported.
 
-### DECORATE / ZScript stub parser
-ZDoom's actor definition languages (DECORATE, ZScript) define custom things.
-Even a minimal name-extraction pass would let `wadcli list things` show
-meaningful names for custom actors in ZDoom PWADs.
+### DECORATE / ZScript stub parser ✓ done (v0.0.89+)
+`wadlib/lumps/decorate.py` provides `parse_decorate`, `DecorateActor`
+(name, parent, doomednum, properties, flags, states), and `DecorateLump`.
+`wadcli list actors` surfaces all actors with their DoomEdNums.
+Not yet covered: full ZScript, inheritance resolution, expression evaluation.
 
 ### Packaging and publishing
 - Publish to PyPI once API is stable
