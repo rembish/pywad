@@ -263,7 +263,11 @@ class TestFuzzParseUdmf:
         """parse_udmf on arbitrary text never raises any exception."""
         _assert_no_crash(lambda: parse_udmf(text))
 
-    @given(text=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs")), max_size=256))
+    @given(
+        text=st.text(
+            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs")), max_size=256
+        )
+    )
     @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
     def test_identifier_like_text_never_crash(self, text: str) -> None:
         """Identifier-like text (letters, digits, spaces) never crashes."""

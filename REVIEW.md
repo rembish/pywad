@@ -2,411 +2,300 @@
 
 Review date: 2026-04-15
 
-Repository state reviewed: v0.1.9-era code after the latest hardening,
-architecture, PK3, registry, and test-suite updates.
+Repository state reviewed: v0.2.4-era code after the latest hardening,
+duplicate-lump fixes, UDMF/DECORATE fixes, fuzz expansion, and
+`ResourceResolver` v2 work.
 
 ## Overall Score
 
-**8.2 / 10**
+**8.6 / 10**
 
-`wadlib` is now a strong Doom WAD toolkit. It is no longer just a broad parser
-with a few risky edges: it has real validation, a large test suite, typed APIs,
-coverage enforcement, fuzz/property tests for several binary parsers, better
-architecture seams, PK3 resource helpers, and a usable CLI.
+`wadlib` is now a credible Doom WAD library, not just an enthusiastic parser
+collection. The recent fixes addressed the previous high-priority correctness
+bugs, the default non-slow tests are now reasonably quick, and the architecture
+has a clearer resource-stack direction.
 
 For classic Doom / Doom II / Heretic / Hexen WAD reading, inspection, export,
-and round-tripping, I would rate it around **8.6 / 10**.
+and round-tripping, I would rate it around **8.9 / 10**.
 
-For arbitrary modern source-port content (GZDoom WADs, PK3s, UDMF, DECORATE,
-ZScript-adjacent syntax, source-port overlay rules), I would rate it around
-**7.2 / 10**.
+For arbitrary modern source-port content (GZDoom PK3s, UDMF, DECORATE,
+source-port resource overlays, embedded maps, and compatibility diagnostics), I
+would rate it around **7.6 / 10**.
 
-The combined score is held at 8.2 because the project still has a few concrete
-correctness leftovers, some documentation overclaiming, and a modern-content
-architecture that is improving but not fully settled.
+The combined score is held below 9 because modern resource resolution is still
+not collision-complete, `ResourceRef` metadata is still too thin for serious
+diagnostics, and generic map/resource assembly over WAD plus PK3 sources is not
+finished.
 
 ## Verification Run
 
 All checks below were run from the project `.venv`.
 
 ```bash
-.venv/bin/pytest
 .venv/bin/ruff check wadlib tests
 .venv/bin/mypy wadlib
 .venv/bin/pylint wadlib
+.venv/bin/pytest tests/test_resolver.py --no-cov -q
+.venv/bin/pytest -m 'not slow' --no-cov -q
 ```
 
 Results:
 
-- Pytest: **1037 passed, 84 skipped, 18 deselected** in **179.08s**.
-- Coverage: **81.75%**, above the configured 80% gate.
 - Ruff: passed.
 - Mypy: passed, no issues in 110 source files.
-- Pylint: exited successfully, rating **9.98 / 10**. Remaining findings are
-  mostly design/complexity warnings in parser, renderer, FUSE, and conversion
-  modules.
+- Pylint: exited successfully, rating **9.98 / 10**. Remaining messages are
+  existing complexity/design warnings, not resolver failures.
+- Resolver tests: **33 passed**.
+- Non-slow test suite with coverage disabled: passed in about **45 seconds**.
 
-I did not run the slow tests. The default pytest config deselects slow tests
-with `-m 'not slow'`, and that is the suite measured above.
-
-I also ran two manual adversarial probes:
-
-- Malformed Doom picture data with a valid column offset but a post that writes
-  past the image height still raises `IndexError` instead of `CorruptLumpError`.
-- `WadArchive.getinfo("DUP")` returns metadata for the first duplicate lump,
-  while `WadArchive.read("DUP")` reads the last duplicate lump. The read behavior
-  is now Doom-like, but the metadata behavior is still inconsistent.
+I did not run the slow tests in this pass. I also did not collect a fresh
+coverage number in this pass because the speed check intentionally used
+`--no-cov`.
 
 ## What Improved
 
-The latest round of changes materially improved the project.
+The last rounds fixed the earlier real blockers.
 
-### Architecture
+### Correctness
 
-- `LumpSource` and `MemoryLumpSource` decouple typed lumps from WAD directory
-  entries and raw file handles.
-- `DirectoryEntry` now behaves like a lump source via `read_bytes()`.
-- `DecoderRegistry`, `scan_map_groups`, `attach_map_lumps`, and `assemble_maps`
-  moved map assembly and decoder dispatch out of `wad.py`.
-- `ResourceResolver` provides a first pass at unified lookup across WAD and PK3
-  sources.
-- `WadFile.maps_in_order` avoids losing map ordering when callers need stable
-  original order.
+- `Picture.decode()` now handles malformed post bounds as `CorruptLumpError`
+  instead of leaking `IndexError`.
+- `WadArchive.getinfo()` now matches `read()` duplicate-lump precedence: the
+  last duplicate wins, matching Doom-style lookup.
+- The UDMF tokenizer and DECORATE inheritance work moved the source-port text
+  parsers closer to honest "data-complete" behavior.
+- `BaseLump.read()` and picture decoding are now better hardened against
+  low-level EOF/truncation leaks.
 
-This is the right direction. `WadFile` is still large, but it is no longer the
-only place where every concept accumulates.
+### Resolver
 
-### Robustness
-
-- Header and directory hardening is much better than in the original review.
-- Non-ASCII WAD magic and non-ASCII directory names now become domain errors
-  instead of incidental `UnicodeDecodeError`.
-- Duplicate-lump lookup in `WadFile.find_lump()` and `WadArchive.read()` now
-  follows last-entry-wins behavior.
-- `BaseLump.__bool__` and `BaseLump.__len__` are safer for non-row lumps.
-- Several binary parsers now raise `CorruptLumpError` for short/truncated input.
+- `ResourceResolver.doom_load_order(base, *patches)` removes the old load-order
+  foot-gun. The constructor remains explicit priority order, while the named
+  constructor matches `doom -iwad base -file p1 p2` semantics.
+- `find_all(name)` and `ResourceRef` give callers a way to inspect shadowed
+  resources across multiple archives.
+- The resolver tests now cover empty resolvers, PK3 lookup, priority order,
+  Doom load order, cross-source `find_all()`, `ResourceRef`, and real WAD plus
+  PK3 cases.
 
 ### Tests
 
-- The non-slow test suite is large and now completes in about three minutes on
-  this machine.
-- Coverage is above the configured 80% threshold with branch coverage enabled.
-- Fuzz/property tests exist for ACS BEHAVIOR, PNAMES, TEXTURE1, MUS, and DMX
-  sound parsing.
-- Many earlier fragile fixture dependencies have been replaced with synthetic
-  WADs where appropriate.
+- The non-slow suite is now practical for routine local use.
+- Fuzz/property coverage has expanded and now includes picture decoding too,
+  which directly covers a bug class found in the earlier review.
+- The important hardening regressions are now represented in tests.
 
-### PK3
+### Roadmap
 
-- `Pk3Archive` now has category APIs for sounds, music, sprites, flats, patches,
-  graphics, and textures.
-- It can decode PNG/JPEG/TGA-style image resources through Pillow via
-  `flat_images`, `sprite_images`, `patch_images`, and `texture_images`.
-- `find_resource()` / `read_resource()` give callers a simple lump-name lookup
-  across PK3 entries.
-
-This is useful and a clear step beyond "ZIP wrapper".
+`TODO.md` is now much more honest about what is core-done versus what is still
+future work. It correctly keeps resource-stack collision APIs, richer
+`ResourceRef` metadata, generic map assembly, diagnostics, and modern
+source-port parser maturity as future work.
 
 ## Current Major Findings
 
-### 1. Picture Decoder Still Leaks A Low-Level Exception
+### 1. `find_all()` Is Not Yet Truly "All"
 
-`wadlib/lumps/picture.py` checks short headers, truncated column offset tables,
-out-of-range column offsets, missing terminators, and truncated post data. That
-is good.
+`ResourceResolver.find_all()` currently returns at most one hit per archive. It
+delegates to `WadFile.find_lump()` for WADs and `Pk3Archive.find_resource()` for
+PK3s.
 
-One corrupt-but-plausible case remains: a post can have `topdelta + row` greater
-than or equal to the image height. `_draw_column()` then writes directly to
-`pixels[col_x, topdelta + row]`, which raises `IndexError`.
+That preserves normal "winner" lookup, but it does not expose every matching
+resource inside a single source:
 
-This matters because the public docstring promises `CorruptLumpError` for
-malformed picture payloads. It is also exactly the kind of edge case fuzzing
-should catch once picture fuzz tests are added.
+- duplicate WAD lumps with the same name collapse to the last winner;
+- PK3 files that collide after uppercase/8-character lump-name truncation
+  collapse to the first matching ZIP entry;
+- callers cannot inspect all same-name entries inside one WAD or one PK3.
 
-Recommended fix:
-
-- Before writing a pixel, check `topdelta + row < height`.
-- If the post exceeds image bounds, raise `CorruptLumpError`.
-- Pass `height` into `_draw_column()` or validate post bounds before the loop.
-- Add a regression test with a 1x1 picture whose post starts at row 1.
-
-Priority: **high** because it is a small, concrete correctness bug.
-
-### 2. `WadArchive.getinfo()` And `read()` Disagree On Duplicate Lumps
-
-`WadArchive.read()` scans the WAD directory in reverse, so the last duplicate
-lump wins. That matches Doom lookup behavior and `WadFile.find_lump()`.
-
-`WadArchive.getinfo()` still iterates `infolist()` forward and returns the first
-matching duplicate. A user can therefore get size/index metadata for one lump
-and bytes for another.
+This is the main remaining resolver gap. The API name says "all", but the
+current behavior is closer to "all winning per-source hits".
 
 Recommended fix:
 
-- Make `getinfo()` use the same precedence as `read()`.
-- Or add an explicit `getinfos(name)` / `allinfo(name)` API and document
-  `getinfo()` as last-wins.
-- Add a regression test where the first and last duplicate have different sizes.
+1. Add `WadFile.find_lumps(name)` or reuse `get_lumps(name)` at the resolver
+   layer, preserving correct priority order.
+2. Add `Pk3Archive.find_resources(name) -> list[Pk3Entry]`.
+3. Change resolver internals so `find_all()` can yield every matching entry,
+   not just each archive's winner.
+4. Add tests for duplicate WAD lumps and PK3 8-character name collisions.
 
-Priority: **high** because this is a public API consistency issue.
+Priority: **medium-high**. Normal reads are fine, but diagnostics and
+shadow/collision tooling need this.
 
-### 3. `ResourceResolver` Priority Order Is Easy To Misuse
+### 2. `ResourceRef` Metadata Is Still Too Thin
 
-`ResourceResolver` searches sources in constructor order and first hit wins.
-That is documented in `resolver.py`, but it differs from the mental model of:
+`ResourceRef` currently exposes only:
 
-```python
-WadFile.open(base, *pwads)
-```
+- `name`
+- `archive`
+- `source`
+- `read_bytes()`
 
-where later PWADs override earlier/base WADs.
+That is enough for basic lookup, but not enough for the diagnostic tooling
+outlined in `TODO.md`.
 
-This is not inherently wrong, but the example in the module docstring uses
-`ResourceResolver(wad, pk3)`, which makes the base WAD win over the PK3 for
-same-name resources. For a Doom-style "mod overrides base" workflow, callers
-probably need to pass higher-priority sources first.
+Useful missing fields:
 
-Recommended fix:
-
-- Add a named constructor such as `ResourceResolver.load_order(base, *patches)`
-  that reverses or normalizes Doom load order.
-- Document examples for both "priority order" and "Doom load order".
-- Consider exposing `find_all(name)` so callers can inspect shadowed resources.
-
-Priority: **medium-high** because it is likely to cause subtle user mistakes.
-
-### 4. PK3 Resource Semantics Are Useful But Not Source-Port Complete
-
-`Pk3Archive` is now much better, but it is still a convenience API, not full
-GZDoom resource resolution.
-
-Known limitations:
-
-- Category dicts are keyed by 8-character WAD-style lump names, so entries that
-  collide after uppercasing/truncation silently overwrite each other.
-- `find_resource()` returns the first matching lump-name entry by ZIP order.
-- There is no full support for source-port filter directories, skins, language
-  overlays, or source-port-specific load order rules.
-- Embedded WAD-format maps such as `maps/MAP01.wad` are listed in the module
-  docstring and TODO, but not integrated into the map model.
+- source/load-order index;
+- WAD directory index or PK3 path;
+- PK3 category/namespace;
+- original lookup kind: WAD lump name, PK3 path, PK3 lossy lump-name lookup;
+- size;
+- whether the entry is the active winner, shadowed, or involved in a collision.
 
 Recommended fix:
 
-- Preserve path-level APIs as the canonical PK3 representation.
-- Make lump-name dict APIs explicitly lossy, or return lists/multimaps for
-  collisions.
-- Add `find_resources(name)` for all matches.
-- Decide whether `maps/MAP01.wad` support belongs in `Pk3Archive`,
-  `ResourceResolver`, or a future map assembler over generic lump sources.
+1. Extend `ResourceRef` while it is still new and easy to change.
+2. Preserve path-level PK3 identity rather than exposing only WAD-style
+   8-character names.
+3. Use the metadata as the foundation for `shadowed(name)` and `collisions()`.
 
 Priority: **medium**.
 
-### 5. README Support Matrix — Revised Assessment
+### 3. PK3 Lookup Is Still Convenience-Level, Not Source-Port Complete
 
-After closer analysis, the three "Full" labels fall into distinct categories:
+The PK3 API is useful, but it is still lossy when viewed through WAD lump-name
+semantics.
 
-**`Boom / MBF / MBF21 | Full` — label was correct, revert.**
-Engine behavior (codepointers, state machines) does not affect how the binary
-format is read. Generalized linedefs are a fixed bit-encoding, sector specials
-are a name table, MBF21 flags are bits. All are fully decoded. "Full" is the
-right label for a library — runtime engine semantics are explicitly out of scope
-for all entries and need no special disclaimer here.
+Current limitations:
 
-**`UDMF maps | Full` — Partial is justified, but for format reasons, not engine reasons.**
-The regex tokenizer has two concrete gaps that affect real mods:
-- Integer assignments do not parse hex literals (`0x1A`), which appear in
-  GZDoom UDMF maps.
-- Quoted string regex `"([^"]*)"` does not handle escaped quotes inside strings.
-These are tokenizer bugs, not engine-semantics gaps. Fix: replace the regex
-integer branch with a hex-aware parser and handle `\"` in quoted strings.
-After the fix, "Full" is appropriate — unknown/extension fields are already
-stored in `props` so namespace-specific fields are preserved correctly.
-
-**`DECORATE | Full` — Partial is honest, but close to fixable.**
-This is the one case where engine flow genuinely affects data correctness.
-`DecorateActor.health` returns `None` for an actor that inherits `health = 60`
-from a parent — the inherited value is invisible without walking the actor list.
-The `parent` string is stored, so all data needed for resolution is present.
-Adding a `resolve_inheritance(actors)` helper that fills inherited properties
-into child actors would make the label "Full" without requiring a scripting engine.
-
-Recommended fix (revised):
-
-- Revert `Boom / MBF / MBF21` to "Full" — the original label was correct.
-- Fix the UDMF tokenizer (hex integers, escaped quotes), then revert to "Full".
-- Add `resolve_inheritance()` to `decorate.py`, then revert to "Full".
-- Add a one-line legend to the table: "Full = complete read/write API for the
-  format's data; engine runtime behavior is out of scope for all entries."
-
-Priority: **high** — format completeness is a stated project goal.
-
-### 6. TODO.md Has Stale Items
-
-`TODO.md` still lists "PNG/TGA/JPG image decoding for flats, sprites, textures"
-as open, but `Pk3Archive` now has Pillow-backed image APIs for those categories.
-
-There are also items marked "done" where the implementation is useful but not
-complete in the full source-port sense, especially DECORATE/ZScript and UDMF.
-The nuance is present in some text, but the headings and README matrix are more
-confident than the code warrants.
+- category dictionaries are keyed by 8-character lump names, so collisions
+  silently overwrite;
+- `find_resource()` returns only the first entry matching the truncated lump
+  name;
+- path lookup is canonical, but WAD-style lookup does not advertise its
+  collision risk strongly enough;
+- embedded WAD maps such as `maps/MAP01.wad` are not integrated into the common
+  map model.
 
 Recommended fix:
 
-- Mark PK3 image decoding as done in TODO.
-- Split "DECORATE metadata parser done" from "full DECORATE/ZScript engine not
-  planned / future".
-- Split "UDMF common block parser done" from "full grammar/semantic validation".
+1. Keep path-based PK3 APIs as canonical.
+2. Add multi-match/collision-aware APIs for WAD-style lookup.
+3. Document lossy lump-name lookup explicitly.
+4. Feed PK3 resources into the future generic map/resource assembler.
 
 Priority: **medium**.
 
-### 7. Fuzz Coverage Is Good But Still Narrow
+### 4. Generic Resource And Map Assembly Is Still The Next Architecture Step
 
-The new Hypothesis tests are a strong improvement. They currently cover:
-
-- ACS BEHAVIOR parser
-- PNAMES
-- TEXTURE1
-- MUS to MIDI
-- DMX sound to WAV
-
-Important parsers still not fuzzed:
-
-- Doom picture decode
-- BLOCKMAP
-- ZNODES
-- UDMF text parsing
-- ZMAPINFO / TEXTURES / DECORATE text parsing
-- PK3 name/resource collision behavior
-
-Recommended fix:
-
-- Add fuzz tests for `Picture.decode()` next because there is already a proven
-  low-level exception leak.
-- Add size/count limits to parsers that trust file-provided counts before
-  allocating format strings or lists.
-- Add fuzz tests for text parsers that assert "no crash" and "no catastrophic
-  regex behavior" on bounded random text.
-
-Priority: **medium**.
-
-### 8. `WadFile` Is Better, But Still A Broad Facade
-
-The new registry and map assembly helpers are meaningful progress. Still,
-`WadFile` remains the main facade for:
-
-- file lifecycle
-- directory access
-- PWAD overlay
-- resource catalogs
-- map access
-- typed lump construction
-- cache invalidation
-
-That is acceptable for the current project size, but the next feature wave
-(deeper PK3 integration, generic resource lookup, embedded maps, source-port
-filters) should avoid pushing more responsibilities back into `WadFile`.
+`WadFile` is much healthier than before, but it is still the classic-WAD facade
+where most convenience APIs live. The next feature wave should avoid putting
+PK3/decomposed-map/embedded-map logic back into `WadFile`.
 
 Recommended direction:
 
-- Keep `WadFile` as the classic WAD convenience facade.
-- Move generic "resource stack" behavior into `ResourceResolver`.
-- Make decoder registry constructors accept generic `LumpSource` rather than
-  `DirectoryEntry` only.
-- Let map assembly operate over generic ordered lump sources, so WAD directories
-  and embedded/virtual PK3 map sources can share the same path.
+1. Keep `WadFile` as the classic WAD convenience facade.
+2. Let `ResourceResolver` own cross-archive resource-stack behavior.
+3. Make map assembly consume ordered `ResourceRef` / `LumpSource` objects rather
+   than only WAD directory entries.
+4. Support classic WAD maps, UDMF maps, decomposed PK3 maps, and embedded WAD
+   maps through one map-facing API.
 
-Priority: **medium-low**, but important for keeping the project maintainable.
+Priority: **medium**. This is not a bug, but it will decide whether modern PK3
+support stays maintainable.
 
-### 9. Pylint Complexity Warnings Are Mostly Real Design Smells
+### 5. Fuzzing Is In Progress, But Should Keep Expanding
 
-Pylint passes the threshold, but it still points at modules worth revisiting:
+The fuzzing direction is good, and picture fuzzing now covers the previous
+out-of-bounds post bug class. The next useful targets are:
 
-- `export3d.py`: nested control flow.
-- `compat.py`: many branches.
-- `fuse.py`: many locals and very low test coverage.
-- `blockmap.py`, `texturex.py`, `decorate.py`, `mid2mus.py`, `colormap.py`:
-  parser/conversion functions doing a lot in one pass.
+- BLOCKMAP;
+- ZNODES;
+- UDMF text parsing;
+- ZMAPINFO / MAPINFO;
+- TEXTURES;
+- DECORATE;
+- PK3 resource-name collision behavior.
 
-These are not urgent failures. For parser-heavy code, some complexity is
-expected. But the warnings are useful smoke signals: when a bug appears in one
-of these modules, prefer extracting named parsing stages instead of adding one
-more nested condition.
+Priority: **medium** until the current fuzz work lands, then **low-medium** as
+maintenance.
+
+### 6. Public Docs Should Catch Up To Resolver v2
+
+`TODO.md` is current enough, but README-facing documentation should explain the
+resolver now that it is a meaningful public API.
+
+Recommended docs:
+
+- priority-order constructor example;
+- `doom_load_order()` example;
+- `find_all()` example;
+- warning that current PK3 lump-name lookup is 8-character and collision-prone;
+- short note that full collision APIs are future work.
+
+Priority: **low-medium**. This is not blocking code correctness, but it reduces
+the chance that users build on the wrong mental model.
+
+### 7. Complexity Warnings Are Still Useful Smoke Signals
+
+Pylint still reports complexity/design warnings in parser and export modules,
+including `export3d.py`, `compat.py`, `fuse.py`, `blockmap.py`, `texturex.py`,
+`decorate.py`, `mid2mus.py`, and `colormap.py`.
+
+These are not urgent failures. Parser-heavy code often has real branching. But
+when bugs appear in these modules, prefer extracting named parsing stages rather
+than adding more nested conditions.
 
 Priority: **low**.
 
-## Current Low-Priority / Medium-Priority Backlog
+## Current Backlog
 
-Medium priority:
+Medium / medium-high priority:
 
-1. Fix `Picture.decode()` bounds handling and add regression plus fuzz tests.
-2. Make `WadArchive.getinfo()` duplicate precedence match `read()`.
-3. Clarify `ResourceResolver` source-order semantics and add a Doom-load-order
-   helper or examples.
-4. Correct README/TODO support claims for UDMF, DECORATE, Boom/MBF21, and PK3
-   image decoding.
-5. Add `Pk3Archive` collision-safe APIs (`find_resources`, path-preserving
-   resource maps, or multimaps).
-6. Add embedded PK3 WAD map support or explicitly document it as unsupported.
-7. Expand fuzz tests to pictures, BLOCKMAP, ZNODES, UDMF, ZMAPINFO, TEXTURES,
-   and DECORATE.
-8. Add more direct tests for the low-coverage CLI commands that are part of the
-   public tool surface.
+1. Make resolver `find_all()` collision-complete within a single WAD or PK3.
+2. Enrich `ResourceRef` metadata before the API hardens.
+3. Add explicit `shadowed(name)` and `collisions()` APIs.
+4. Add collision-safe PK3 lookup APIs such as `find_resources(name)`.
+5. Document resolver v2 in README.
+6. Continue fuzz work for BLOCKMAP, ZNODES, text parsers, and PK3 collisions.
+7. Move map assembly toward generic resource inputs.
 
 Low priority:
 
 1. Refactor high-complexity parser/export functions when touching them for
    functional work.
-2. Reduce `fuse.py` risk if FUSE is meant to be a supported public feature;
-   otherwise document it as experimental.
-3. Consider lazy/larger-lump strategies. `BaseLump` still eagerly buffers every
-   lump, which is simple and safe but not ideal for huge resources.
-4. Add stricter semantic validation modes for maps: sidedef/sector references,
-   texture references, PNAMES patch indices, and UDMF required fields.
-5. Decide whether release docs should describe the project as "Beta" for all
-   content or "stable for classic WAD, beta for source-port formats".
+2. Decide whether FUSE is supported or experimental; document accordingly.
+3. Consider lazy/larger-lump strategies for very large resources.
+4. Add stricter semantic validation modes for maps, textures, PNAMES indices,
+   and UDMF required fields.
+5. Expand release docs around "stable for classic WAD, beta for modern
+   source-port formats".
 
 ## Recommended Order Of Operations
 
-1. **Fix the two concrete correctness bugs first.**
-   Address `Picture.decode()` out-of-bounds posts and `WadArchive.getinfo()`
-   duplicate precedence. These are small, testable, and user-visible.
+1. **Finish resolver collision semantics.**
+   Add WAD duplicate and PK3 collision multi-match APIs, then make
+   `ResourceResolver.find_all()` actually return all hits.
 
-2. **Patch documentation truthfulness next.**
-   Update README and TODO so support claims match the actual implementation.
-   This avoids promising full source-port semantics before they exist.
+2. **Expand `ResourceRef` metadata.**
+   Do this before external users depend on the smaller shape.
 
-3. **Add targeted regression tests.**
-   Add tests for the exact picture and duplicate-metadata cases found in this
-   review. These should be fast non-slow tests.
+3. **Add resolver README examples.**
+   Document priority order, Doom load order, `find_all()`, and the current PK3
+   collision caveat.
 
-4. **Expand fuzzing where it will catch real bugs.**
-   Start with `Picture.decode()`, then BLOCKMAP and text parsers. Keep max input
-   sizes bounded so the default suite stays around the current runtime.
+4. **Land the current fuzz work.**
+   Keep fuzz tests bounded so the normal non-slow suite stays fast.
 
-5. **Clarify resolver/load-order APIs.**
-   Decide whether `ResourceResolver` is a priority-order object, a Doom-load-order
-   object, or supports both via named constructors. Document this before people
-   build on it.
+5. **Build explicit diagnostics.**
+   `shadowed(name)`, `collisions()`, and later `analyze()` should sit on top of
+   the richer resolver metadata.
 
-6. **Make PK3 APIs collision-aware.**
-   Keep convenient lump-name dicts if useful, but add path-preserving or
-   multi-match APIs so data loss is not silent.
-
-7. **Only then continue larger architecture extraction.**
-   Move decoder registry and map assembly toward generic `LumpSource` inputs, and
-   keep `WadFile` as a facade rather than the place where every new format lands.
+6. **Only then tackle generic map assembly.**
+   Use the resolver/resource metadata as the substrate for WAD maps, UDMF maps,
+   decomposed PK3 maps, and embedded PK3 WAD maps.
 
 ## Final Verdict
 
-The project is in good shape. The last updates addressed the biggest earlier
-concerns: the test suite is healthy, non-slow tests finish in a reasonable time,
-coverage is above the enforced threshold, static checks pass, and the architecture
-is moving away from a monolithic `WadFile`.
+The project is in good shape. The earlier high-priority correctness findings
+have been addressed, the resolver is materially better, and the non-slow suite
+is now usable for normal development.
 
-The remaining issues are not signs that the project is bad. They are the next
-layer of maturity work: precise public semantics, conservative documentation,
-collision-aware PK3 handling, parser fuzzing beyond the initial set, and a few
-small correctness fixes.
+The remaining concerns are mostly the next maturity layer: collision-complete
+resource resolution, richer origin metadata, public resolver documentation,
+continued fuzzing, and a cleaner architecture for modern PK3/map workflows.
 
-My current recommendation: treat `wadlib` as **approaching release quality for
-classic WAD workflows**, and still **beta for modern GZDoom/UDMF/PK3 workflows**.
+My current recommendation: treat `wadlib` as **near release quality for classic
+WAD workflows**, and still **beta for modern GZDoom/UDMF/PK3 workflows**.
