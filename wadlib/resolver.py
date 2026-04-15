@@ -21,6 +21,7 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 from .pk3 import Pk3Archive
@@ -91,7 +92,7 @@ class ResourceResolver:
     # Core API
     # ------------------------------------------------------------------
 
-    def _iter_source(self, name_upper: str):  # type: ignore[return]
+    def _iter_source(self, name_upper: str) -> Iterator[tuple[WadFile | Pk3Archive, LumpSource]]:
         """Yield ``(archive, LumpSource)`` pairs for every hit across all sources."""
         for src in self._sources:
             if isinstance(src, WadFile):
