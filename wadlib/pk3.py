@@ -39,7 +39,11 @@ import os
 import zipfile
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal
+from io import BytesIO
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
 
 # Canonical category names used by all resource properties.
 # Keys are the normalized lowercase directory names found in real pk3 files;
@@ -246,6 +250,48 @@ class Pk3Archive:
     def textures(self) -> dict[str, bytes]:
         """All entries under ``textures/`` (or ``texture/``) as lump_name → bytes."""
         return self._category_dict("textures")
+
+    # -- Image decoding -------------------------------------------------------
+
+    @staticmethod
+    def _decode_image(data: bytes) -> Image:
+        """Decode raw image bytes (PNG, JPEG, TGA, …) into a Pillow Image.
+
+        `.load()` is called immediately so the BytesIO buffer can be discarded
+        without keeping it alive for the lifetime of the Image object.
+        """
+        from PIL import Image as PilImage  # pylint: disable=import-outside-toplevel
+
+        img = PilImage.open(BytesIO(data))
+        img.load()
+        return img
+
+    def _category_images(self, category: str) -> dict[str, Image]:
+        """Return lump_name -> decoded Image for every entry in *category*."""
+        return {
+            e.lump_name: self._decode_image(self.read(e.path))
+            for e in self._by_category.get(category, [])
+        }
+
+    @property
+    def flat_images(self) -> dict[str, Image]:
+        """All flat entries decoded as Pillow Images (lump_name -> Image)."""
+        return self._category_images("flats")
+
+    @property
+    def sprite_images(self) -> dict[str, Image]:
+        """All sprite entries decoded as Pillow Images (lump_name -> Image)."""
+        return self._category_images("sprites")
+
+    @property
+    def patch_images(self) -> dict[str, Image]:
+        """All patch entries decoded as Pillow Images (lump_name -> Image)."""
+        return self._category_images("patches")
+
+    @property
+    def texture_images(self) -> dict[str, Image]:
+        """All texture entries decoded as Pillow Images (lump_name -> Image)."""
+        return self._category_images("textures")
 
     def find_resource(self, name: str) -> Pk3Entry | None:
         """Find the first entry whose lump name matches *name* (case-insensitive).

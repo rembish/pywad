@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-04-15
+
+### Added
+
+- **`Pk3Archive._decode_image(data)`** — static helper that opens any Pillow-supported
+  format (PNG, JPEG, TGA, …) from raw bytes via `BytesIO`; calls `.load()` immediately
+  so the buffer can be discarded.
+- **`Pk3Archive._category_images(category)`** — decodes every entry in a category to
+  a `PIL.Image.Image`; mirrors the existing `_category_dict` pattern.
+- **`Pk3Archive.flat_images`**, **`sprite_images`**, **`patch_images`**,
+  **`texture_images`** properties — return `dict[str, Image]` (lump_name → decoded
+  Pillow Image) for the corresponding pk3 directory.
+- 7 new tests in `tests/test_pk3.py` (`TestPk3ArchiveImageApi`): flat/sprite/patch/
+  texture round-trip, empty-category guard, static `_decode_image` sanity check.
+
 ## [0.1.8] - 2026-04-15
 
 ### Added

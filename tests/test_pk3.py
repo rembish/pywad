@@ -379,6 +379,104 @@ class TestPk3ArchiveResourceApi:
             os.unlink(path)
 
 
+# ---------------------------------------------------------------------------
+# Pk3Archive — image API
+# ---------------------------------------------------------------------------
+
+
+def _png_bytes(width: int = 2, height: int = 2, color: str = "RGB") -> bytes:
+    """Create a tiny in-memory PNG using Pillow."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    img = Image.new(color, (width, height), (128, 64, 32) if color == "RGB" else 128)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+class TestPk3ArchiveImageApi:
+    def _make_image_pk3(self) -> str:
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            path = f.name
+        flat_png = _png_bytes()
+        sprite_png = _png_bytes(4, 8)
+        patch_png = _png_bytes(8, 8)
+        tex_png = _png_bytes(16, 16)
+        with Pk3Archive(path, "w") as pk3:
+            pk3.writestr("flats/FLOOR1.png", flat_png)
+            pk3.writestr("sprites/TROOA1.png", sprite_png)
+            pk3.writestr("patches/WALL01.png", patch_png)
+            pk3.writestr("textures/BRICK1.png", tex_png)
+        return path
+
+    def test_flat_images_returns_dict(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                imgs = pk3.flat_images
+                assert "FLOOR1" in imgs
+        finally:
+            os.unlink(path)
+
+    def test_flat_image_dimensions(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                img = pk3.flat_images["FLOOR1"]
+                assert img.size == (2, 2)
+        finally:
+            os.unlink(path)
+
+    def test_sprite_images(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                imgs = pk3.sprite_images
+                assert "TROOA1" in imgs
+                assert imgs["TROOA1"].size == (4, 8)
+        finally:
+            os.unlink(path)
+
+    def test_patch_images(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                imgs = pk3.patch_images
+                assert "WALL01" in imgs
+                assert imgs["WALL01"].size == (8, 8)
+        finally:
+            os.unlink(path)
+
+    def test_texture_images(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                imgs = pk3.texture_images
+                assert "BRICK1" in imgs
+                assert imgs["BRICK1"].size == (16, 16)
+        finally:
+            os.unlink(path)
+
+    def test_empty_category_images(self) -> None:
+        path = self._make_image_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                # No graphics/ entries in this archive
+                assert pk3._category_images("graphics") == {}
+        finally:
+            os.unlink(path)
+
+    def test_decode_image_static(self) -> None:
+        data = _png_bytes(3, 3)
+        from PIL.Image import Image as PilImage
+
+        img = Pk3Archive._decode_image(data)
+        assert isinstance(img, PilImage)
+        assert img.size == (3, 3)
+
+
 @pytest.mark.skipif(not _has_wad(FREEDOOM2), reason="freedoom2.wad not available")
 class TestRealWadToPk3:
     def test_convert_freedoom2(self) -> None:

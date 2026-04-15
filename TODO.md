@@ -96,7 +96,7 @@ Export PLAYPAL as a visual swatch PNG (14 palettes × 256 colours).
 Aggregate statistics across all maps: total things, total linedefs, sector
 area distribution, thing type breakdown, secret count, etc.
 
-### `wadcli check`
+### `wadcli check` ✓ done (v0.0.53)
 Sanity-check a WAD for common authoring errors: missing textures, missing
 flats, unreachable sectors, duplicate map names, etc.
 
