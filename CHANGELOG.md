@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.92] - 2026-04-15
+
+### Added
+
+- **`tests/test_mapinfo.py`**: synthetic PWAD tests for `serialize_mapinfo` and
+  `MapInfoLump` — all properties, comment skipping, multi-map, `get()`.
+  Coverage: 18% → 98%.  No HEXEN.WAD required.
+- **`tests/test_sndseq.py`**: new test file covering `serialize_sndseq` and
+  `SndSeqLump` — basic sequences, tics, orphan-line skipping, `get()`.
+  Coverage: 71% → 100%.  No HEXEN.WAD required.
+- **`tests/test_zmapinfo.py`**: new test file covering `serialize_zmapinfo` and
+  `ZMapInfoLump` — direct titles, lookup titles, all properties, comment
+  stripping, `resolved_title()` with/without language dict.
+  Coverage: 69% → 98%.  No real WAD required.
+
+### Changed
+
+- Combined statement+branch coverage rose from 80.04% to **82.04%**, giving a
+  comfortable 2-point buffer above the 80% CI gate.
+
 ## [0.0.91] - 2026-04-15
 
 ### Changed
