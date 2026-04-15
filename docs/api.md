@@ -299,8 +299,8 @@ with WadFile.open("DOOM2.WAD", "mod.wad") as wad:
 
 | Class / Property | Description |
 |---|---|
-| `DecorateLump` | Parsed DECORATE lump; `.actors` returns list of `DecorateActor` |
-| `DecorateActor` | Dataclass with fields: `name`, `parent`, `editor_number`, `radius`, `height`, `states` |
+| `DecorateLump` | Parsed DECORATE lump; `.actors` returns list of `DecorateActor`; `.editor_numbers` returns `dict[int, DecorateActor]` |
+| `DecorateActor` | Dataclass with fields: `name`, `parent`, `doomednum`, `replaces`, `properties`, `flags`, `states`; computed properties `health`, `radius`, `height`, `speed`, `is_monster`, `is_item` |
 | `parse_decorate(text)` | Parse raw DECORATE text into a list of `DecorateActor` objects |
 
 ---

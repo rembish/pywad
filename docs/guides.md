@@ -456,7 +456,7 @@ with WadFile.open("DOOM2.WAD", "mod.wad") as wad:
     if dec:
         for actor in dec.actors:
             print(f"{actor.name} (parent={actor.parent}, "
-                  f"ednum={actor.editor_number}, "
+                  f"ednum={actor.doomednum}, "
                   f"radius={actor.radius}, height={actor.height})")
 
 # Parse a raw DECORATE text string directly
@@ -471,7 +471,7 @@ Actor MyMonster : Zombieman 1234 {
 """
 actors = parse_decorate(text)
 print(actors[0].name)          # "MyMonster"
-print(actors[0].editor_number) # 1234
+print(actors[0].doomednum) # 1234
 print(actors[0].parent)        # "Zombieman"
 ```
 

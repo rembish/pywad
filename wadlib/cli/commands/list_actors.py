@@ -12,20 +12,16 @@ def configure(p: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    from ...lumps.decorate import parse_decorate
-
     with open_wad(args) as wad:
-        entry = wad.find_lump("DECORATE")
-        if entry is None:
+        dec = wad.decorate
+        if dec is None:
             if args.json:
                 print("[]")
             else:
                 print("No DECORATE lump found.")
             return
 
-        wad.fd.seek(entry.offset)
-        text = wad.fd.read(entry.size).decode("utf-8", errors="replace")
-        actors = parse_decorate(text)
+        actors = dec.actors
 
         if args.json:
             print(
