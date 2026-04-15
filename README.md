@@ -442,15 +442,48 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 |---|---|---|
 | Vanilla Doom / Doom II WAD | Full | IWAD + PWAD overlay, all binary map lumps, textures, sounds, music, sprites |
 | Heretic | Full | FONTA/FONTB fonts, Heretic thing catalog |
-| Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS |
-| Strife | Partial | Thing type catalog (all 230 types); no Strife-specific conversation/script lumps |
-| Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; `MBF21_LINEDEF_FLAGS` |
-| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, DEHACKED custom things, DECORATE actors; no ZScript |
-| UDMF maps | Full | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access via `UdmfLump` |
-| PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; not a full ZDoom-compatible resource overlay layer |
-| DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat or state machine |
-| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties |
+| Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS, compiled ACS BEHAVIOR |
+| Strife | Partial | Thing type catalog (all 230 types); no conversation/script lumps |
+| Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
+| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
+| UDMF maps | Full | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access |
+| PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; no full ZDoom resource overlay |
+| DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat/state machine |
+| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states |
+| LANGUAGE | Full | `wad.language` → `LanguageLump`; multi-locale string lookup, `strings_for(locale)` |
 | ZScript | None | Not parsed |
+
+### Lump-type capability matrix
+
+Legend: ✅ full  ⚠ partial  — not applicable / not present in this format
+
+| Lump / feature | Vanilla | Heretic | Hexen | Strife | Boom/MBF21 | ZDoom | UDMF |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| THINGS (binary) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| LINEDEFS (binary) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| SIDEDEFS / SEGS / SSECTORS / NODES | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| SECTORS (binary) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| TEXTMAP (UDMF) | — | — | — | — | — | ✅ | ✅ |
+| BLOCKMAP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| REJECT | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| GL nodes (GL_VERT / GL_SEGS / GL_SSECT) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| BEHAVIOR / ACS bytecode | — | — | ✅ | ✅ | — | ✅ | ✅ |
+| Generalized linedefs | — | — | — | — | ✅ | — | — |
+| PNAMES / TEXTURE1 / TEXTURE2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TEXTURES (ZDoom format) | — | — | — | — | — | ✅ | ✅ |
+| PLAYPAL / COLORMAP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DMX sound (PC speaker / OPL) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| MUS music | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| MP3 / OGG music | — | — | — | — | — | ✅ | ✅ |
+| DEHACKED | — | — | — | — | ⚠ | ⚠ | — |
+| DECORATE | — | — | — | — | — | ✅ | ✅ |
+| LANGUAGE | — | — | — | — | — | ✅ | ✅ |
+| SNDSEQ | — | ✅ | ✅ | — | — | ✅ | ✅ |
+| SNDINFO | — | ✅ | — | — | — | ✅ | ✅ |
+| MAPINFO (Hexen) | — | — | ✅ | — | — | — | — |
+| ZMAPINFO (ZDoom) | — | — | — | — | — | ✅ | ✅ |
+| ANIMDEFS | — | — | ✅ | — | — | ✅ | ✅ |
+| ANIMATED / SWITCHES | ✅ | ✅ | — | — | ✅ | — | — |
 
 ### PWAD custom types (DEHEXTRA / MBF21)
 
