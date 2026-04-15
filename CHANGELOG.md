@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.91] - 2026-04-15
+
+### Changed
+
+- **`wadlib/exceptions.py`**: removed redundant `pass` statements from all
+  exception classes that already have docstrings; added docstring to the bare
+  `BaseWadException` base class.
+
+### Documentation
+
+- **README.md**: added *Format / feature support matrix* table covering Vanilla,
+  Heretic, Hexen, Strife, Boom/MBF/MBF21, ZDoom/GZDoom WAD, UDMF, PK3,
+  DeHackEd, DECORATE, and ZScript with honest support-level notes.
+- **TODO.md**: marked UDMF map format and the bulk of DEHACKED parsing as done;
+  updated DeHackEd entry to list what is and is not yet covered; clarified the
+  `type: ignore[assignment]` item with a concrete fix direction.
+
 ## [0.0.90] - 2026-04-15
 
 ### Fixed

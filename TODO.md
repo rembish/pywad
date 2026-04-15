@@ -16,10 +16,11 @@ Implementing this requires:
 - PNG/TGA/JPG image decoding for flats, sprites, textures (Pillow already a dep)
 - Embedded WAD-format maps inside `maps/MAP01.wad` entries
 
-### UDMF map format
+### UDMF map format ✓ done (v0.0.89)
 Universal Doom Map Format (text-based, used by myhouse.pk3 and most modern maps).
-Requires a complete text parser for the UDMF spec.  Very different from binary
-Doom/Hexen map format.  Needed before pk3 maps can be rendered.
+`MapData` now includes `TEXTMAP`/`ENDMAP`; UDMF maps attach to `WadFile.maps`
+as `map_entry.udmf` (`UdmfLump`).  Full property parsing (vertices, linedefs,
+sidedefs, sectors, things) via `UdmfLump`.
 
 ### ZNODES compressed BSP ✓ done (v0.0.47)
 Modern PWADs may use `ZNODES` instead of `NODES`/`SSECTORS`/`SEGS`.
@@ -35,14 +36,12 @@ Content-based detection (magic bytes) — exposed via `wad.music` alongside MUS 
 
 ## Parsing / decoding
 
-### Full DEHACKED parsing
-Currently only PAR times are extracted.  A complete DEHACKED parser would cover:
-- Thing stat overrides (hit points, speed, damage, flags)
-- Frame/state sequence patches
-- Weapon patches
-- Sound remaps
-- Text string replacements
-- Cheat code changes
+### Full DEHACKED parsing ✓ largely done (v0.0.89+)
+The parser now covers: PAR times, thing stat overrides (hit points, speed,
+damage, flags), frame/state patches, weapon patches, ammo patches, sound
+remaps, text string replacements, custom thing ID extensions (DEHEXTRA /
+MBF21).  Not yet covered: cheat code changes, state machine simulation,
+sprite/frame sequence validation.
 
 ### TEXTURE lump: animated texture support via ANIMDEFS
 `ANIMDEFS` maps sequences of flats/textures into animation cycles.  The
@@ -123,8 +122,9 @@ stack is reflected on next access.
 
 ### `type: ignore[assignment]` in `attach_znodes`
 `ZNodList[ZNodSeg/SubSector/Node/Vertex]` assigned to vanilla-typed fields
-produces four `type: ignore[assignment]` suppressions; fix with Union types or
-a shared Protocol so mypy accepts both vanilla and ZNOD lumps in those slots.
+produces four `type: ignore[assignment]` suppressions.  Fix with Union types or
+a shared `NodeLike` Protocol so mypy accepts both vanilla and ZNOD lumps in
+those slots without suppression.
 
 ---
 

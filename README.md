@@ -435,6 +435,22 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Strife | `STRIFE1.WAD` | All 230 thing types, Strife-specific keys/monsters/NPCs |
 | Source-port PWADs | `.wad` | ZDoom ZMAPINFO, ANIMDEFS, DEHACKED PAR times + custom things |
 
+### Format / feature support matrix
+
+| Format or feature | Support | Notes |
+|---|---|---|
+| Vanilla Doom / Doom II WAD | Full | IWAD + PWAD overlay, all binary map lumps, textures, sounds, music, sprites |
+| Heretic | Full | FONTA/FONTB fonts, Heretic thing catalog |
+| Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS |
+| Strife | Partial | Thing type catalog (all 230 types); no Strife-specific conversation/script lumps |
+| Boom / MBF / MBF21 | Partial | Reads correctly; no dedicated API for BOOM line/sector specials or MBF21 flags |
+| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, DEHACKED custom things; no DECORATE or ZScript |
+| UDMF maps | Partial | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access via `UdmfLump` |
+| PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; not a full ZDoom-compatible resource overlay layer |
+| DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat or state machine |
+| DECORATE | None | Not parsed |
+| ZScript | None | Not parsed |
+
 ### PWAD custom types (DEHEXTRA / MBF21)
 
 PWADs that add new monsters or decorations beyond the base game's 137 types embed
