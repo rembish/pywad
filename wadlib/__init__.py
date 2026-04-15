@@ -16,6 +16,12 @@ from .lumps.boom import (
     decode_generalized,
 )
 from .lumps.decorate import DecorateActor, DecorateLump, resolve_inheritance
+from .lumps.strife_conversation import (
+    ConversationChoice,
+    ConversationLump,
+    ConversationPage,
+    parse_conversation,
+)
 from .registry import LUMP_REGISTRY, DecoderRegistry
 from .resolver import ResourceRef, ResourceResolver
 from .source import LumpSource, MemoryLumpSource
@@ -28,6 +34,9 @@ __all__ = [
     "LUMP_REGISTRY",
     "MBF21_LINEDEF_FLAGS",
     "BadHeaderWadException",
+    "ConversationChoice",
+    "ConversationLump",
+    "ConversationPage",
     "CorruptLumpError",
     "DecoderRegistry",
     "DecorateActor",
@@ -49,5 +58,6 @@ __all__ = [
     "WadFormatError",
     "WadWriter",
     "decode_generalized",
+    "parse_conversation",
     "resolve_inheritance",
 ]

@@ -54,6 +54,7 @@ from .lumps.segs import Segs, SubSectors
 from .lumps.sidedefs import SideDefs
 from .lumps.sndinfo import SndInfo
 from .lumps.sndseq import SndSeqLump
+from .lumps.strife_conversation import ConversationLump
 from .lumps.textures import PNames, TextureList
 from .lumps.things import Things
 from .lumps.udmf import UdmfLump
@@ -267,6 +268,7 @@ _SIMPLE_LUMPS: list[tuple[str, Callable[[DirectoryEntry], BaseLump[Any]]]] = [
     ("ANIMDEFS", AnimDefsLump),
     ("DECORATE", DecorateLump),
     ("DEHACKED", DehackedLump),
+    ("DIALOGUE", ConversationLump),
 ]
 
 for _name, _ctor in _SIMPLE_LUMPS:

@@ -433,7 +433,7 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Doom II | `DOOM2.WAD` | MAP01-MAP32 |
 | Heretic | `HERETIC.WAD` | FONTA/FONTB fonts, Heretic thing types |
 | Hexen | `HEXEN.WAD` | Hexen map/things format, SNDSEQ, MAPINFO, ANIMDEFS |
-| Strife | `STRIFE1.WAD` | All 230 thing types, Strife-specific keys/monsters/NPCs |
+| Strife | `STRIFE1.WAD` | All 262 thing types, Strife-specific keys/monsters/NPCs |
 | Source-port PWADs | `.wad` | ZDoom ZMAPINFO, ANIMDEFS, DEHACKED PAR times + custom things |
 
 ### Format / feature support matrix
@@ -443,7 +443,7 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Vanilla Doom / Doom II WAD | Full | IWAD + PWAD overlay, all binary map lumps, textures, sounds, music, sprites |
 | Heretic | Full | FONTA/FONTB fonts, Heretic thing catalog |
 | Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS, compiled ACS BEHAVIOR |
-| Strife | Partial | Thing type catalog (all 230 types); no conversation/script lumps |
+| Strife | Full | Thing type catalog (all 262 types); DIALOGUE lump parsed into `ConversationPage` / `ConversationChoice` dataclasses |
 | Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
 | ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
 | UDMF maps | Full | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props` |
@@ -470,7 +470,8 @@ Legend: ✅ full  ⚠ partial  — not applicable / not present in this format
 | BLOCKMAP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | REJECT | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | GL nodes (GL_VERT / GL_SEGS / GL_SSECT) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| BEHAVIOR / ACS bytecode | — | — | ✅ | ✅ | — | ✅ | ✅ |
+| BEHAVIOR / ACS bytecode | — | — | ✅ | — | — | ✅ | ✅ |
+| DIALOGUE (Strife NPC conversation) | — | — | — | ✅ | — | — | — |
 | Generalized linedefs | — | — | — | — | ✅ | — | — |
 | PNAMES / TEXTURE1 / TEXTURE2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | TEXTURES (ZDoom format) | — | — | — | — | — | ✅ | ✅ |

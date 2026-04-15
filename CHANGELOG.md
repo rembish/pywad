@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-04-15
+
+### Added
+
+- **Strife DIALOGUE lump parser** (`wadlib/lumps/strife_conversation.py`):
+  - `ConversationChoice` — frozen dataclass for one player-response option
+    (228 bytes: `give_item`, `need_items[3]`, `need_amounts[3]`, `text`,
+    `text_ok`, `next`, `objective`, `text_no`).
+  - `ConversationPage` — frozen dataclass for one NPC dialogue page
+    (1 516 bytes: `speaker_id`, `drop_item`, `check_items[3]`, `jump_to`,
+    `name`, `voice`, `back_pic`, `text`, five `ConversationChoice` slots).
+  - `ConversationPage.active_choices` — filters out unused (empty-text) choice
+    slots.
+  - `parse_conversation(data: bytes) -> list[ConversationPage]` — module-level
+    parser; raises `CorruptLumpError` when the lump is not a multiple of
+    1 516 bytes or a record is structurally invalid.
+  - `ConversationLump(BaseLump)` — `pages: cached_property` wrapper; registered
+    in `LUMP_REGISTRY` under `"DIALOGUE"` (the vanilla Strife 8-char lump name).
+  - Exported from `wadlib`: `ConversationChoice`, `ConversationPage`,
+    `ConversationLump`, `parse_conversation`.
+- **37 new tests** in `tests/test_strife_conversation.py` covering: empty lump,
+  single/multi-page counts, all header and choice fields, null-padded string
+  decoding, `active_choices` filtering, lump-order preservation,
+  `ConversationLump` via `WadFile` + `DirectoryEntry`, registry lookup, and
+  three `CorruptLumpError` paths.
+
+### Changed
+
+- Strife row in the feature-support matrix updated from **Partial** to **Full**.
+- DIALOGUE row added to the lump-type capability matrix.
+- BEHAVIOR/ACS row corrected: Strife maps do not use the Hexen/ZDoom BEHAVIOR
+  lump (was erroneously marked ✅; now —).
+- README: corrected Strife thing-type count from 230 to 262 (two locations).
+  The authoritative count (262) was already correct in `docs/games.md`.
+
 ## [0.2.8] - 2026-04-15
 
 ### Added
