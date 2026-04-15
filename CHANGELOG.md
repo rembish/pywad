@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.93] - 2026-04-15
+
+### Added
+
+- **`wadlib/exceptions.py`**: new `CorruptLumpError(WadFormatError)` exception for
+  malformed lump payloads (truncated picture columns, bad flat size, palette read failures).
+  Exported from `wadlib.__init__`.
+- **`wadlib/lumps/picture.py`**: hardened `decode()` and `_draw_column()` — explicit
+  checks for empty lump, short header, truncated column offset table, column offsets
+  beyond lump size, and truncated post data; all raise `CorruptLumpError` instead of
+  `AssertionError` or bare `EOFError`.
+- **`wadlib/lumps/flat.py`**: hardened `decode()` — rejects lumps shorter than 4096
+  bytes with `CorruptLumpError`.
+- **`wadlib/lumps/playpal.py`**: hardened `get_palette()` — size check precedes index
+  range check so a too-short lump raises `CorruptLumpError`, not `IndexError`.
+- **`tests/test_hardening.py`**: new `TestCorruptLump` class (6 tests) covering all
+  hardened parsers with synthetic malformed lumps; no real WAD required.
+
 ## [0.0.92] - 2026-04-15
 
 ### Added

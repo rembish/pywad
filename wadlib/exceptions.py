@@ -16,3 +16,10 @@ class TruncatedWadError(WadFormatError):
 
 class InvalidDirectoryError(WadFormatError):
     """Raised when a WAD directory entry references data outside the file."""
+
+
+class CorruptLumpError(WadFormatError):
+    """Raised when a lump's binary payload is internally malformed.
+
+    Examples: truncated picture column data, bad flat size, palette read failure.
+    """

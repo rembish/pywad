@@ -26,6 +26,7 @@ from typing import Any
 
 from PIL import Image
 
+from ..exceptions import CorruptLumpError
 from ..lumps.base import BaseLump
 from ..lumps.playpal import Palette
 
@@ -40,7 +41,12 @@ class Picture(BaseLump[Any]):
     def _header(self) -> tuple[int, int, int, int]:
         self.seek(0)
         raw = self.read(_HEADER_SIZE)
-        assert raw is not None
+        if raw is None:
+            raise CorruptLumpError(f"{self.name!r}: picture lump is empty")
+        if len(raw) < _HEADER_SIZE:
+            raise CorruptLumpError(
+                f"{self.name!r}: picture header too short ({len(raw)} < {_HEADER_SIZE} bytes)"
+            )
         w, h, lx, ty = unpack(_HEADER_FMT, raw)
         return int(w), int(h), int(lx), int(ty)
 
@@ -63,18 +69,42 @@ class Picture(BaseLump[Any]):
     def _draw_column(self, col_x: int, col_off: int, palette: Palette, pixels: Any) -> None:
         self.seek(col_off)
         while True:
-            td_raw = self.read(1)
-            assert td_raw is not None
+            try:
+                td_raw = self.read(1)
+            except EOFError as exc:
+                raise CorruptLumpError(
+                    f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
+                ) from exc
+            if not td_raw:
+                raise CorruptLumpError(
+                    f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
+                )
             topdelta = td_raw[0]
             if topdelta == 0xFF:
                 break
-            len_raw = self.read(1)
-            assert len_raw is not None
+            try:
+                len_raw = self.read(1)
+            except EOFError as exc:
+                raise CorruptLumpError(
+                    f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                ) from exc
+            if not len_raw:
+                raise CorruptLumpError(
+                    f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                )
             post_len = len_raw[0]
             self.read(1)  # pre-padding (unused)
             for row in range(post_len):
-                px_raw = self.read(1)
-                assert px_raw is not None
+                try:
+                    px_raw = self.read(1)
+                except EOFError as exc:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
+                    ) from exc
+                if not px_raw:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
+                    )
                 r, g, b = palette[px_raw[0]]
                 pixels[col_x, topdelta + row] = (r, g, b, 255)
             self.read(1)  # post-padding (unused)
@@ -83,22 +113,41 @@ class Picture(BaseLump[Any]):
         """Decode this picture into a PIL RGBA image using *palette*.
 
         Transparent pixels (gaps between posts) are fully transparent (alpha=0).
+
+        Raises:
+            CorruptLumpError: if the lump payload is malformed (truncated header,
+                out-of-range column offsets, truncated post data, etc.).
         """
         self.seek(0)
         hdr_raw = self.read(_HEADER_SIZE)
-        assert hdr_raw is not None
+        if hdr_raw is None:
+            raise CorruptLumpError(f"{self.name!r}: picture lump is empty")
+        if len(hdr_raw) < _HEADER_SIZE:
+            raise CorruptLumpError(
+                f"{self.name!r}: picture header too short ({len(hdr_raw)} < {_HEADER_SIZE} bytes)"
+            )
         width, height, _loff, _toff = unpack(_HEADER_FMT, hdr_raw)
         width, height = int(width), int(height)
 
         col_raw = self.read(width * 4)
-        assert col_raw is not None
+        if col_raw is None or len(col_raw) < width * 4:
+            raise CorruptLumpError(
+                f"{self.name!r}: column offset table truncated "
+                f"(got {len(col_raw) if col_raw else 0}, need {width * 4} bytes)"
+            )
         col_offsets = unpack(f"<{width}I", col_raw)
+
+        lump_size = self._size or 0
 
         img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         pixels = img.load()
-        assert pixels is not None
+        assert pixels is not None  # PIL invariant
 
         for col_x, col_off in enumerate(col_offsets):
+            if col_off >= lump_size:
+                raise CorruptLumpError(
+                    f"{self.name!r}: column {col_x} offset {col_off} beyond lump size {lump_size}"
+                )
             self._draw_column(col_x, int(col_off), palette, pixels)
 
         return img

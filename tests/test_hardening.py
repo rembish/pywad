@@ -3,6 +3,7 @@
 These tests verify that:
 - Non-ASCII magic bytes raise WadFormatError, not UnicodeDecodeError
 - Non-ASCII lump names raise InvalidDirectoryError, not UnicodeDecodeError
+- Corrupt picture/flat/playpal lumps raise CorruptLumpError, not AssertionError/EOFError
 - Truncated files raise TruncatedWadError
 - Out-of-range lump offsets raise InvalidDirectoryError
 - WadFile.find_lump and WadArchive.read agree on duplicate lump precedence
@@ -20,10 +21,14 @@ import pytest
 from wadlib.archive import WadArchive
 from wadlib.exceptions import (
     BadHeaderWadException,
+    CorruptLumpError,
     InvalidDirectoryError,
     TruncatedWadError,
     WadFormatError,
 )
+from wadlib.lumps.flat import Flat
+from wadlib.lumps.picture import Picture
+from wadlib.lumps.playpal import PlayPal
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -268,3 +273,88 @@ class TestUdmfLumpSafety:
             m = wad.maps[0]
             # A zero-size lump should be falsy.
             assert not m.udmf
+
+
+# ---------------------------------------------------------------------------
+# CorruptLumpError — picture, flat, and playpal parsers
+# ---------------------------------------------------------------------------
+
+_FAKE_PALETTE = [(0, 0, 0)] * 256  # black palette for decode calls
+
+
+class TestCorruptLump:
+    """Verify that malformed lump payloads raise CorruptLumpError."""
+
+    # -- helpers --
+
+    def _wad_with_lump(self, tmp_path: Path, name: str, data: bytes) -> str:
+        """Build a single-lump PWAD and return its path."""
+        raw = _build_wad_bytes(b"PWAD", [(name.encode().ljust(8, b"\x00")[:8], data)])
+        return _write_raw(tmp_path, "corrupt.wad", raw)
+
+    def _get_lump(self, path: str, cls: type, lump_name: str):  # type: ignore[no-untyped-def]
+        """Open a WAD and return the named lump cast to *cls*."""
+        with WadFile(path) as wad:
+            entry = wad.find_lump(lump_name)
+            assert entry is not None
+            return cls(entry)
+
+    # -- Picture --
+
+    def test_picture_empty_lump_raises(self, tmp_path: Path) -> None:
+        """An empty picture lump must raise CorruptLumpError, not AssertionError."""
+        # Zero-size lumps have no DirectoryEntry data — use 1-byte stub instead
+        path = self._wad_with_lump(tmp_path, "PATCH1", b"\x01")
+        lump = self._get_lump(path, Picture, "PATCH1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
+    def test_picture_header_too_short_raises(self, tmp_path: Path) -> None:
+        """A lump shorter than the 8-byte picture header raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "PATCH1", b"\x01\x00\x01")  # 3 bytes only
+        lump = self._get_lump(path, Picture, "PATCH1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
+    def test_picture_column_offset_past_lump_raises(self, tmp_path: Path) -> None:
+        """A column offset that points beyond the lump raises CorruptLumpError."""
+        # Valid header: 1x1 picture, column offset 9999 (past end of this tiny lump)
+        header = struct.pack("<HHhh", 1, 1, 0, 0)
+        col_offset = struct.pack("<I", 9999)  # way past end
+        data = header + col_offset + b"\xff"  # EOF marker byte (won't be reached)
+        path = self._wad_with_lump(tmp_path, "PATCH1", data)
+        lump = self._get_lump(path, Picture, "PATCH1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
+    def test_picture_truncated_column_data_raises(self, tmp_path: Path) -> None:
+        """Post data that extends past the lump raises CorruptLumpError."""
+        header = struct.pack("<HHhh", 1, 1, 0, 0)
+        # Column offset points right after the offset table
+        col_off = len(header) + 4
+        col_offset = struct.pack("<I", col_off)
+        # Topdelta=0, post_len=10 but no pixel data follows
+        post = b"\x00\x0a\x00"  # topdelta=0, length=10, pre-pad — then nothing
+        data = header + col_offset + post
+        path = self._wad_with_lump(tmp_path, "PATCH1", data)
+        lump = self._get_lump(path, Picture, "PATCH1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
+    # -- Flat --
+
+    def test_flat_too_short_raises(self, tmp_path: Path) -> None:
+        """A flat shorter than 4096 bytes raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "FLAT1", b"\x00" * 100)
+        lump = self._get_lump(path, Flat, "FLAT1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
+    # -- PlayPal --
+
+    def test_playpal_too_short_raises(self, tmp_path: Path) -> None:
+        """A PLAYPAL shorter than one full palette (768 bytes) raises CorruptLumpError."""
+        path = self._wad_with_lump(tmp_path, "PLAYPAL", b"\x00" * 100)
+        lump = self._get_lump(path, PlayPal, "PLAYPAL")
+        with pytest.raises(CorruptLumpError):
+            lump.get_palette(0)

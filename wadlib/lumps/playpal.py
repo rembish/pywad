@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..directory import DirectoryEntry
+from ..exceptions import CorruptLumpError
 from .base import BaseLump
 
 # Each palette: 256 colours x 3 bytes (R, G, B)
@@ -36,14 +37,25 @@ class PlayPal(BaseLump[Any]):
     def get_palette(self, index: int = 0) -> Palette:
         """Return palette *index* as a list of 256 (r, g, b) tuples.
 
-        Raises IndexError for out-of-range indices.
+        Raises:
+            CorruptLumpError: if the lump is too short to contain any palette.
+            IndexError: if *index* is out of range for a well-formed lump.
         """
+        if (self._size or 0) < _PALETTE_SIZE:
+            raise CorruptLumpError(
+                f"PLAYPAL: lump too short for any palette "
+                f"({self._size or 0} < {_PALETTE_SIZE} bytes)"
+            )
         if index < 0 or index >= self.num_palettes:
             raise IndexError(index)
         offset = index * _PALETTE_SIZE
         self.seek(offset)
         raw = self.read(_PALETTE_SIZE)
-        assert raw is not None
+        if raw is None or len(raw) < _PALETTE_SIZE:
+            raise CorruptLumpError(
+                f"PLAYPAL palette {index}: expected {_PALETTE_SIZE} bytes, "
+                f"got {len(raw) if raw else 0}"
+            )
         return [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, _PALETTE_SIZE, 3)]
 
     def __iter__(self) -> PlayPal:

@@ -11,6 +11,7 @@ from typing import Any
 
 from PIL import Image
 
+from ..exceptions import CorruptLumpError
 from ..lumps.base import BaseLump
 from ..lumps.playpal import Palette
 
@@ -36,13 +37,20 @@ class Flat(BaseLump[Any]):
     """A single 64x64 floor/ceiling texture."""
 
     def decode(self, palette: Palette) -> Image.Image:
-        """Decode this flat into a 64x64 PIL RGB image using *palette*."""
+        """Decode this flat into a 64x64 PIL RGB image using *palette*.
+
+        Raises:
+            CorruptLumpError: if the lump is empty or shorter than 4096 bytes.
+        """
         self.seek(0)
         raw = self.read(FLAT_BYTES)
-        assert raw is not None
+        if raw is None or len(raw) < FLAT_BYTES:
+            raise CorruptLumpError(
+                f"{self.name!r}: flat must be {FLAT_BYTES} bytes, got {len(raw) if raw else 0}"
+            )
         img = Image.new("RGB", (FLAT_SIZE, FLAT_SIZE))
         pixels = img.load()
-        assert pixels is not None
+        assert pixels is not None  # PIL invariant
         for i, idx in enumerate(raw):
             x, y = i % FLAT_SIZE, i // FLAT_SIZE
             pixels[x, y] = palette[idx]
