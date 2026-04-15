@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from struct import pack
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from .base import BaseLump
+
+if TYPE_CHECKING:
+    from .boom import GeneralizedLinedef
 
 LINEDEF_FORMAT = "<HHHHHhh"
 
@@ -16,6 +19,17 @@ class LineDefinition:
     sector_tag: int
     right_sidedef: int
     left_sidedef: int
+
+    @property
+    def generalized(self) -> "GeneralizedLinedef | None":
+        """Decode this linedef as a Boom generalized type, or return None.
+
+        Returns a :class:`~wadlib.lumps.boom.GeneralizedLinedef` when
+        ``special_type >= 0x2F80`` (Boom generalized range), otherwise ``None``.
+        """
+        from .boom import decode_generalized  # lazy — avoids circular import
+
+        return decode_generalized(self.special_type)
 
     def to_bytes(self) -> bytes:
         return pack(

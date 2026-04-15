@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.97] - 2026-04-15
+
+### Added
+
+- **`wadlib/lumps/boom.py`**: new module for Boom/MBF/MBF21 extended linedef
+  and sector API:
+  - `GeneralizedCategory` — enum of the 7 generalized action families
+    (CRUSHER, STAIR, LIFT, LOCKED_DOOR, DOOR, CEILING, FLOOR)
+  - `GeneralizedTrigger` — enum for the 8 trigger types (W1/WR/S1/SR/G1/GR/P1/PR)
+  - `GeneralizedSpeed` — enum for movement speed (SLOW/NORMAL/FAST/TURBO)
+  - `GeneralizedLinedef` — frozen dataclass with `category`, `trigger`,
+    `speed`, `subtype` (category-specific bits 5+)
+  - `decode_generalized(special_type)` — returns `GeneralizedLinedef | None`
+  - `DOOM_SECTOR_SPECIALS` — dict mapping standard Doom sector special IDs
+    (0-17) to human-readable names
+  - `MBF21_LINEDEF_FLAGS` — dict of the three MBF21 linedef flag additions
+    (BLOCKLANDMONSTERS, BLOCKPLAYERS, BLOCKALL)
+- **`LineDefinition.generalized`**: new property — returns
+  `decode_generalized(self.special_type)`, giving every linedef instant
+  Boom generalized decoding without any extra import.
+- **`Sector.special_name`**: new property — looks up `DOOM_SECTOR_SPECIALS`
+  and returns a human-readable name for the sector's effect (e.g. `"Secret"`,
+  `"10% damage + end level"`).
+- All new symbols exported from `wadlib` top-level (`__all__`).
+
+### Changed
+
+- **README**: Boom/MBF/MBF21 row updated to reflect the new dedicated API.
+
 ## [0.0.96] - 2026-04-15
 
 ### Added

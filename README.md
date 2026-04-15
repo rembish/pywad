@@ -444,7 +444,7 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Heretic | Full | FONTA/FONTB fonts, Heretic thing catalog |
 | Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS |
 | Strife | Partial | Thing type catalog (all 230 types); no Strife-specific conversation/script lumps |
-| Boom / MBF / MBF21 | Partial | Reads correctly; no dedicated API for BOOM line/sector specials or MBF21 flags |
+| Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; `MBF21_LINEDEF_FLAGS` |
 | ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, DEHACKED custom things, DECORATE actors; no ZScript |
 | UDMF maps | Full | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access via `UdmfLump` |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; not a full ZDoom-compatible resource overlay layer |
