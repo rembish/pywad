@@ -196,7 +196,11 @@ class TestDoomLoadOrder:
         path_p1 = _make_pk3({"lumps/DATA.lmp": b"patch1"})
         path_p2 = _make_pk3({"lumps/DATA.lmp": b"patch2"})
         try:
-            with Pk3Archive(path_base) as base, Pk3Archive(path_p1) as p1, Pk3Archive(path_p2) as p2:
+            with (
+                Pk3Archive(path_base) as base,
+                Pk3Archive(path_p1) as p1,
+                Pk3Archive(path_p2) as p2,
+            ):
                 r = ResourceResolver.doom_load_order(base, p1, p2)
                 assert r.read("DATA") == b"patch2"
         finally:
@@ -231,7 +235,7 @@ class TestDoomLoadOrder:
         path_b = _make_pk3({"lumps/X.lmp": b"b"})
         try:
             with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
-                priority = ResourceResolver(a, b)   # a wins
+                priority = ResourceResolver(a, b)  # a wins
                 doom = ResourceResolver.doom_load_order(a, b)  # b wins (last patch)
                 assert priority.read("X") == b"a"
                 assert doom.read("X") == b"b"
