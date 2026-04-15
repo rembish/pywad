@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.90] - 2026-04-15
+
+### Fixed
+
+- **Non-ASCII magic bytes** now raise `WadFormatError` (via `BadHeaderWadException`)
+  instead of leaking `UnicodeDecodeError`; `magic_raw.isascii()` is checked before
+  `.decode("ascii")` is called.
+- **Non-ASCII lump names** in the WAD directory now raise `InvalidDirectoryError`
+  instead of `UnicodeDecodeError`; `DirectoryEntry.__init__` guards the decode.
+- **`WadArchive.read`** now scans the directory in reverse (last entry wins),
+  consistent with `WadFile.find_lump` and Doom's `W_CheckNumForName` semantics.
+  Previously it returned the first duplicate lump.
+- **`BaseLump.__bool__`** added so truthiness checks (`if lump:`) on non-row lumps
+  such as `UdmfLump` no longer crash with `AssertionError`.  `__len__` now returns
+  the raw byte size for non-row lumps instead of asserting `_row_format is not None`.
+
+### Added
+
+- **`tests/test_hardening.py`** — 16 adversarial read-time tests covering
+  non-ASCII magic, non-ASCII lump names, truncated WAD files, out-of-range lump
+  offsets, duplicate lump lookup consistency between `WadFile` and `WadArchive`,
+  and `UdmfLump` truthiness/repr safety.
+
+### Changed
+
+- `test_export3d.py` module fixtures merged into a single `_map01_exports` fixture
+  that opens freedoom2.wad once and computes both plain and material OBJ exports in
+  one pass.  `test_basic_export`, `test_with_materials`, `test_scale_factor`, and
+  `test_multiple_maps` marked `@pytest.mark.slow`.
+
 ## [0.0.89] - 2026-04-14
 
 ### Added

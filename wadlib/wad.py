@@ -115,6 +115,8 @@ class WadFile:  # pylint: disable=too-many-public-methods
             magic_raw, self.directory_size, self._directory_offset = unpack(
                 HEADER_FORMAT, raw_header
             )
+            if not magic_raw.isascii():
+                raise BadHeaderWadException(repr(magic_raw))
             magic = magic_raw.decode("ascii")
             if magic not in WadType.names():
                 raise BadHeaderWadException(magic)

@@ -180,7 +180,9 @@ class WadArchive:
         self._check_readable()
         upper = name.upper()
         if self._reader is not None:
-            for entry in self._reader.directory:
+            # Scan in reverse so the last entry with this name wins — consistent
+            # with WadFile.find_lump and Doom's W_CheckNumForName semantics.
+            for entry in reversed(self._reader.directory):
                 if entry.name == upper:
                     if entry.size == 0:
                         return b""

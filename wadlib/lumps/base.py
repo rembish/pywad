@@ -67,9 +67,18 @@ class BaseLump[T]:
             raise StopIteration
         return self.read_item()
 
+    def __bool__(self) -> bool:
+        """Return ``True`` if this lump contains any data."""
+        return self._size is not None and self._size > 0
+
     def __len__(self) -> int:
         if not self.readable():
             return 0
+        if self._row_format is None:
+            # Non-row lumps (e.g. UdmfLump, text lumps) have no fixed row size.
+            # Return the raw byte count so len() is at least safe to call.
+            assert self._size is not None
+            return self._size
         assert self._size is not None
         return self._size // self._row_size
 

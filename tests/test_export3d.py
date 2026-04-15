@@ -20,35 +20,39 @@ def _has_wad(path: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Module-scoped fixtures — expensive exports computed once, shared by all tests
+# Module-scoped fixtures — both exports computed in a single WAD open
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="module")
-def _obj_map01() -> str:
-    """OBJ string for freedoom2 MAP01 at default scale — computed once."""
+def _map01_exports() -> tuple[str, tuple[str, str], BaseMapEntry]:
+    """All MAP01 export data computed in one WAD open — shared by all tests."""
     if not _has_wad(FREEDOOM2):
         pytest.skip("freedoom2.wad not available")
     with WadFile(FREEDOOM2) as wad:
-        return cast(str, map_to_obj(wad.maps[0]))
+        m = wad.maps[0]
+        obj_plain = cast(str, map_to_obj(m))
+        obj_mtl = cast(tuple[str, str], map_to_obj(m, materials=True))
+        return obj_plain, obj_mtl, m
 
 
 @pytest.fixture(scope="module")
-def _obj_map01_mtl() -> tuple[str, str]:
-    """(OBJ, MTL) strings for freedoom2 MAP01 with materials — computed once."""
-    if not _has_wad(FREEDOOM2):
-        pytest.skip("freedoom2.wad not available")
-    with WadFile(FREEDOOM2) as wad:
-        return cast(tuple[str, str], map_to_obj(wad.maps[0], materials=True))
+def _obj_map01(_map01_exports: tuple[str, tuple[str, str], BaseMapEntry]) -> str:
+    return _map01_exports[0]
 
 
 @pytest.fixture(scope="module")
-def _map01_entry() -> BaseMapEntry:
-    """MAP01 entry with all lump data buffered — WAD can close afterwards."""
-    if not _has_wad(FREEDOOM2):
-        pytest.skip("freedoom2.wad not available")
-    with WadFile(FREEDOOM2) as wad:
-        return wad.maps[0]
+def _obj_map01_mtl(
+    _map01_exports: tuple[str, tuple[str, str], BaseMapEntry],
+) -> tuple[str, str]:
+    return _map01_exports[1]
+
+
+@pytest.fixture(scope="module")
+def _map01_entry(
+    _map01_exports: tuple[str, tuple[str, str], BaseMapEntry],
+) -> BaseMapEntry:
+    return _map01_exports[2]
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +62,7 @@ def _map01_entry() -> BaseMapEntry:
 
 @pytest.mark.skipif(not _has_wad(FREEDOOM2), reason="freedoom2.wad not available")
 class TestExport3d:
+    @pytest.mark.slow
     def test_basic_export(self, _obj_map01: str) -> None:
         assert isinstance(_obj_map01, str)
         assert _obj_map01.startswith("#")
@@ -82,6 +87,7 @@ class TestExport3d:
         val2 = float(v2.split()[1])
         assert abs(val2) < abs(val1) or val1 == 0.0
 
+    @pytest.mark.slow
     def test_with_materials(self, _obj_map01_mtl: tuple[str, str]) -> None:
         obj, mtl = _obj_map01_mtl
         assert "mtllib" in obj

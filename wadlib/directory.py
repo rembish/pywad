@@ -8,8 +8,15 @@ if TYPE_CHECKING:
 
 class DirectoryEntry:
     def __init__(self, owner: WadFile, offset: int, size: int, name: bytes | str) -> None:
+        from .exceptions import InvalidDirectoryError
+
         self.owner = owner
-        self.name = name.decode("ascii").rstrip("\0") if isinstance(name, bytes) else name
+        if isinstance(name, bytes):
+            if not name.rstrip(b"\0").isascii():
+                raise InvalidDirectoryError(f"Non-ASCII bytes in lump name: {name!r}")
+            self.name = name.decode("ascii").rstrip("\0")
+        else:
+            self.name = name
         self.size = size
         self.offset = offset
 
