@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.95] - 2026-04-15
+
+### Added
+
+- **`WadFile.decorate`**: new cached property that returns the `DecorateLump` for
+  the `DECORATE` lump (ZDoom/GZDoom actor definitions), or `None` if not present.
+  PWAD-aware — a mod's DECORATE overrides the IWAD's.
+- **`DecorateLump` / `DecorateActor`**: both are now exported from `wadlib` top-level
+  so callers can do `from wadlib import DecorateLump, DecorateActor`.
+- **README**: `wad.decorate` entry added to the API property table; DECORATE row in
+  the support matrix updated from "None" to "Full"; UDMF row updated from "Partial"
+  to "Full"; ZDoom row updated to reflect DECORATE support.
+
 ## [0.0.94] - 2026-04-15
 
 ### Added

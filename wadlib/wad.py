@@ -19,6 +19,7 @@ from .lumps.base import BaseLump
 from .lumps.behavior import BehaviorLump
 from .lumps.blockmap import BlockMap, Reject
 from .lumps.colormap import ColormapLump
+from .lumps.decorate import DecorateLump
 from .lumps.dehacked import DehackedFile, DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
@@ -456,6 +457,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
         """Return the ANIMDEFS lump (PWAD-aware), or None if not present."""
         entry = self.find_lump("ANIMDEFS")
         return AnimDefsLump(entry) if entry else None
+
+    @cached_property
+    def decorate(self) -> DecorateLump | None:
+        """Return the DECORATE lump (ZDoom actor definitions, PWAD-aware), or None."""
+        entry = self.find_lump("DECORATE")
+        return DecorateLump(entry) if entry else None
 
     @cached_property
     def stcfn(self) -> dict[int, Picture]:

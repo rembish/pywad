@@ -118,6 +118,7 @@ with WadFile("DOOM2.WAD") as wad:
 | `wad.mapinfo` | `MapInfoLump` — Hexen MAPINFO (numeric map IDs, titles) |
 | `wad.zmapinfo` | `ZMapInfoLump` — ZDoom ZMAPINFO (string map names, music, sky) |
 | `wad.animdefs` | `AnimDefsLump` — Hexen/ZDoom flat/texture animation sequences |
+| `wad.decorate` | `DecorateLump` — ZDoom actor definitions (name, doomednum, flags, properties) |
 | `wad.dehacked` | `DehackedLump` — embedded DeHackEd patch (PAR times, custom thing types) |
 
 All properties are cached and PWAD-aware.
@@ -444,11 +445,11 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS |
 | Strife | Partial | Thing type catalog (all 230 types); no Strife-specific conversation/script lumps |
 | Boom / MBF / MBF21 | Partial | Reads correctly; no dedicated API for BOOM line/sector specials or MBF21 flags |
-| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, DEHACKED custom things; no DECORATE or ZScript |
-| UDMF maps | Partial | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access via `UdmfLump` |
+| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, DEHACKED custom things, DECORATE actors; no ZScript |
+| UDMF maps | Full | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access via `UdmfLump` |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; not a full ZDoom-compatible resource overlay layer |
 | DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat or state machine |
-| DECORATE | None | Not parsed |
+| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties |
 | ZScript | None | Not parsed |
 
 ### PWAD custom types (DEHEXTRA / MBF21)
