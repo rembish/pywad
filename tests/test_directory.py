@@ -45,3 +45,9 @@ def test_directory_entry_repr(freedoom1_wad: WadFile) -> None:
 def test_doom2_directory_has_map_markers(freedoom2_wad: WadFile) -> None:
     names = {e.name for e in freedoom2_wad.directory}
     assert "MAP01" in names
+
+
+def test_directory_entry_str(freedoom1_wad: WadFile) -> None:
+    """str(entry) returns the lump name."""
+    entry = freedoom1_wad.directory[0]
+    assert str(entry) == entry.name

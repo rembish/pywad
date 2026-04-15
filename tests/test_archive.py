@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -472,3 +473,99 @@ class TestRealWadArchive:
                 assert len(wad) == len(orig_names) + 1
         finally:
             os.unlink(copy_path)
+
+
+# ---------------------------------------------------------------------------
+# WadArchive — exception safety and write-mode coverage
+# ---------------------------------------------------------------------------
+
+
+class TestExceptionSafety:
+    def test_exit_with_exception_does_not_commit(self, tmp_path: Path) -> None:
+        """An exception inside the with block must not write the file."""
+        path = str(tmp_path / "test.wad")
+
+        # Write a known file.
+        with WadArchive(path, "w") as wad:
+            wad.writestr("ORIG", b"original", validate=False)
+
+        original_size = os.path.getsize(path)
+
+        with pytest.raises(RuntimeError), WadArchive(path, "a") as wad:
+            wad.writestr("NEW", b"new data", validate=False)
+            raise RuntimeError("abort!")
+
+        # File must not have grown.
+        assert os.path.getsize(path) == original_size
+
+    def test_exit_with_exception_read_mode(self, tmp_path: Path) -> None:
+        """Exception in read mode does not crash __exit__."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("X", b"x", validate=False)
+
+        with pytest.raises(KeyError), WadArchive(path, "r") as wad:
+            _ = wad.read("MISSING")
+
+    def test_wad_type_in_write_mode(self, tmp_path: Path) -> None:
+        """wad_type property is accessible before save in write mode."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w", wad_type=WadType.PWAD) as wad:
+            assert wad.wad_type == WadType.PWAD
+            wad.writestr("X", b"x", validate=False)
+
+    def test_infolist_in_append_mode(self, tmp_path: Path) -> None:
+        """infolist() works in append mode (via writer path)."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("ALPHA", b"aaa", validate=False)
+
+        with WadArchive(path, "a") as wad:
+            wad.writestr("BETA", b"bbb", validate=False)
+            infos = wad.infolist()
+            assert len(infos) == 2
+            assert infos[0].name == "ALPHA"
+            assert infos[1].name == "BETA"
+
+    def test_read_missing_in_append_mode(self, tmp_path: Path) -> None:
+        """Reading a non-existent lump in append mode raises KeyError."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("ALPHA", b"aaa", validate=False)
+
+        with WadArchive(path, "a") as wad, pytest.raises(KeyError):
+            wad.read("MISSING")
+
+    def test_contains_in_append_mode(self, tmp_path: Path) -> None:
+        """__contains__ resolves via the writer in append mode."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("ALPHA", b"aaa", validate=False)
+
+        with WadArchive(path, "a") as wad:
+            wad.writestr("BETA", b"bbb", validate=False)
+            assert "ALPHA" in wad
+            assert "BETA" in wad
+            assert "MISSING" not in wad
+
+    def test_filename_property(self, tmp_path: Path) -> None:
+        """filename property returns the path passed to the constructor."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("X", b"x", validate=False)
+            assert wad.filename == path
+
+    def test_double_close_is_safe(self, tmp_path: Path) -> None:
+        """Calling close() twice must not raise."""
+        path = str(tmp_path / "test.wad")
+        wad = WadArchive(path, "w")
+        wad.writestr("X", b"x", validate=False)
+        wad.close()
+        wad.close()  # covers the early-return branch in close()
+
+    def test_contains_write_mode_returns_false(self, tmp_path: Path) -> None:
+        """__contains__ on a write-only archive returns False instead of raising."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("X", b"x", validate=False)
+            assert "X" not in wad  # write mode → _check_readable raises ValueError → except → False
