@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-15
+
+### Added
+
+- **`Pk3Archive` resource API**: category-grouped property accessors (`sounds`,
+  `music`, `sprites`, `flats`, `patches`, `graphics`, `textures`) returning
+  `dict[str, bytes]` (lump\_name → raw bytes).  Alias directories
+  (`sfx/` → sounds, `mus/` → music, `sprite/` → sprites, etc.) are
+  automatically normalised via `_CATEGORY_ALIASES`.
+- **`Pk3Archive.find_resource(name)`**: case-insensitive 8-char lump-name
+  search across all archive entries; returns the matching `Pk3Entry` or
+  `None`.
+- **`Pk3Archive.read_resource(name)`**: convenience wrapper around
+  `find_resource`; returns raw bytes or `None`.
+
 ## [0.1.2] - 2026-04-15
 
 ### Added

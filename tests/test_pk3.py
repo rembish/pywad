@@ -230,6 +230,154 @@ class TestPk3ToWad:
             os.unlink(wad2_path)
 
 
+# ---------------------------------------------------------------------------
+# Pk3Archive — resource API
+# ---------------------------------------------------------------------------
+
+
+class TestPk3ArchiveResourceApi:
+    def _make_pk3(self) -> str:
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            path = f.name
+        with Pk3Archive(path, "w") as pk3:
+            pk3.writestr("sounds/DSPISTOL.lmp", b"snd1")
+            pk3.writestr("sfx/DSGUNSHOT.lmp", b"snd2")
+            pk3.writestr("music/D_RUNNIN.lmp", b"mus1")
+            pk3.writestr("mus/D_INTER.lmp", b"mus2")
+            pk3.writestr("sprites/TROOA1.lmp", b"spr1")
+            pk3.writestr("flats/FLOOR0_1.lmp", b"flt1")
+            pk3.writestr("patches/WALL00_1.lmp", b"pat1")
+            pk3.writestr("graphics/TITLEPIC.lmp", b"gfx1")
+            pk3.writestr("textures/BRICK7.lmp", b"tex1")
+            pk3.writestr("lumps/PLAYPAL.lmp", b"lmp1")
+        return path
+
+    def test_sounds_canonical(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                s = pk3.sounds
+                assert "DSPISTOL" in s
+                assert s["DSPISTOL"] == b"snd1"
+        finally:
+            os.unlink(path)
+
+    def test_sounds_alias(self) -> None:
+        """sfx/ should normalize to sounds category."""
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                s = pk3.sounds
+                # DSGUNSHOT is 9 chars; lump_name truncates to 8 → DSGUNSHO
+                assert "DSGUNSHO" in s
+                assert s["DSGUNSHO"] == b"snd2"
+        finally:
+            os.unlink(path)
+
+    def test_music_canonical_and_alias(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                m = pk3.music
+                assert "D_RUNNIN" in m
+                assert "D_INTER" in m
+        finally:
+            os.unlink(path)
+
+    def test_sprites(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert "TROOA1" in pk3.sprites
+        finally:
+            os.unlink(path)
+
+    def test_flats(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert "FLOOR0_1" in pk3.flats
+        finally:
+            os.unlink(path)
+
+    def test_patches(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert "WALL00_1" in pk3.patches
+        finally:
+            os.unlink(path)
+
+    def test_graphics(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert "TITLEPIC" in pk3.graphics
+        finally:
+            os.unlink(path)
+
+    def test_textures(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert "BRICK7" in pk3.textures
+        finally:
+            os.unlink(path)
+
+    def test_find_resource(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                entry = pk3.find_resource("DSPISTOL")
+                assert entry is not None
+                assert entry.path == "sounds/DSPISTOL.lmp"
+        finally:
+            os.unlink(path)
+
+    def test_find_resource_case_insensitive(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert pk3.find_resource("dspistol") is not None
+                assert pk3.find_resource("DsPiStOl") is not None
+        finally:
+            os.unlink(path)
+
+    def test_find_resource_missing(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert pk3.find_resource("NOTHERE") is None
+        finally:
+            os.unlink(path)
+
+    def test_read_resource(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert pk3.read_resource("DSPISTOL") == b"snd1"
+        finally:
+            os.unlink(path)
+
+    def test_read_resource_missing(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert pk3.read_resource("NOTHERE") is None
+        finally:
+            os.unlink(path)
+
+    def test_empty_category(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                # No voxels in this archive
+                from wadlib.pk3 import Pk3Archive as _A  # noqa: F401
+                assert pk3._category_dict("voxels") == {}
+        finally:
+            os.unlink(path)
+
+
 @pytest.mark.skipif(not _has_wad(FREEDOOM2), reason="freedoom2.wad not available")
 class TestRealWadToPk3:
     def test_convert_freedoom2(self) -> None:

@@ -38,7 +38,43 @@ from __future__ import annotations
 import os
 import zipfile
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Literal
+
+# Canonical category names used by all resource properties.
+# Keys are the normalized lowercase directory names found in real pk3 files;
+# values are the canonical name this library exposes.
+_CATEGORY_ALIASES: dict[str, str] = {
+    "sound": "sounds",
+    "sounds": "sounds",
+    "sfx": "sounds",
+    "mus": "music",
+    "music": "music",
+    "musics": "music",
+    "sprite": "sprites",
+    "sprites": "sprites",
+    "flat": "flats",
+    "flats": "flats",
+    "patch": "patches",
+    "patches": "patches",
+    "graphic": "graphics",
+    "graphics": "graphics",
+    "hires": "hires",
+    "texture": "textures",
+    "textures": "textures",
+    "voxel": "voxels",
+    "voxels": "voxels",
+    "lump": "lumps",
+    "lumps": "lumps",
+    "maps": "maps",
+    "map": "maps",
+    "acs": "acs",
+    "filter": "filter",
+    "skins": "skins",
+    "skin": "skins",
+    "voices": "voices",
+    "voice": "voices",
+}
 
 
 @dataclass(frozen=True)
@@ -160,6 +196,76 @@ class Pk3Archive:
 
     def __repr__(self) -> str:
         return f"<Pk3Archive {self._filename!r} mode={self._mode!r}>"
+
+    # -- Resource API ---------------------------------------------------------
+
+    @cached_property
+    def _by_category(self) -> dict[str, list[Pk3Entry]]:
+        """Group all entries by canonical category name."""
+        result: dict[str, list[Pk3Entry]] = {}
+        for entry in self.infolist():
+            raw_cat = entry.category.lower()
+            canonical = _CATEGORY_ALIASES.get(raw_cat, raw_cat)
+            result.setdefault(canonical, []).append(entry)
+        return result
+
+    def _category_dict(self, category: str) -> dict[str, bytes]:
+        return {e.lump_name: self.read(e.path) for e in self._by_category.get(category, [])}
+
+    @property
+    def sounds(self) -> dict[str, bytes]:
+        """All entries under ``sounds/`` (or ``sound/``, ``sfx/``) as lump_name → bytes."""
+        return self._category_dict("sounds")
+
+    @property
+    def music(self) -> dict[str, bytes]:
+        """All entries under ``music/`` (or ``mus/``) as lump_name → bytes."""
+        return self._category_dict("music")
+
+    @property
+    def sprites(self) -> dict[str, bytes]:
+        """All entries under ``sprites/`` (or ``sprite/``) as lump_name → bytes."""
+        return self._category_dict("sprites")
+
+    @property
+    def flats(self) -> dict[str, bytes]:
+        """All entries under ``flats/`` (or ``flat/``) as lump_name → bytes."""
+        return self._category_dict("flats")
+
+    @property
+    def patches(self) -> dict[str, bytes]:
+        """All entries under ``patches/`` (or ``patch/``) as lump_name → bytes."""
+        return self._category_dict("patches")
+
+    @property
+    def graphics(self) -> dict[str, bytes]:
+        """All entries under ``graphics/`` (or ``graphic/``) as lump_name → bytes."""
+        return self._category_dict("graphics")
+
+    @property
+    def textures(self) -> dict[str, bytes]:
+        """All entries under ``textures/`` (or ``texture/``) as lump_name → bytes."""
+        return self._category_dict("textures")
+
+    def find_resource(self, name: str) -> Pk3Entry | None:
+        """Find the first entry whose lump name matches *name* (case-insensitive).
+
+        The search is case-insensitive and truncates to 8 characters to match
+        WAD lump name semantics.  Returns ``None`` if not found.
+        """
+        name_upper = name.upper()[:8]
+        for entry in self.infolist():
+            if entry.lump_name == name_upper:
+                return entry
+        return None
+
+    def read_resource(self, name: str) -> bytes | None:
+        """Read the first entry whose lump name matches *name*.
+
+        Returns the raw bytes of the entry, or ``None`` if not found.
+        """
+        entry = self.find_resource(name)
+        return self.read(entry.path) if entry else None
 
 
 # ---------------------------------------------------------------------------
