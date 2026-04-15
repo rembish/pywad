@@ -107,6 +107,6 @@ class MapInfoLump(BaseLump[Any]):
 
         return entries
 
-    def get(self, map_num: int) -> MapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
+    def get_map(self, map_num: int) -> MapInfoEntry | None:
         """Return the MapInfoEntry for the given map number, or None."""
         return next((m for m in self.maps if m.map_num == map_num), None)

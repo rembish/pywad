@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-04-15
+
+### Changed
+
+- **`MapInfoLump.get_map(num)`** — renamed from `.get(num)` to eliminate a
+  Liskov substitution violation with `BaseLump.get(index: int)`.
+- **`SndSeqLump.get_sequence(name)`** — renamed from `.get(name)` (parameter
+  type changed from `int` to `str`, which is not a compatible override).
+- **`ZMapInfoLump.get_map(name)`** — renamed from `.get(name)` (same reason).
+- **`wadcli/list_mapinfo.py`** — added explicit `MapInfoLump` / `ZMapInfoLump`
+  type annotations; removed `# type: ignore[no-untyped-def]`.
+- All callers in `cli/`, `tests/` updated to the new method names.
+
+### Fixed
+
+- `mypy --strict` now reports zero errors across all 108 source files.
+
 ## [0.1.4] - 2026-04-15
 
 ### Added

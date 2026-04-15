@@ -191,10 +191,10 @@ def test_sndseq_get_by_name() -> None:
     wad_bytes = _build_wad("IWAD", [("SNDSEQ", sndseq_bytes)])
     with _wad_from_bytes(wad_bytes) as w:
         assert w.sndseq is not None
-        seq = w.sndseq.get("DoorOpen")
+        seq = w.sndseq.get_sequence("DoorOpen")
         assert seq is not None
         assert seq.name == "DoorOpen"
-        missing = w.sndseq.get("Nonexistent")
+        missing = w.sndseq.get_sequence("Nonexistent")
         assert missing is None
 
 
@@ -203,7 +203,7 @@ def test_sndseq_get_case_insensitive() -> None:
     wad_bytes = _build_wad("IWAD", [("SNDSEQ", sndseq_bytes)])
     with _wad_from_bytes(wad_bytes) as w:
         assert w.sndseq is not None
-        assert w.sndseq.get("dooropen") is not None
+        assert w.sndseq.get_sequence("dooropen") is not None
 
 
 def test_sndseq_comment_lines_ignored() -> None:
@@ -280,10 +280,10 @@ def test_zmapinfo_get_by_name() -> None:
     wad_bytes = _build_wad("IWAD", [("ZMAPINFO", zmapinfo_bytes)])
     with _wad_from_bytes(wad_bytes) as w:
         assert w.zmapinfo is not None
-        entry = w.zmapinfo.get("MAP01")
+        entry = w.zmapinfo.get_map("MAP01")
         assert entry is not None
         assert entry.map_name == "MAP01"
-        assert w.zmapinfo.get("MAP99") is None
+        assert w.zmapinfo.get_map("MAP99") is None
 
 
 def test_zmapinfo_multiple_maps() -> None:

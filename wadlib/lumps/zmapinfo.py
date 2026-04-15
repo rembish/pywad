@@ -166,7 +166,7 @@ class ZMapInfoLump(BaseLump[Any]):
 
         return entries
 
-    def get(self, map_name: str) -> ZMapInfoEntry | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
+    def get_map(self, map_name: str) -> ZMapInfoEntry | None:
         """Return the entry for the given map name (case-insensitive), or None."""
         return next(
             (e for e in self.maps if e.map_name == map_name.upper()),

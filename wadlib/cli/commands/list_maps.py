@@ -57,7 +57,7 @@ def _resolve_mi(
     """Return the MAPINFO or ZMAPINFO entry for map_name, or None."""
     # ZMAPINFO (ZDoom) takes priority when present — it has richer data
     if zmapinfo is not None:
-        entry = zmapinfo.get(map_name)
+        entry = zmapinfo.get_map(map_name)
         if entry is not None:
             return entry
     if mapinfo is not None:
@@ -65,7 +65,7 @@ def _resolve_mi(
             num = int(map_name.lstrip("MAPmapEe"))
         except ValueError:
             return None
-        return mapinfo.get(num)
+        return mapinfo.get_map(num)
     return None
 
 

@@ -83,6 +83,6 @@ class SndSeqLump(BaseLump[Any]):
 
         return result
 
-    def get(self, name: str) -> SndSeq | None:  # type: ignore[override]  # pylint: disable=arguments-differ,arguments-renamed
-        """Return the sequence with the given name, or None."""
+    def get_sequence(self, name: str) -> SndSeq | None:
+        """Return the sequence with the given name (case-insensitive), or None."""
         return next((s for s in self.sequences if s.name.lower() == name.lower()), None)

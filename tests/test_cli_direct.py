@@ -1011,10 +1011,10 @@ def test_resolve_mi_with_zmapinfo() -> None:
 
     entry = MagicMock()
     zmapinfo = MagicMock()
-    zmapinfo.get.return_value = entry
+    zmapinfo.get_map.return_value = entry
     result = _resolve_mi("MAP01", None, zmapinfo)
     assert result is entry
-    zmapinfo.get.assert_called_with("MAP01")
+    zmapinfo.get_map.assert_called_with("MAP01")
 
 
 def test_resolve_mi_zmapinfo_miss_falls_to_mapinfo() -> None:
@@ -1023,11 +1023,11 @@ def test_resolve_mi_zmapinfo_miss_falls_to_mapinfo() -> None:
     from wadlib.cli.commands.list_maps import _resolve_mi
 
     zmapinfo = MagicMock()
-    zmapinfo.get.return_value = None  # miss
+    zmapinfo.get_map.return_value = None  # miss
 
     mi_entry = MagicMock()
     mapinfo = MagicMock()
-    mapinfo.get.return_value = mi_entry
+    mapinfo.get_map.return_value = mi_entry
 
     result = _resolve_mi("MAP01", mapinfo, zmapinfo)
     assert result is mi_entry

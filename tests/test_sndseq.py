@@ -104,7 +104,7 @@ def test_sndseq_get_by_name() -> None:
     path = _make_sndseq_wad(":DoorOpen\n  playuntildone DoorOpen\n  end\n")
     with WadFile(path) as wad:
         assert wad.sndseq is not None
-        seq = wad.sndseq.get("dooropen")  # case-insensitive
+        seq = wad.sndseq.get_sequence("dooropen")  # case-insensitive
         assert seq is not None
         assert seq.name == "DoorOpen"
 
@@ -113,4 +113,4 @@ def test_sndseq_get_missing_returns_none() -> None:
     path = _make_sndseq_wad(":DoorOpen\n  end\n")
     with WadFile(path) as wad:
         assert wad.sndseq is not None
-        assert wad.sndseq.get("MISSING") is None
+        assert wad.sndseq.get_sequence("MISSING") is None

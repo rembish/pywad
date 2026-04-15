@@ -3,6 +3,8 @@
 import argparse
 import json
 
+from ...lumps.mapinfo import MapInfoLump
+from ...lumps.zmapinfo import ZMapInfoLump
 from .._wad_args import open_wad
 
 
@@ -28,7 +30,7 @@ def run(args: argparse.Namespace) -> None:
                 print("No MAPINFO or ZMAPINFO lump found.")
 
 
-def _print_mapinfo(mapinfo, as_json: bool) -> None:  # type: ignore[no-untyped-def]
+def _print_mapinfo(mapinfo: MapInfoLump, as_json: bool) -> None:
     entries = mapinfo.maps
     if as_json:
         print(
@@ -63,7 +65,7 @@ def _print_mapinfo(mapinfo, as_json: bool) -> None:  # type: ignore[no-untyped-d
     print(f"\n{len(entries)} map(s) in MAPINFO.")
 
 
-def _print_zmapinfo(zmapinfo, as_json: bool) -> None:  # type: ignore[no-untyped-def]
+def _print_zmapinfo(zmapinfo: ZMapInfoLump, as_json: bool) -> None:
     entries = zmapinfo.maps
     if as_json:
         print(

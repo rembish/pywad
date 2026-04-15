@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wadlib"
-version = "0.1.4"
+version = "0.1.5"
 description = "Python library to read, write, and analyse id Doom WAD files"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
 license = { text = "BSD-2-Clause" }

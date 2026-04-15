@@ -131,7 +131,7 @@ def test_mapinfo_get_returns_correct_entry() -> None:
     path = _make_mapinfo_wad('map 5 "FIFTH"\ncdtrack 7\n')
     with WadFile(path) as wad:
         assert wad.mapinfo is not None
-        e = wad.mapinfo.get(5)
+        e = wad.mapinfo.get_map(5)
         assert e is not None
         assert e.title == "FIFTH"
 
@@ -140,7 +140,7 @@ def test_mapinfo_get_missing_returns_none() -> None:
     path = _make_mapinfo_wad('map 1 "FIRST"\n')
     with WadFile(path) as wad:
         assert wad.mapinfo is not None
-        assert wad.mapinfo.get(99) is None
+        assert wad.mapinfo.get_map(99) is None
 
 
 # ---------------------------------------------------------------------------
@@ -169,28 +169,28 @@ def test_all_entries_are_mapinfoentry(hexen_wad: WadFile) -> None:
 
 def test_map1_title(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    entry = hexen_wad.mapinfo.get(1)
+    entry = hexen_wad.mapinfo.get_map(1)
     assert entry is not None
     assert entry.title == "WINNOWING HALL"
 
 
 def test_map1_cdtrack(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    entry = hexen_wad.mapinfo.get(1)
+    entry = hexen_wad.mapinfo.get_map(1)
     assert entry is not None
     assert entry.cdtrack == 13
 
 
 def test_map1_lightning(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    entry = hexen_wad.mapinfo.get(1)
+    entry = hexen_wad.mapinfo.get_map(1)
     assert entry is not None
     assert entry.lightning is True
 
 
 def test_map2_next(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    entry = hexen_wad.mapinfo.get(2)
+    entry = hexen_wad.mapinfo.get_map(2)
     assert entry is not None
     assert entry.next == 3
 
@@ -201,11 +201,11 @@ def test_doom1_has_no_mapinfo(freedoom1_wad: WadFile) -> None:
 
 def test_get_returns_correct_entry(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    entry = hexen_wad.mapinfo.get(1)
+    entry = hexen_wad.mapinfo.get_map(1)
     assert entry is not None
     assert entry.map_num == 1
 
 
 def test_get_unknown_map_returns_none(hexen_wad: WadFile) -> None:
     assert hexen_wad.mapinfo is not None
-    assert hexen_wad.mapinfo.get(999) is None
+    assert hexen_wad.mapinfo.get_map(999) is None
