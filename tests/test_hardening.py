@@ -345,6 +345,20 @@ class TestCorruptLump:
         with pytest.raises(CorruptLumpError):
             lump.decode(_FAKE_PALETTE)
 
+    def test_picture_post_past_image_height_raises(self, tmp_path: Path) -> None:
+        """A post whose topdelta+row >= height must raise CorruptLumpError, not IndexError."""
+        # 1x1 picture, but the single post starts at row 1 (past image height=1).
+        header = struct.pack("<HHhh", 1, 1, 0, 0)  # width=1, height=1
+        col_off = len(header) + 4  # column data starts right after offset table
+        col_offset = struct.pack("<I", col_off)
+        # topdelta=1, post_len=1, pre-pad, pixel=0, post-pad, terminator
+        post = b"\x01\x01\x00\x00\x00\xff"
+        data = header + col_offset + post
+        path = self._wad_with_lump(tmp_path, "PATCH1", data)
+        lump = self._get_lump(path, Picture, "PATCH1")
+        with pytest.raises(CorruptLumpError):
+            lump.decode(_FAKE_PALETTE)
+
     # -- Flat --
 
     def test_flat_too_short_raises(self, tmp_path: Path) -> None:

@@ -66,7 +66,9 @@ class Picture(BaseLump[Any]):
     def top_offset(self) -> int:
         return self._header[3]
 
-    def _draw_column(self, col_x: int, col_off: int, palette: Palette, pixels: Any) -> None:
+    def _draw_column(
+        self, col_x: int, col_off: int, height: int, palette: Palette, pixels: Any
+    ) -> None:
         self.seek(col_off)
         while True:
             try:
@@ -95,6 +97,11 @@ class Picture(BaseLump[Any]):
             post_len = len_raw[0]
             self.read(1)  # pre-padding (unused)
             for row in range(post_len):
+                if topdelta + row >= height:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} post writes past image height "
+                        f"(topdelta={topdelta}, row={row}, height={height})"
+                    )
                 try:
                     px_raw = self.read(1)
                 except EOFError as exc:
@@ -148,7 +155,7 @@ class Picture(BaseLump[Any]):
                 raise CorruptLumpError(
                     f"{self.name!r}: column {col_x} offset {col_off} beyond lump size {lump_size}"
                 )
-            self._draw_column(col_x, int(col_off), palette, pixels)
+            self._draw_column(col_x, int(col_off), height, palette, pixels)
 
         return img
 

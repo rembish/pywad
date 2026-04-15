@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os
 import tempfile
+from io import BytesIO
 
 import pytest
+from PIL import Image
+from PIL.Image import Image as PilImage
 
 from wadlib.archive import WadArchive
 from wadlib.lumps.sound import encode_dmx
@@ -371,9 +374,6 @@ class TestPk3ArchiveResourceApi:
         path = self._make_pk3()
         try:
             with Pk3Archive(path, "r") as pk3:
-                # No voxels in this archive
-                from wadlib.pk3 import Pk3Archive as _A  # noqa: F401
-
                 assert pk3._category_dict("voxels") == {}
         finally:
             os.unlink(path)
@@ -386,10 +386,6 @@ class TestPk3ArchiveResourceApi:
 
 def _png_bytes(width: int = 2, height: int = 2, color: str = "RGB") -> bytes:
     """Create a tiny in-memory PNG using Pillow."""
-    from io import BytesIO
-
-    from PIL import Image
-
     img = Image.new(color, (width, height), (128, 64, 32) if color == "RGB" else 128)
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -470,8 +466,6 @@ class TestPk3ArchiveImageApi:
 
     def test_decode_image_static(self) -> None:
         data = _png_bytes(3, 3)
-        from PIL.Image import Image as PilImage
-
         img = Pk3Archive._decode_image(data)
         assert isinstance(img, PilImage)
         assert img.size == (3, 3)

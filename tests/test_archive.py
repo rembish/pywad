@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import struct
 import tempfile
 from pathlib import Path
 
@@ -10,6 +11,8 @@ import pytest
 
 from wadlib.archive import LumpInfo, WadArchive
 from wadlib.enums import WadType
+from wadlib.wad import WadFile
+from wadlib.writer import WadWriter
 
 FREEDOOM2 = "wads/freedoom2.wad"
 
@@ -300,6 +303,34 @@ class TestReadMode:
         finally:
             os.unlink(path)
 
+    def test_getinfo_duplicate_matches_read(self) -> None:
+        """getinfo() must return the last duplicate lump, consistent with read()."""
+        # Build a raw WAD with two DUP lumps of different sizes (3 and 5 bytes).
+        lump1 = b"aaa"
+        lump2 = b"bbbbb"
+        lumps_data = lump1 + lump2
+        dir_offset = 12 + len(lumps_data)
+        header = struct.pack("<4sII", b"PWAD", 2, dir_offset)
+
+        def _entry(offset: int, size: int, name: str) -> bytes:
+            return struct.pack("<II8s", offset, size, name.encode().ljust(8, b"\x00")[:8])
+
+        directory = _entry(12, len(lump1), "DUP") + _entry(12 + len(lump1), len(lump2), "DUP")
+        raw = header + lumps_data + directory
+
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            path = f.name
+            f.write(raw)
+        try:
+            with WadArchive(path) as wad:
+                info = wad.getinfo("DUP")
+                data = wad.read("DUP")
+                # Both must agree: last entry wins (size=5, data=b"bbbbb")
+                assert info.size == len(lump2)
+                assert data == lump2
+        finally:
+            os.unlink(path)
+
 
 # ---------------------------------------------------------------------------
 # WadArchive — append mode
@@ -457,9 +488,6 @@ class TestRealWadArchive:
                 orig_playpal = src.read("PLAYPAL")
 
             # Use writer to make a copy, then append
-            from wadlib.wad import WadFile
-            from wadlib.writer import WadWriter
-
             with WadFile(FREEDOOM2) as wf:
                 w = WadWriter.from_wad(wf)
                 w.save(copy_path)

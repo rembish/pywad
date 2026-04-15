@@ -40,10 +40,14 @@ import zipfile
 from dataclasses import dataclass
 from functools import cached_property
 from io import BytesIO
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:
-    from PIL.Image import Image
+from PIL import Image as _PIL
+
+from .constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+from .enums import MapData, WadType
+from .wad import WadFile
+from .writer import WadWriter
 
 # Canonical category names used by all resource properties.
 # Keys are the normalized lowercase directory names found in real pk3 files;
@@ -254,19 +258,17 @@ class Pk3Archive:
     # -- Image decoding -------------------------------------------------------
 
     @staticmethod
-    def _decode_image(data: bytes) -> Image:
+    def _decode_image(data: bytes) -> _PIL.Image:
         """Decode raw image bytes (PNG, JPEG, TGA, …) into a Pillow Image.
 
         `.load()` is called immediately so the BytesIO buffer can be discarded
         without keeping it alive for the lifetime of the Image object.
         """
-        from PIL import Image as PilImage  # pylint: disable=import-outside-toplevel
-
-        img = PilImage.open(BytesIO(data))
+        img = _PIL.open(BytesIO(data))
         img.load()
         return img
 
-    def _category_images(self, category: str) -> dict[str, Image]:
+    def _category_images(self, category: str) -> dict[str, _PIL.Image]:
         """Return lump_name -> decoded Image for every entry in *category*."""
         return {
             e.lump_name: self._decode_image(self.read(e.path))
@@ -274,22 +276,22 @@ class Pk3Archive:
         }
 
     @property
-    def flat_images(self) -> dict[str, Image]:
+    def flat_images(self) -> dict[str, _PIL.Image]:
         """All flat entries decoded as Pillow Images (lump_name -> Image)."""
         return self._category_images("flats")
 
     @property
-    def sprite_images(self) -> dict[str, Image]:
+    def sprite_images(self) -> dict[str, _PIL.Image]:
         """All sprite entries decoded as Pillow Images (lump_name -> Image)."""
         return self._category_images("sprites")
 
     @property
-    def patch_images(self) -> dict[str, Image]:
+    def patch_images(self) -> dict[str, _PIL.Image]:
         """All patch entries decoded as Pillow Images (lump_name -> Image)."""
         return self._category_images("patches")
 
     @property
-    def texture_images(self) -> dict[str, Image]:
+    def texture_images(self) -> dict[str, _PIL.Image]:
         """All texture entries decoded as Pillow Images (lump_name -> Image)."""
         return self._category_images("textures")
 
@@ -350,10 +352,6 @@ def wad_to_pk3(wad_path: str, pk3_path: str) -> None:
 
     Lump data is stored as raw ``.lmp`` files (no format conversion).
     """
-    from .constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
-    from .enums import MapData
-    from .wad import WadFile
-
     map_data_names = set(MapData.names())
 
     with WadFile(wad_path) as wad, Pk3Archive(pk3_path, "w") as pk3:
@@ -414,9 +412,6 @@ def pk3_to_wad(pk3_path: str, wad_path: str) -> None:
 
     Lump names are derived from filenames (uppercased, extension stripped).
     """
-    from .enums import WadType
-    from .writer import WadWriter
-
     writer = WadWriter(WadType.PWAD)
 
     with Pk3Archive(pk3_path, "r") as pk3:

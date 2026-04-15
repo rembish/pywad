@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-15
+
+### Fixed
+
+- **`Picture.decode()` out-of-bounds post** — `_draw_column()` now checks
+  `topdelta + row < height` before writing each pixel; raises `CorruptLumpError`
+  instead of `IndexError` for posts that extend past the image height.
+  Regression test added in `tests/test_hardening.py`.
+- **`WadArchive.getinfo()` duplicate precedence** — now scans the directory in
+  reverse so the last duplicate entry wins, consistent with `read()` and Doom's
+  `W_CheckNumForName` semantics.  Regression test added in `tests/test_archive.py`.
+
 ## [0.1.9] - 2026-04-15
 
 ### Added

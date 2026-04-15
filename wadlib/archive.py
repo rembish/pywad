@@ -164,10 +164,13 @@ class WadArchive:
     def getinfo(self, name: str) -> LumpInfo:
         """Return a ``LumpInfo`` for the named lump.
 
+        When duplicate lump names exist, the *last* entry wins — consistent
+        with ``read()`` and Doom's W_CheckNumForName semantics.
+
         Raises ``KeyError`` if the lump does not exist.
         """
         upper = name.upper()
-        for info in self.infolist():
+        for info in reversed(self.infolist()):
             if info.name == upper:
                 return info
         raise KeyError(name)

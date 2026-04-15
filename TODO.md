@@ -4,6 +4,127 @@ Ideas collected over the course of development. Roughly ordered by scope.
 
 ---
 
+## Post-stabilization roadmap
+
+This section is for the next feature direction after the current correctness,
+docs, and fuzzing cleanup lands. It intentionally skips the short-term fixes
+already in progress.
+
+### Resource stack / `ResourceResolver` v2
+The next large feature should be a first-class resource stack rather than another
+standalone lump parser. Modern Doom content is defined by load order and lookup
+rules as much as by file formats: IWAD + PWAD layers, duplicate names, PK3 paths,
+PK3 namespaces, truncated WAD-style lump names, shadowing, filters, and embedded
+maps.
+
+Target goals:
+- One resolver that can combine WAD, PWAD, PK3, and in-memory sources.
+- Explicit constructors for both priority order and Doom load order:
+  - `ResourceResolver.priority_order(*sources)` where first match wins.
+  - `ResourceResolver.doom_load_order(base, *patches)` where later patches
+    shadow earlier/base resources.
+- A resource metadata object, e.g. `ResourceRef`, with:
+  - canonical name
+  - original path or lump name
+  - source path/archive identity
+  - source index/load-order index
+  - directory or ZIP entry index
+  - size
+  - namespace/category (`flats`, `sprites`, `sounds`, `maps`, etc.)
+  - lookup kind (`wad-name`, `pk3-path`, `pk3-lump-name`)
+  - raw byte loader
+  - collision/shadowing information
+- Public APIs that make shadowing and collisions inspectable:
+  - `find(name) -> ResourceRef | None`
+  - `find_all(name) -> list[ResourceRef]`
+  - `read(name) -> bytes | None`
+  - `iter_resources(category=None)`
+  - `shadowed(name)` / `collisions()`
+- Keep PK3 path lookup canonical. WAD-style 8-character lump-name lookup over
+  PK3 entries should be available, but clearly marked as lossy when names collide.
+
+Acceptance tests should cover:
+- duplicate lumps inside one WAD
+- IWAD + one PWAD + two PWADs with override order
+- WAD + PK3 mixed lookup
+- PK3 entries that collide after uppercasing/truncation
+- path-preserving PK3 lookup
+- `find_all()` returning shadowed resources in deterministic order
+
+### Unified map assembly over generic resources
+Once resource lookup is source-agnostic, map assembly should work over generic
+ordered resources rather than only WAD directory entries.
+
+Formats to support through the same map-facing API:
+- classic WAD map markers followed by map lumps
+- Hexen-format maps with BEHAVIOR
+- UDMF maps with `TEXTMAP` / `ENDMAP`
+- PK3 decomposed maps such as `maps/MAP01/THINGS.lmp`
+- PK3 embedded WAD maps such as `maps/MAP01.wad`
+
+The output should preserve origin metadata so callers can tell whether a map
+came from the base WAD, a PWAD, an embedded WAD inside a PK3, or decomposed PK3
+map files.
+
+### Validation and diagnostics layer
+After resource resolution is reliable, add a structured analysis API that goes
+beyond the current writer-side validation and CLI checks.
+
+Possible API shape:
+- `analyze(wad_or_resolver) -> ValidationReport`
+- `ValidationReport.errors`
+- `ValidationReport.warnings`
+- `ValidationReport.unsupported_features`
+- JSON-serializable report objects for CLI and tooling use
+
+Useful checks:
+- missing textures, flats, patches, sprites, sounds, and music
+- invalid map references: linedef vertices, sidedef sectors, sector references
+- PNAMES patch indices that point nowhere
+- duplicate/colliding resources and shadowed resources
+- PK3 resources that collide under WAD-style names
+- unsupported source-port features detected in ZMAPINFO, DECORATE, UDMF, or
+  DEHACKED
+- compatibility-level diagnostics: vanilla, limit-removing, Boom, MBF, MBF21,
+  ZDoom, UDMF
+
+The CLI can layer on this as `wadcli check --strict` or richer JSON output, but
+the core report should live in the library first.
+
+### Modern source-port parser maturity
+After the resolver and diagnostics foundation is in place, improve modern text
+format support incrementally. The goal should be "accurate metadata extraction"
+before attempting anything like a source-port runtime.
+
+Good next targets:
+- UDMF: stricter tokenization, escaped strings, better malformed-input errors,
+  namespace-specific validation, and semantic checks.
+- TEXTURES: more complete ZDoom texture definitions, patch transforms, scaling,
+  offsets, and graceful handling of unsupported clauses.
+- ZMAPINFO / MAPINFO: richer map metadata, episodes, clusters, skies, music,
+  next-map links, and compatibility flags.
+- DECORATE: better include handling, replacement relationships, inheritance-aware
+  metadata where possible, and clearer unsupported-expression reporting.
+- ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
+  compositing APIs.
+
+Full ZScript execution or full DECORATE behavior simulation should stay out of
+scope unless the project deliberately becomes a source-port analysis engine.
+
+### Release-shape documentation
+Before a broader release, document the split between classic-WAD stability and
+modern source-port coverage.
+
+Suggested positioning:
+- stable/mature: classic WAD reading, writing, inspection, maps, textures,
+  palettes, sounds, music, and common CLI export workflows
+- beta: source-port metadata, UDMF, PK3, DECORATE, ZMAPINFO, compatibility
+  conversion, and FUSE
+- explicitly unsupported or partial: full ZScript, full engine behavior,
+  source-port runtime semantics
+
+---
+
 ## Format support
 
 ### pk3 / ZIP virtual filesystem
@@ -13,7 +134,7 @@ Implementing this requires:
 - Namespace mapping: `flats/FOO.png` → flat `FOO`, `sprites/` → sprites, etc. ✓ done (v0.1.3)
 - `LumpSource` protocol to support both offset-based (WAD) and pre-loaded bytes
   (pk3 ZIP entries) — `MemoryLumpSource` decouples `BaseLump` from WAD fd ✓ done (v0.1.6)
-- PNG/TGA/JPG image decoding for flats, sprites, textures (Pillow already a dep)
+- PNG/TGA/JPG image decoding for flats, sprites, textures ✓ done (v0.1.9)
 - Embedded WAD-format maps inside `maps/MAP01.wad` entries
 
 ### UDMF map format ✓ done (v0.0.89)
