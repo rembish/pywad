@@ -66,56 +66,6 @@ class Picture(BaseLump[Any]):
     def top_offset(self) -> int:
         return self._header[3]
 
-    def _draw_column(
-        self, col_x: int, col_off: int, height: int, palette: Palette, pixels: Any
-    ) -> None:
-        self.seek(col_off)
-        while True:
-            try:
-                td_raw = self.read(1)
-            except EOFError as exc:
-                raise CorruptLumpError(
-                    f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
-                ) from exc
-            if not td_raw:
-                raise CorruptLumpError(
-                    f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
-                )
-            topdelta = td_raw[0]
-            if topdelta == 0xFF:
-                break
-            try:
-                len_raw = self.read(1)
-            except EOFError as exc:
-                raise CorruptLumpError(
-                    f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
-                ) from exc
-            if not len_raw:
-                raise CorruptLumpError(
-                    f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
-                )
-            post_len = len_raw[0]
-            self.read(1)  # pre-padding (unused)
-            for row in range(post_len):
-                if topdelta + row >= height:
-                    raise CorruptLumpError(
-                        f"{self.name!r}: column {col_x} post writes past image height "
-                        f"(topdelta={topdelta}, row={row}, height={height})"
-                    )
-                try:
-                    px_raw = self.read(1)
-                except EOFError as exc:
-                    raise CorruptLumpError(
-                        f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
-                    ) from exc
-                if not px_raw:
-                    raise CorruptLumpError(
-                        f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
-                    )
-                r, g, b = palette[px_raw[0]]
-                pixels[col_x, topdelta + row] = (r, g, b, 255)
-            self.read(1)  # post-padding (unused)
-
     def decode(self, palette: Palette) -> Image.Image:
         """Decode this picture into a PIL RGBA image using *palette*.
 
@@ -150,12 +100,60 @@ class Picture(BaseLump[Any]):
         pixels = img.load()
         assert pixels is not None  # PIL invariant
 
+        def _draw_column(col_x: int, col_off: int) -> None:
+            self.seek(col_off)
+            while True:
+                try:
+                    td_raw = self.read(1)
+                except EOFError as exc:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
+                    ) from exc
+                if not td_raw:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} at offset {col_off} has no terminator"
+                    )
+                topdelta = td_raw[0]
+                if topdelta == 0xFF:
+                    break
+                try:
+                    len_raw = self.read(1)
+                except EOFError as exc:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                    ) from exc
+                if not len_raw:
+                    raise CorruptLumpError(
+                        f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                    )
+                post_len = len_raw[0]
+                self.read(1)  # pre-padding (unused)
+                for row in range(post_len):
+                    if topdelta + row >= height:
+                        raise CorruptLumpError(
+                            f"{self.name!r}: column {col_x} post writes past image height "
+                            f"(topdelta={topdelta}, row={row}, height={height})"
+                        )
+                    try:
+                        px_raw = self.read(1)
+                    except EOFError as exc:
+                        raise CorruptLumpError(
+                            f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
+                        ) from exc
+                    if not px_raw:
+                        raise CorruptLumpError(
+                            f"{self.name!r}: column {col_x} post data truncated at pixel {row}"
+                        )
+                    r, g, b = palette[px_raw[0]]
+                    pixels[col_x, topdelta + row] = (r, g, b, 255)
+                self.read(1)  # post-padding (unused)
+
         for col_x, col_off in enumerate(col_offsets):
             if col_off >= lump_size:
                 raise CorruptLumpError(
                     f"{self.name!r}: column {col_x} offset {col_off} beyond lump size {lump_size}"
                 )
-            self._draw_column(col_x, int(col_off), height, palette, pixels)
+            _draw_column(col_x, int(col_off))
 
         return img
 

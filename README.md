@@ -444,12 +444,12 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Heretic | Full | FONTA/FONTB fonts, Heretic thing catalog |
 | Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS, compiled ACS BEHAVIOR |
 | Strife | Partial | Thing type catalog (all 230 types); no conversation/script lumps |
-| Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
+| Boom / MBF / MBF21 | Partial | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags; engine behavior/codepointers not modelled |
 | ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
-| UDMF maps | Full | Parsed and attached to `WadFile.maps` as `map_entry.udmf`; full property access |
+| UDMF maps | Partial | Common blocks/properties parsed and attached to `WadFile.maps`; not a complete grammar/semantic validator |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; no full ZDoom resource overlay |
 | DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat/state machine |
-| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states |
+| DECORATE | Partial | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states; no inheritance resolution or expression evaluation |
 | LANGUAGE | Full | `wad.language` → `LanguageLump`; multi-locale string lookup, `strings_for(locale)` |
 | ZScript | None | Not parsed |
 

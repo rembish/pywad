@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-04-15
+
+### Changed
+
+- **README support matrix** — corrected three overclaiming "Full" labels to "Partial":
+  - Boom/MBF/MBF21: engine behavior/codepointers not modelled
+  - UDMF maps: common blocks parsed; not a complete grammar/semantic validator
+  - DECORATE: no inheritance resolution or expression evaluation
+- **`Picture.decode()`** — refactored `_draw_column` from a method with 6 parameters
+  into a nested closure capturing `height`, `palette`, and `pixels` from the outer
+  `decode()` scope; eliminates the pylint `too-many-arguments` smell.
+
 ## [0.2.0] - 2026-04-15
 
 ### Fixed
