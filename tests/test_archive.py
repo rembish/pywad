@@ -569,3 +569,25 @@ class TestExceptionSafety:
         with WadArchive(path, "w") as wad:
             wad.writestr("X", b"x", validate=False)
             assert "X" not in wad  # write mode → _check_readable raises ValueError → except → False
+
+    def test_write_and_writemarker_skip_validation(self, tmp_path: Path) -> None:
+        """validate=False bypasses validation in write() and writemarker()."""
+        src = str(tmp_path / "src.lmp")
+        wad_path = str(tmp_path / "test.wad")
+        Path(src).write_bytes(b"data")
+        with WadArchive(wad_path, "w") as wad:
+            wad.write(src, arcname="SRCFILE", validate=False)
+            wad.writemarker("MAP01", validate=False)
+        with WadArchive(wad_path) as wad:
+            assert "SRCFILE" in wad
+            assert "MAP01" in wad
+
+    def test_replace_skip_validation(self, tmp_path: Path) -> None:
+        """validate=False bypasses validation in replace()."""
+        path = str(tmp_path / "test.wad")
+        with WadArchive(path, "w") as wad:
+            wad.writestr("ALPHA", b"original", validate=False)
+        with WadArchive(path, "a") as wad:
+            assert wad.replace("ALPHA", b"new", validate=False)
+        with WadArchive(path) as wad:
+            assert wad.read("ALPHA") == b"new"

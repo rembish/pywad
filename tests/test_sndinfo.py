@@ -67,6 +67,16 @@ def test_sndinfo_values_uppercase() -> None:
         assert wad.sndinfo.sounds["foo"] == "DSLOWER"
 
 
+def test_sndinfo_skips_single_token_lines() -> None:
+    """Lines with only one token (no lump name) are silently ignored."""
+    path = _make_sndinfo_wad("orphan\nfoo BAR\n")
+    with WadFile(path) as wad:
+        assert wad.sndinfo is not None
+        sounds = wad.sndinfo.sounds
+        assert "orphan" not in sounds
+        assert sounds["foo"] == "BAR"
+
+
 def test_hexen_sndinfo_not_none(hexen_wad: WadFile) -> None:
     assert hexen_wad.sndinfo is not None
 
