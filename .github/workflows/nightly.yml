@@ -1,14 +1,13 @@
-name: CI
+name: Nightly (slow tests)
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+  schedule:
+    - cron: "0 3 * * *"  # 03:00 UTC every night
+  workflow_dispatch: {}   # allow manual trigger from the Actions tab
 
 jobs:
-  check:
-    name: check (Python ${{ matrix.python-version }})
+  slow:
+    name: slow tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,5 +25,5 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Run all checks
-        run: make check
+      - name: Run slow tests
+        run: .venv/bin/pytest -m slow --no-cov -q

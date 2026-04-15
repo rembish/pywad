@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.94] - 2026-04-15
+
+### Added
+
+- **`WadFile.maps_in_order`**: new cached property that returns maps in their WAD
+  directory order rather than sorted by episode/map number.  Useful when the WAD
+  author intentionally sequences maps in a non-standard order or when round-tripping
+  a WAD without reordering its map blocks.
+- **`.github/workflows/nightly.yml`**: dedicated nightly CI workflow (03:00 UTC,
+  cron `0 3 * * *`) for `pytest -m slow`.  Slow tests no longer block every PR —
+  the nightly run catches regressions overnight and can also be triggered manually
+  via `workflow_dispatch`.
+
+### Changed
+
+- **`.github/workflows/ci.yml`**: removed the inline `pytest -m slow` step from
+  the push/PR pipeline; fast feedback on PRs is no longer delayed by renderer
+  and compositor tests.
+
 ## [0.0.93] - 2026-04-15
 
 ### Added

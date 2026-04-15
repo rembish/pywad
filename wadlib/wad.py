@@ -203,12 +203,10 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return entries
 
     @cached_property
-    def maps(self) -> list[BaseMapEntry]:
-        # Collect maps from all WADs (base + PWADs), PWADs override same-named base maps.
-        # _all_wads order is PWAD-first (highest priority first); we scan each WAD
-        # independently then merge so later (higher-priority) entries win.
+    def _maps_raw(self) -> tuple[dict[str, BaseMapEntry], list[str]]:
+        """Return (seen, order) where *order* is WAD directory insertion order."""
         seen: dict[str, BaseMapEntry] = {}  # name → map entry, last writer wins
-        order: list[str] = []  # insertion order for base WAD
+        order: list[str] = []  # insertion order from WAD directory
 
         for wad in reversed(self._all_wads):  # base first, PWADs overwrite
             groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
@@ -239,6 +237,13 @@ class WadFile:  # pylint: disable=too-many-public-methods
                     order.append(name)
                 seen[name] = map_entry
 
+        return seen, order
+
+    @cached_property
+    def maps(self) -> list[BaseMapEntry]:
+        """Maps sorted by episode/map number (E1M1, E1M2, … or MAP01, MAP02, …)."""
+        seen, order = self._maps_raw
+
         def _map_sort_key(name: str) -> tuple[int, int, int]:
             m1 = DOOM1_MAP_NAME_REGEX.match(name)
             if m1:
@@ -249,6 +254,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
             return (2, 0, 0)
 
         return [seen[n] for n in sorted(order, key=_map_sort_key)]
+
+    @cached_property
+    def maps_in_order(self) -> list[BaseMapEntry]:
+        """Maps in the order they appear in the WAD directory (no sorting)."""
+        seen, order = self._maps_raw
+        return [seen[n] for n in order]
 
     def find_lump(self, name: str) -> "DirectoryEntry | None":
         """Return the highest-priority directory entry with the given name.
