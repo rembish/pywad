@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-04-15
+
+### Added
+
+- **`tests/test_fuzz_parsers.py`**: Hypothesis-based property tests for all
+  hardened binary parsers.  Nine `@given` tests confirm that `PNames`,
+  `TextureList`, `Mus.to_midi`, `DmxSound.to_wav`, and `parse_behavior`
+  never raise unexpected low-level exceptions (IndexError, struct.error,
+  AssertionError, etc.) on arbitrary byte inputs — only `CorruptLumpError`
+  or `ValueError`.
+- **`pyproject.toml`**: added `hypothesis>=6.100` to `[project.optional-dependencies]
+  dev`.
+
 ## [0.0.99] - 2026-04-15
 
 ### Changed
