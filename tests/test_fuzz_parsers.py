@@ -1,12 +1,15 @@
-"""Property-based fuzz tests for binary lump parsers.
+"""Property-based fuzz tests for binary and text lump parsers.
 
 These tests verify that hardened parsers never raise unexpected low-level
 exceptions (AssertionError, IndexError, struct.error, AttributeError, etc.)
-when fed arbitrary byte inputs.  The only acceptable outcomes are:
+when fed arbitrary byte or text inputs.  The only acceptable outcomes are:
 
 - A successful parse (returns a value)
-- CorruptLumpError  (corrupt / truncated data)
+- CorruptLumpError  (corrupt / truncated binary data)
 - ValueError        (explicitly invalid caller input, e.g. wrong DMX format)
+
+Text parsers (UDMF, DECORATE, ZMAPINFO, MAPINFO) are lenient by design and
+must never raise at all — arbitrary text simply produces empty/partial output.
 
 Everything else is a bug in the hardening layer.
 """
@@ -24,10 +27,14 @@ from hypothesis import strategies as st
 
 from wadlib.exceptions import CorruptLumpError
 from wadlib.lumps.behavior import parse_behavior
+from wadlib.lumps.decorate import parse_decorate
+from wadlib.lumps.mapinfo import MapInfoLump
 from wadlib.lumps.mus import Mus
 from wadlib.lumps.picture import Picture
 from wadlib.lumps.sound import DmxSound
 from wadlib.lumps.textures import PNames, TextureList
+from wadlib.lumps.udmf import parse_udmf
+from wadlib.lumps.zmapinfo import ZMapInfoLump
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -242,3 +249,97 @@ class TestFuzzPictureDecode:
         post = bytes([topdelta, 1, 0, 0, 0, 0xFF])
         lump = _make_lump("PATCH1", header + col_offset + post, Picture)
         _assert_no_crash(lambda: lump.decode(_FAKE_PALETTE), CorruptLumpError)
+
+
+# ---------------------------------------------------------------------------
+# parse_udmf — module-level function, takes a string
+# ---------------------------------------------------------------------------
+
+
+class TestFuzzParseUdmf:
+    @given(text=st.text(max_size=512))
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_text_never_crash(self, text: str) -> None:
+        """parse_udmf on arbitrary text never raises any exception."""
+        _assert_no_crash(lambda: parse_udmf(text))
+
+    @given(text=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs")), max_size=256))
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_identifier_like_text_never_crash(self, text: str) -> None:
+        """Identifier-like text (letters, digits, spaces) never crashes."""
+        _assert_no_crash(lambda: parse_udmf(text))
+
+    @given(
+        ns=st.sampled_from(["doom", "heretic", "hexen", "zdoom", "eternity"]),
+        body=st.text(max_size=256),
+    )
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_valid_namespace_header_never_crash(self, ns: str, body: str) -> None:
+        """A valid namespace declaration followed by arbitrary body never crashes."""
+        _assert_no_crash(lambda: parse_udmf(f'namespace = "{ns}";\n{body}'))
+
+
+# ---------------------------------------------------------------------------
+# parse_decorate — module-level function, takes a string
+# ---------------------------------------------------------------------------
+
+
+class TestFuzzParseDecorate:
+    @given(text=st.text(max_size=512))
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_text_never_crash(self, text: str) -> None:
+        """parse_decorate on arbitrary text never raises any exception."""
+        _assert_no_crash(lambda: parse_decorate(text))
+
+    @given(
+        name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=12),
+        body=st.text(max_size=128),
+    )
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_actor_like_block_never_crash(self, name: str, body: str) -> None:
+        """An actor block header followed by arbitrary body never crashes."""
+        _assert_no_crash(lambda: parse_decorate(f"actor {name}\n{{\n{body}\n}}"))
+
+
+# ---------------------------------------------------------------------------
+# ZMapInfoLump.maps — lump-based
+# ---------------------------------------------------------------------------
+
+
+class TestFuzzZMapInfo:
+    @given(data=st.binary(max_size=512))
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_maps_arbitrary_bytes_never_crash(self, data: bytes) -> None:
+        """ZMapInfoLump.maps on arbitrary bytes never raises any exception."""
+        lump = _make_lump("ZMAPINFO", data, ZMapInfoLump)
+        _assert_no_crash(lambda: lump.maps)
+
+    @given(text=st.text(max_size=256))
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_maps_arbitrary_text_bytes_never_crash(self, text: str) -> None:
+        """ZMapInfoLump.maps on UTF-8-encoded arbitrary text never crashes."""
+        data = text.encode("utf-8", errors="replace")
+        lump = _make_lump("ZMAPINFO", data, ZMapInfoLump)
+        _assert_no_crash(lambda: lump.maps)
+
+
+# ---------------------------------------------------------------------------
+# MapInfoLump.maps — lump-based
+# ---------------------------------------------------------------------------
+
+
+class TestFuzzMapInfo:
+    @given(data=st.binary(max_size=512))
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_maps_arbitrary_bytes_never_crash(self, data: bytes) -> None:
+        """MapInfoLump.maps on arbitrary bytes never raises any exception."""
+        lump = _make_lump("MAPINFO", data, MapInfoLump)
+        _assert_no_crash(lambda: lump.maps)
+
+    @given(text=st.text(max_size=256))
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_maps_arbitrary_text_bytes_never_crash(self, text: str) -> None:
+        """MapInfoLump.maps on UTF-8-encoded arbitrary text never crashes."""
+        data = text.encode("utf-8", errors="replace")
+        lump = _make_lump("MAPINFO", data, MapInfoLump)
+        _assert_no_crash(lambda: lump.maps)

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-04-15
+
+### Added
+
+- **Text parser fuzz tests** in `tests/test_fuzz_parsers.py`:
+  - `TestFuzzParseUdmf` (3 methods) — arbitrary text, identifier-like text, and
+    valid-namespace-header + arbitrary body: `parse_udmf` must never raise.
+  - `TestFuzzParseDecorate` (2 methods) — arbitrary text and actor-block-like text:
+    `parse_decorate` must never raise.
+  - `TestFuzzZMapInfo` (2 methods) — arbitrary bytes and UTF-8-encoded arbitrary text
+    as lump data: `ZMapInfoLump.maps` must never raise.
+  - `TestFuzzMapInfo` (2 methods) — same pattern for `MapInfoLump.maps`.
+- Updated module docstring in `test_fuzz_parsers.py` to cover both binary and text
+  parser contracts.
+
 ## [0.2.6] - 2026-04-15
 
 ### Added
