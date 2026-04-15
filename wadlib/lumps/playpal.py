@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..directory import DirectoryEntry
 from ..exceptions import CorruptLumpError
+from ..source import LumpSource
 from .base import BaseLump
 
 # Each palette: 256 colours x 3 bytes (R, G, B)
@@ -23,7 +23,7 @@ class PlayPal(BaseLump[Any]):
     flashes.  Palettes 9-13 are radiation-suit tints.
     """
 
-    def __init__(self, entry: DirectoryEntry) -> None:
+    def __init__(self, entry: LumpSource) -> None:
         super().__init__(entry)
         self._palette_index: int = 0
 

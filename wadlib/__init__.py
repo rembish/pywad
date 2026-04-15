@@ -17,6 +17,7 @@ from .lumps.boom import (
 )
 from .lumps.decorate import DecorateActor, DecorateLump
 from .registry import LUMP_REGISTRY, DecoderRegistry
+from .source import LumpSource, MemoryLumpSource
 from .validate import InvalidLumpError
 from .wad import WadFile
 from .writer import WadWriter
@@ -37,6 +38,8 @@ __all__ = [
     "InvalidDirectoryError",
     "InvalidLumpError",
     "LumpInfo",
+    "LumpSource",
+    "MemoryLumpSource",
     "TruncatedWadError",
     "WadArchive",
     "WadFile",

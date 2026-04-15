@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-04-15
+
+### Added
+
+- **`wadlib/source.py`** — new module with:
+  - `LumpSource`: `runtime_checkable` `Protocol` exposing `name: str`,
+    `size: int`, and `read_bytes() -> bytes`.
+  - `MemoryLumpSource`: in-memory implementation for pk3 entries, tests, and
+    any caller that doesn't have a WAD file descriptor.
+- `LumpSource` and `MemoryLumpSource` exported from `wadlib.__init__`.
+
+### Changed
+
+- **`BaseLump.__init__`** now accepts `entry: LumpSource` instead of
+  `entry: DirectoryEntry`, decoupling the base class from the WAD fd.
+  - The `entry.owner.fd.seek / fd.read` pattern is replaced by a single
+    `entry.read_bytes()` call.
+- **`DirectoryEntry`** gained `read_bytes() -> bytes` to satisfy the protocol.
+- **`PlayPal.__init__`** and **`BaseMapEntry.__init__`** / **`MapEntry`**
+  updated to `entry: LumpSource` for Liskov compliance.
+
 ## [0.1.5] - 2026-04-15
 
 ### Changed

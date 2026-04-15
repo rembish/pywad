@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from functools import cached_property
 from itertools import chain
 from re import Pattern
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 from ..constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+from ..source import LumpSource
 from .base import BaseLump
 from .blockmap import BlockMap, Reject
 from .hexen import HexenLineDefs, HexenThings
@@ -20,9 +21,6 @@ from .udmf import UdmfLump
 from .vertices import Vertices
 from .znodes import ZNodesLump, ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNodVertex
 
-if TYPE_CHECKING:
-    from ..directory import DirectoryEntry
-
 
 @dataclass
 class Point:
@@ -33,7 +31,7 @@ class Point:
 class BaseMapEntry(BaseLump[Any]):
     _regex: ClassVar[Pattern[str]]
 
-    def __init__(self, entry: DirectoryEntry) -> None:
+    def __init__(self, entry: LumpSource) -> None:
         super().__init__(entry)
         self._match = self._regex.match(self.name)
 
@@ -150,7 +148,7 @@ class Doom2MapEntry(BaseMapEntry):
         return f"<{self.__class__.__name__} Map {self.number}>"
 
 
-def MapEntry(entry: DirectoryEntry) -> BaseMapEntry:  # pylint: disable=invalid-name
+def MapEntry(entry: LumpSource) -> BaseMapEntry:  # pylint: disable=invalid-name
     if DOOM1_MAP_NAME_REGEX.match(entry.name):
         return Doom1MapEntry(entry)
 

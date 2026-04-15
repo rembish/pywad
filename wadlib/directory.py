@@ -23,5 +23,9 @@ class DirectoryEntry:
     def __str__(self) -> str:
         return self.name
 
+    def read_bytes(self) -> bytes:
+        self.owner.fd.seek(self.offset)
+        return self.owner.fd.read(self.size)
+
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} "{self.name}" / {self.size}>'

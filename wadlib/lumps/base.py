@@ -4,7 +4,7 @@ from io import SEEK_CUR, SEEK_END, SEEK_SET, BytesIO
 from struct import calcsize, unpack
 from typing import Any, ClassVar, cast, overload
 
-from ..directory import DirectoryEntry
+from ..source import LumpSource
 
 
 class BaseLump[T]:
@@ -22,14 +22,13 @@ class BaseLump[T]:
     _row_format: ClassVar[str | None] = None
     _row_item: ClassVar[type[Any] | None] = None
 
-    def __init__(self, entry: DirectoryEntry) -> None:
+    def __init__(self, entry: LumpSource) -> None:
         self._name = entry.name
         self._size: int | None = entry.size or None
         self._rposition: int | None = 0 if self._size else None
 
         if self._size:
-            entry.owner.fd.seek(entry.offset)
-            self._buf: BytesIO | None = BytesIO(entry.owner.fd.read(self._size))
+            self._buf: BytesIO | None = BytesIO(entry.read_bytes())
         else:
             self._buf = None
 
