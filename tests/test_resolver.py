@@ -26,9 +26,8 @@ def _has_wad(path: str) -> bool:
 
 def _make_pk3(entries: dict[str, bytes]) -> str:
     """Write a temporary pk3 file and return the path."""
-    f = tempfile.NamedTemporaryFile(suffix=".pk3", delete=False)
-    path = f.name
-    f.close()
+    with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+        path = f.name
     with Pk3Archive(path, "w") as pk3:
         for name, data in entries.items():
             pk3.writestr(name, data)
@@ -204,7 +203,7 @@ class TestResourceResolverWithRealWad:
             r = ResourceResolver(wad)
             data = r.read("PLAYPAL")
         assert data is not None
-        assert len(data) == 768 * 14  # 14 palettes × 256 colours × 3 bytes
+        assert len(data) == 768 * 14  # 14 palettes x 256 colours x 3 bytes
 
     def test_missing_returns_none(self) -> None:
         with WadFile(FREEDOOM2) as wad:

@@ -15,14 +15,9 @@ Usage::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from .pk3 import Pk3Archive
 from .source import LumpSource, MemoryLumpSource
 from .wad import WadFile
-
-if TYPE_CHECKING:
-    pass
 
 
 class ResourceResolver:

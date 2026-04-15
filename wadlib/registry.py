@@ -1,32 +1,37 @@
 """Lump decoder registry and map-data dispatch tables.
 
-Centralises two previously inlined concerns from ``wad.py``:
+Centralises three previously inlined concerns from ``wad.py``:
 
 1. **Map-data dispatch** — ``_DOOM_DISPATCH``, ``_HEXEN_OVERRIDES``, and
    ``attach_map_lumps`` (the function that wires raw directory entries into a
    ``BaseMapEntry``).
 
-2. **Simple lump registry** — ``DecoderRegistry``, a name → constructor map
+2. **Map assembly** — ``scan_map_groups`` (find marker/lump groups in a
+   directory) and ``assemble_maps`` (build the full seen/order mapping from a
+   stack of directories, base-first).
+
+3. **Simple lump registry** — ``DecoderRegistry``, a name → constructor map
    that lets external callers (and future plug-ins) look up or extend the
    decoder for any named lump.  ``LUMP_REGISTRY`` is the default instance
    pre-populated with every decoder built into wadlib.
 
 Usage::
 
-    from wadlib.registry import LUMP_REGISTRY, DecoderRegistry
+    from wadlib.registry import LUMP_REGISTRY, DecoderRegistry, assemble_maps
 
     # Decode a lump using the built-in registry
     lump = LUMP_REGISTRY.find_and_decode("PLAYPAL", wad)
 
-    # Extend the registry with a custom decoder
-    LUMP_REGISTRY.register("MYDATA", MyLump)
+    # Assemble maps from a WAD directory sequence (base-first order)
+    seen, order = assemble_maps([wad.directory])
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Protocol
+from collections.abc import Callable, Sequence
+from typing import Any, Protocol
 
+from .constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
 from .directory import DirectoryEntry
 from .enums import MapData
 from .lumps.animdefs import AnimDefsLump
@@ -40,6 +45,7 @@ from .lumps.endoom import Endoom
 from .lumps.hexen import HexenLineDefs, HexenThings
 from .lumps.language import LanguageLump
 from .lumps.lines import Lines
+from .lumps.map import BaseMapEntry, MapEntry
 from .lumps.mapinfo import MapInfoLump
 from .lumps.nodes import Nodes
 from .lumps.playpal import PlayPal
@@ -54,10 +60,6 @@ from .lumps.udmf import UdmfLump
 from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
 from .lumps.znodes import ZNodesLump
-
-if TYPE_CHECKING:
-    from .lumps.map import BaseMapEntry
-
 
 # ---------------------------------------------------------------------------
 # Protocol — anything with find_lump
@@ -121,6 +123,67 @@ def attach_map_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen
             getattr(map_entry, method_name)(constructor(entry))
         else:
             map_entry.attach(entry)
+
+
+def scan_map_groups(
+    entries: Sequence[DirectoryEntry],
+) -> list[tuple[DirectoryEntry, list[DirectoryEntry]]]:
+    """Find map marker/lump groups in a single WAD directory sequence.
+
+    Scans *entries* for map-name markers (E1M1, MAP01, etc.) and collects
+    the ``MapData``-named lumps that follow each marker until the next marker.
+
+    Returns a list of ``(marker, lumps)`` pairs in directory order.
+    """
+    groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
+    current_lumps: list[DirectoryEntry] = []
+    marker: DirectoryEntry | None = None
+
+    for entry in entries:
+        is_marker = bool(
+            DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name)
+        )
+        if is_marker:
+            if marker is not None:
+                groups.append((marker, current_lumps))
+            marker = entry
+            current_lumps = []
+        elif marker is not None and entry.name in MapData.names():
+            current_lumps.append(entry)
+
+    if marker is not None:
+        groups.append((marker, current_lumps))
+
+    return groups
+
+
+def assemble_maps(
+    directories: Sequence[Sequence[DirectoryEntry]],
+) -> tuple[dict[str, BaseMapEntry], list[str]]:
+    """Build a ``(seen, order)`` map from a stack of WAD directories.
+
+    *directories* must be passed in **base-first** order (i.e. the base IWAD
+    first, then PWADs in load order).  PWADs overwrite earlier maps with the
+    same name; ``order`` preserves the first-seen insertion order.
+
+    Returns:
+        seen:  name → ``BaseMapEntry`` (last writer wins).
+        order: map names in first-seen directory order.
+    """
+    seen: dict[str, BaseMapEntry] = {}
+    order: list[str] = []
+
+    for directory in directories:
+        for map_marker, lumps in scan_map_groups(directory):
+            map_entry = MapEntry(map_marker)
+            hexen = any(e.name == "BEHAVIOR" for e in lumps)
+            attach_map_lumps(map_entry, lumps, hexen)
+            name = str(map_entry)
+            if name not in seen:
+                order.append(name)
+            seen[name] = map_entry
+
+    return seen, order
 
 
 # ---------------------------------------------------------------------------

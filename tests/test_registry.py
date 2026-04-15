@@ -1,15 +1,23 @@
-"""Tests for wadlib.registry — DecoderRegistry and attach_map_lumps."""
+"""Tests for wadlib.registry — DecoderRegistry, attach_map_lumps, scan/assemble."""
 
 from __future__ import annotations
 
 import struct
 import tempfile
+from io import BytesIO
 from pathlib import Path
 
+from wadlib.directory import DirectoryEntry
 from wadlib.lumps.base import BaseLump
 from wadlib.lumps.colormap import ColormapLump
 from wadlib.lumps.playpal import PlayPal
-from wadlib.registry import LUMP_REGISTRY, DecoderRegistry, attach_map_lumps
+from wadlib.registry import (
+    LUMP_REGISTRY,
+    DecoderRegistry,
+    assemble_maps,
+    attach_map_lumps,
+    scan_map_groups,
+)
 
 # ---------------------------------------------------------------------------
 # DecoderRegistry — unit tests
@@ -166,8 +174,142 @@ class TestAttachMapLumps:
 
 
 # ---------------------------------------------------------------------------
+# scan_map_groups / assemble_maps — unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestScanMapGroups:
+    def test_empty_directory(self) -> None:
+        assert scan_map_groups([]) == []
+
+    def test_no_markers(self) -> None:
+        entries = [_fake_entry("PLAYPAL"), _fake_entry("COLORMAP")]
+        assert scan_map_groups(entries) == []
+
+    def test_single_doom1_marker_no_lumps(self) -> None:
+        marker = _fake_entry("E1M1")
+        groups = scan_map_groups([marker])
+        assert len(groups) == 1
+        m, lumps = groups[0]
+        assert m.name == "E1M1"
+        assert lumps == []
+
+    def test_single_doom2_marker_no_lumps(self) -> None:
+        marker = _fake_entry("MAP01")
+        groups = scan_map_groups([marker])
+        assert len(groups) == 1
+        assert groups[0][0].name == "MAP01"
+
+    def test_marker_with_valid_lump(self) -> None:
+        entries = [_fake_entry("E1M1"), _fake_entry("THINGS")]
+        groups = scan_map_groups(entries)
+        assert len(groups) == 1
+        m, lumps = groups[0]
+        assert m.name == "E1M1"
+        assert len(lumps) == 1
+        assert lumps[0].name == "THINGS"
+
+    def test_non_mapdata_lump_ignored(self) -> None:
+        entries = [_fake_entry("E1M1"), _fake_entry("THINGS"), _fake_entry("PLAYPAL")]
+        groups = scan_map_groups(entries)
+        assert len(groups) == 1
+        _, lumps = groups[0]
+        # PLAYPAL is not a MapData name so it's ignored
+        assert len(lumps) == 1
+        assert lumps[0].name == "THINGS"
+
+    def test_multiple_markers(self) -> None:
+        entries = [
+            _fake_entry("E1M1"),
+            _fake_entry("THINGS"),
+            _fake_entry("E1M2"),
+            _fake_entry("VERTEXES"),
+            _fake_entry("LINEDEFS"),
+        ]
+        groups = scan_map_groups(entries)
+        assert len(groups) == 2
+        assert groups[0][0].name == "E1M1"
+        assert len(groups[0][1]) == 1
+        assert groups[1][0].name == "E1M2"
+        assert len(groups[1][1]) == 2
+
+    def test_consecutive_markers_no_lumps(self) -> None:
+        entries = [_fake_entry("MAP01"), _fake_entry("MAP02")]
+        groups = scan_map_groups(entries)
+        assert len(groups) == 2
+        assert groups[0][1] == []
+        assert groups[1][1] == []
+
+
+class TestAssembleMaps:
+    def test_empty_directories(self) -> None:
+        seen, order = assemble_maps([])
+        assert seen == {}
+        assert order == []
+
+    def test_empty_directory_list(self) -> None:
+        seen, order = assemble_maps([[]])
+        assert seen == {}
+        assert order == []
+
+    def test_single_map(self) -> None:
+        directory = [_fake_entry("E1M1"), _fake_entry("THINGS")]
+        seen, order = assemble_maps([directory])
+        assert "E1M1" in seen
+        assert order == ["E1M1"]
+
+    def test_two_maps_in_one_directory(self) -> None:
+        directory = [
+            _fake_entry("E1M1"),
+            _fake_entry("THINGS"),
+            _fake_entry("MAP01"),
+            _fake_entry("VERTEXES"),
+        ]
+        seen, order = assemble_maps([directory])
+        assert set(order) == {"E1M1", "MAP01"}
+        assert len(seen) == 2
+
+    def test_pwad_overwrites_base(self) -> None:
+        """Later directory (PWAD) wins for the same map name."""
+        base_dir = [_fake_entry("E1M1"), _fake_entry("THINGS")]
+        pwad_dir = [_fake_entry("E1M1"), _fake_entry("VERTEXES")]
+        seen, order = assemble_maps([base_dir, pwad_dir])
+        assert order == ["E1M1"]
+        # The map entry from pwad_dir should win; it has VERTEXES, not THINGS
+        map_entry = seen["E1M1"]
+        assert map_entry.vertices is not None
+        assert map_entry.things is None
+
+    def test_pwad_adds_new_map(self) -> None:
+        """PWAD can add a map not in the base."""
+        base_dir = [_fake_entry("E1M1")]
+        pwad_dir = [_fake_entry("E1M2")]
+        _, order = assemble_maps([base_dir, pwad_dir])
+        assert set(order) == {"E1M1", "E1M2"}
+
+    def test_order_preserves_first_seen(self) -> None:
+        """Map names appear in order of first encounter, not last write."""
+        base_dir = [_fake_entry("MAP01"), _fake_entry("MAP02")]
+        pwad_dir = [_fake_entry("MAP01")]
+        _, order = assemble_maps([base_dir, pwad_dir])
+        assert order.index("MAP01") < order.index("MAP02")
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+class _FW:
+    """Minimal fake WadFile stub — only needs .fd for read_bytes()."""
+
+    def __init__(self) -> None:
+        self.fd = BytesIO(b"")
+
+
+def _fake_entry(name: str) -> DirectoryEntry:
+    """Build a zero-size DirectoryEntry with the given name, no real WAD needed."""
+    return DirectoryEntry(_FW(), 0, 0, name)  # type: ignore[arg-type]
 
 
 def _build_single_lump_wad(name: bytes, data: bytes) -> bytes:

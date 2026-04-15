@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-04-15
+
+### Added
+
+- **`scan_map_groups(entries)`** in `wadlib/registry.py` — scans a single WAD
+  directory sequence for map-marker/lump groups; returns `(marker, lumps)` pairs.
+- **`assemble_maps(directories)`** in `wadlib/registry.py` — builds the full
+  `(seen, order)` map dict from a base-first stack of directory sequences,
+  replacing the inlined logic that was in `WadFile._maps_raw`.
+
+### Changed
+
+- **`WadFile._maps_raw`** now delegates entirely to `assemble_maps`, reducing the
+  method body to a one-liner.  Behaviour is identical.
+- **`wadlib/resolver.py`** — removed dead `if TYPE_CHECKING: pass` block.
+- `tests/test_registry.py` extended with 15 new tests covering `scan_map_groups`
+  and `assemble_maps` in isolation (no WAD file required).
+
 ## [0.1.7] - 2026-04-15
 
 ### Added

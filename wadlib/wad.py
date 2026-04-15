@@ -11,7 +11,7 @@ from .constants import (
     HEADER_FORMAT,
 )
 from .directory import DirectoryEntry
-from .enums import MapData, WadType
+from .enums import WadType
 from .exceptions import BadHeaderWadException, InvalidDirectoryError, TruncatedWadError
 from .lumps.animdefs import AnimDefsLump
 from .lumps.base import BaseLump
@@ -21,7 +21,7 @@ from .lumps.dehacked import DehackedFile, DehackedLump
 from .lumps.endoom import Endoom
 from .lumps.flat import Flat
 from .lumps.language import LanguageLump
-from .lumps.map import BaseMapEntry, MapEntry  # MapEntry is a factory function
+from .lumps.map import BaseMapEntry
 from .lumps.mapinfo import MapInfoLump
 from .lumps.mus import _HEADER_SIZE as _MUS_MIN_SIZE
 from .lumps.mus import _MUS_MAGIC, Mus
@@ -44,7 +44,7 @@ from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
 from .lumps.textures import PNames, TextureList
 from .lumps.zmapinfo import ZMapInfoLump
-from .registry import attach_map_lumps
+from .registry import assemble_maps
 
 _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
 
@@ -155,39 +155,8 @@ class WadFile:  # pylint: disable=too-many-public-methods
     @cached_property
     def _maps_raw(self) -> tuple[dict[str, BaseMapEntry], list[str]]:
         """Return (seen, order) where *order* is WAD directory insertion order."""
-        seen: dict[str, BaseMapEntry] = {}  # name → map entry, last writer wins
-        order: list[str] = []  # insertion order from WAD directory
-
-        for wad in reversed(self._all_wads):  # base first, PWADs overwrite
-            groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
-            current_lumps: list[DirectoryEntry] = []
-            marker: DirectoryEntry | None = None
-
-            for entry in wad.directory:
-                is_marker = bool(
-                    DOOM1_MAP_NAME_REGEX.match(entry.name) or DOOM2_MAP_NAME_REGEX.match(entry.name)
-                )
-                if is_marker:
-                    if marker is not None:
-                        groups.append((marker, current_lumps))
-                    marker = entry
-                    current_lumps = []
-                elif marker is not None and entry.name in MapData.names():
-                    current_lumps.append(entry)
-
-            if marker is not None:
-                groups.append((marker, current_lumps))
-
-            for map_marker, lumps in groups:
-                map_entry = MapEntry(map_marker)
-                hexen = any(e.name == "BEHAVIOR" for e in lumps)
-                attach_map_lumps(map_entry, lumps, hexen)
-                name = str(map_entry)
-                if name not in seen:
-                    order.append(name)
-                seen[name] = map_entry
-
-        return seen, order
+        # Directories in base-first order (reversed _all_wads) so PWADs overwrite.
+        return assemble_maps([w.directory for w in reversed(self._all_wads)])
 
     @cached_property
     def maps(self) -> list[BaseMapEntry]:
