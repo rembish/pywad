@@ -300,12 +300,34 @@ class Pk3Archive:
 
         The search is case-insensitive and truncates to 8 characters to match
         WAD lump name semantics.  Returns ``None`` if not found.
+
+        .. note::
+            When multiple entries share the same lump name (e.g. two sprites
+            that collide after uppercasing and 8-character truncation), only
+            the first match in ZIP order is returned.  Use :meth:`find_resources`
+            to retrieve all colliding entries.
         """
         name_upper = name.upper()[:8]
         for entry in self.infolist():
             if entry.lump_name == name_upper:
                 return entry
         return None
+
+    def find_resources(self, name: str) -> list[Pk3Entry]:
+        """Return all entries whose lump name matches *name* (case-insensitive).
+
+        Unlike :meth:`find_resource`, this returns every entry that maps to the
+        same WAD-style lump name, in ZIP order.  This is useful when PK3 entries
+        collide after uppercasing and 8-character truncation::
+
+            entries = pk3.find_resources("TROGEN")
+            # might return both sprites/TROGEN1.png and sprites/TROGEN2.png
+            # if both truncate to the same 8-char lump name
+
+        Returns an empty list if no entry matches.
+        """
+        name_upper = name.upper()[:8]
+        return [e for e in self.infolist() if e.lump_name == name_upper]
 
     def read_resource(self, name: str) -> bytes | None:
         """Read the first entry whose lump name matches *name*.

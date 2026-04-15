@@ -370,6 +370,51 @@ class TestPk3ArchiveResourceApi:
         finally:
             os.unlink(path)
 
+    def test_find_resources_single_match(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                results = pk3.find_resources("DSPISTOL")
+                assert len(results) == 1
+                assert results[0].path == "sounds/DSPISTOL.lmp"
+        finally:
+            os.unlink(path)
+
+    def test_find_resources_missing_returns_empty(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert pk3.find_resources("NOTHERE") == []
+        finally:
+            os.unlink(path)
+
+    def test_find_resources_collision(self) -> None:
+        """Two entries that collide under the same lump name are both returned."""
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            collision_path = f.name
+        try:
+            with Pk3Archive(collision_path, "w") as pk3:
+                # Both truncate to lump name "LONGNAME" (8 chars)
+                pk3.writestr("sprites/LONGNAME_A.lmp", b"first")
+                pk3.writestr("sprites/LONGNAME_B.lmp", b"second")
+            with Pk3Archive(collision_path, "r") as pk3:
+                results = pk3.find_resources("LONGNAME")
+                assert len(results) == 2
+                paths = {e.path for e in results}
+                assert "sprites/LONGNAME_A.lmp" in paths
+                assert "sprites/LONGNAME_B.lmp" in paths
+        finally:
+            os.unlink(collision_path)
+
+    def test_find_resources_case_insensitive(self) -> None:
+        path = self._make_pk3()
+        try:
+            with Pk3Archive(path, "r") as pk3:
+                assert len(pk3.find_resources("dspistol")) == 1
+                assert len(pk3.find_resources("DsPiStOl")) == 1
+        finally:
+            os.unlink(path)
+
     def test_empty_category(self) -> None:
         path = self._make_pk3()
         try:

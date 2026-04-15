@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-04-15
+
+### Added
+
+- **`Pk3Archive.find_resources(name)`** — returns `list[Pk3Entry]` of every entry
+  that maps to the same WAD-style lump name (after uppercasing and 8-character
+  truncation), in ZIP order. Closes the silent-overwrite gap where entries
+  colliding under the same lump name were invisible to `find_resource()`.
+  `find_resource()` is unchanged (first-match semantics, with a note in its
+  docstring pointing to `find_resources`).
+- 4 new tests in `tests/test_pk3.py`: single match, missing (empty list),
+  collision (two entries with the same lump name), case-insensitive lookup.
+
+## [0.2.5] - 2026-04-15
+
+### Changed
+
+- **TODO.md** — updated to reflect completed work:
+  - `ResourceResolver` v2 core marked done (v0.2.4); remaining goals listed.
+  - UDMF entry notes tokenizer hardening (hex literals, escaped strings, v0.2.2).
+  - DECORATE entry notes `resolve_inheritance()` added (v0.2.2); splits
+    "stub parser + inheritance done" from "full ZScript not planned".
+
 ## [0.2.4] - 2026-04-15
 
 ### Added
