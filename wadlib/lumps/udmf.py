@@ -34,13 +34,13 @@ _COMMENT_RE = re.compile(r"//[^\n]*|/\*[\s\S]*?\*/")
 _ASSIGNMENT_RE = re.compile(
     r"(\w+)\s*=\s*"
     r"(?:"
-    r'"([^"]*)"'  # quoted string
+    r'"((?:[^"\\]|\\.)*)"'  # quoted string (handles \" and \\ escapes)
     r"|"
     r"(true|false)"  # boolean
     r"|"
     r"(-?[\d]+\.[\d]*|-?\.[\d]+)"  # float
     r"|"
-    r"(-?[\d]+)"  # integer
+    r"(-?0[xX][0-9a-fA-F]+|-?[\d]+)"  # integer: hex (0x…) or decimal
     r")\s*;"
 )
 _BLOCK_START_RE = re.compile(r"(\w+)\s*\{")
@@ -197,13 +197,14 @@ def parse_udmf(text: str) -> UdmfMap:
         for m in _ASSIGNMENT_RE.finditer(block_body):
             key = m.group(1)
             if m.group(2) is not None:
-                props[key] = m.group(2)  # string
+                # Unescape \" and \\ sequences inside quoted strings
+                props[key] = m.group(2).replace('\\"', '"').replace("\\\\", "\\")
             elif m.group(3) is not None:
                 props[key] = m.group(3) == "true"  # boolean
             elif m.group(4) is not None:
                 props[key] = float(m.group(4))  # float
             elif m.group(5) is not None:
-                props[key] = int(m.group(5))  # integer
+                props[key] = int(m.group(5), 0)  # decimal or hex (0x…)
 
         if block_type == "thing":
             result.things.append(UdmfThing(props=props))

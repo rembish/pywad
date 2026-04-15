@@ -5,7 +5,7 @@ from __future__ import annotations
 import struct
 import tempfile
 
-from wadlib.lumps.decorate import DecorateLump, parse_decorate
+from wadlib.lumps.decorate import DecorateLump, parse_decorate, resolve_inheritance
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -196,3 +196,108 @@ def test_actor_is_monster_via_countkill() -> None:
     text = "actor Imp\n{\n    +COUNTKILL\n}\n"
     actors = parse_decorate(text)
     assert actors[0].is_monster
+
+
+# ---------------------------------------------------------------------------
+# resolve_inheritance
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_no_parent() -> None:
+    """Actors without a parent are returned unchanged."""
+    actors = parse_decorate("actor Base\n{\n    health 100\n    +SOLID\n}\n")
+    resolved = resolve_inheritance(actors)
+    assert resolved[0].health == 100
+    assert "SOLID" in resolved[0].flags
+
+
+def test_resolve_inherits_property() -> None:
+    """Child inherits a property not overridden in its own definition."""
+    text = "actor Base\n{\n    health 200\n    speed 8\n}\nactor Child : Base\n{\n    speed 4\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert child.health == 200  # inherited
+    assert child.speed == 4  # overridden
+
+
+def test_resolve_child_overrides_property() -> None:
+    """Child property wins over parent property."""
+    text = "actor Base\n{\n    health 100\n}\nactor Child : Base\n{\n    health 50\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert child.health == 50
+
+
+def test_resolve_inherits_flags() -> None:
+    """Child inherits parent flags not explicitly set or cleared."""
+    text = (
+        "actor Base\n{\n    +SOLID\n    +SHOOTABLE\n}\nactor Child : Base\n{\n    +COUNTKILL\n}\n"
+    )
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert "SOLID" in child.flags  # inherited
+    assert "SHOOTABLE" in child.flags  # inherited
+    assert "COUNTKILL" in child.flags  # own
+
+
+def test_resolve_antiflag_clears_parent_flag() -> None:
+    """A child -FLAG removes the parent's +FLAG."""
+    text = "actor Base\n{\n    +SOLID\n}\nactor Child : Base\n{\n    -SOLID\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert "SOLID" not in child.flags
+
+
+def test_resolve_inherits_doomednum() -> None:
+    """Child inherits doomednum from parent when child has none."""
+    text = "actor Base 3001\n{\n    health 60\n}\nactor Child : Base\n{\n    health 30\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert child.doomednum == 3001
+
+
+def test_resolve_child_doomednum_wins() -> None:
+    """Child doomednum takes precedence over parent."""
+    text = "actor Base 3001\n{\n}\nactor Child : Base 9000\n{\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    child = next(a for a in resolved if a.name == "Child")
+    assert child.doomednum == 9000
+
+
+def test_resolve_unknown_parent_unchanged() -> None:
+    """An actor whose parent is not in the list is returned as-is."""
+    text = "actor Child : SomeEngineClass\n{\n    health 50\n}\n"
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    assert resolved[0].health == 50
+    assert resolved[0].parent == "SomeEngineClass"
+
+
+def test_resolve_deep_chain() -> None:
+    """Properties propagate through a three-level chain correctly."""
+    text = (
+        "actor A\n{\n    health 100\n    speed 4\n}\n"
+        "actor B : A\n{\n    speed 8\n    radius 20\n}\n"
+        "actor C : B\n{\n    radius 30\n}\n"
+    )
+    actors = parse_decorate(text)
+    resolved = resolve_inheritance(actors)
+    c = next(a for a in resolved if a.name == "C")
+    assert c.health == 100  # from A via B
+    assert c.speed == 8  # from B
+    assert c.radius == 30  # own
+
+
+def test_resolve_does_not_mutate_originals() -> None:
+    """resolve_inheritance must not modify the original actor objects."""
+    text = "actor Base\n{\n    health 100\n}\nactor Child : Base\n{\n}\n"
+    actors = parse_decorate(text)
+    original_child_health = actors[1].health
+    resolve_inheritance(actors)
+    assert actors[1].health == original_child_health  # unchanged

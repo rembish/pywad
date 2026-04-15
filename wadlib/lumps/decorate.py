@@ -29,7 +29,7 @@ Usage::
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import Any
 
@@ -206,6 +206,43 @@ def parse_decorate(text: str) -> list[DecorateActor]:
         actors.append(actor)
 
     return actors
+
+
+def resolve_inheritance(actors: list[DecorateActor]) -> list[DecorateActor]:
+    """Return new DecorateActor instances with inherited properties and flags filled in.
+
+    Walk each actor's parent chain from the oldest ancestor forward, merging
+    properties and flags with child definitions winning over parent definitions:
+
+    - ``properties``: parent values are the base; child values override.
+    - ``flags``: union of parent and child set-flags, then subtract child antiflags.
+    - ``antiflags``: union of parent and child antiflags.
+    - ``states``: child states list if non-empty, otherwise parent states.
+    - ``doomednum``: child value if present, otherwise inherited from parent.
+    - ``replaces``: child value always kept.
+
+    Actors whose parent class is not in the input list are returned unchanged.
+    Inheritance cycles are detected and broken at the cycle entry point.
+
+    The input list and actor objects are not mutated; new instances are returned.
+    """
+    by_name: dict[str, DecorateActor] = {a.name.upper(): a for a in actors}
+
+    def _resolve(actor: DecorateActor, visiting: frozenset[str]) -> DecorateActor:
+        parent_upper = actor.parent.upper() if actor.parent else ""
+        if not parent_upper or parent_upper not in by_name or parent_upper in visiting:
+            return actor
+        parent = _resolve(by_name[parent_upper], visiting | {actor.name.upper()})
+        return replace(
+            actor,
+            properties={**parent.properties, **actor.properties},
+            flags=(parent.flags | actor.flags) - actor.antiflags,
+            antiflags=parent.antiflags | actor.antiflags,
+            states=actor.states if actor.states else parent.states,
+            doomednum=actor.doomednum if actor.doomednum is not None else parent.doomednum,
+        )
+
+    return [_resolve(a, frozenset({a.name.upper()})) for a in actors]
 
 
 class DecorateLump(BaseLump[Any]):

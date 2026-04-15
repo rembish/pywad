@@ -15,7 +15,7 @@ from .lumps.boom import (
     GeneralizedTrigger,
     decode_generalized,
 )
-from .lumps.decorate import DecorateActor, DecorateLump
+from .lumps.decorate import DecorateActor, DecorateLump, resolve_inheritance
 from .registry import LUMP_REGISTRY, DecoderRegistry
 from .resolver import ResourceResolver
 from .source import LumpSource, MemoryLumpSource
@@ -48,4 +48,5 @@ __all__ = [
     "WadFormatError",
     "WadWriter",
     "decode_generalized",
+    "resolve_inheritance",
 ]

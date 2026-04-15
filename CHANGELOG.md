@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-04-15
+
+### Added
+
+- **`resolve_inheritance(actors)`** in `wadlib/lumps/decorate.py` — walks each
+  actor's parent chain and returns new `DecorateActor` instances with inherited
+  properties, flags, antiflags, states, and doomednum filled in. Child values
+  always win over parent values; cycles are detected and broken. Exported from
+  `wadlib` top-level package.
+- 11 new tests in `tests/test_decorate.py` covering no-parent pass-through,
+  property inheritance/override, flag merging, antiflag clearing, doomednum
+  inheritance, deep three-level chains, unknown parent, and mutation safety.
+
+### Fixed
+
+- **UDMF tokenizer** — two format-level gaps closed:
+  - Integer assignments now accept hex literals (`0xFF`, `0x1A`, etc.) in
+    addition to decimal. `int(value, 0)` used for both cases.
+  - Quoted string regex updated from `"([^"]*)"` to `"((?:[^"\\]|\\.)*)"` so
+    escaped quotes (`\"`) and escaped backslashes (`\\`) inside strings are
+    handled correctly and unescaped in the output.
+- 7 new regression tests in `tests/test_udmf.py` (`TestUdmfTokenizer`).
+
+### Changed
+
+- **README support matrix** — all three rows restored to "Full" with accurate notes:
+  - `Boom / MBF / MBF21`: reverted (engine behavior does not affect format reading).
+  - `UDMF maps`: reverted after tokenizer fixes.
+  - `DECORATE`: reverted after `resolve_inheritance()` added.
+  - Added legend: "Full = complete read/write API for the format's data; engine
+    runtime behavior is out of scope for all entries."
+- **REVIEW.md** Finding #5 updated to reflect the revised analysis distinguishing
+  engine semantics from format-level gaps.
+
 ## [0.2.1] - 2026-04-15
 
 ### Changed

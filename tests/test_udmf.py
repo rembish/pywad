@@ -220,3 +220,52 @@ class TestUdmfFromScratch:
         assert len(m2.linedefs) == 4
         assert len(m2.sidedefs) == 4
         assert len(m2.sectors) == 1
+
+
+# ---------------------------------------------------------------------------
+# Tokenizer correctness — hex integers and escaped strings
+# ---------------------------------------------------------------------------
+
+
+class TestUdmfTokenizer:
+    def test_hex_integer(self) -> None:
+        """Hex literals like 0x1A must be parsed as integers."""
+        # id is a known UdmfThing field — check it directly, not via props
+        text = 'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; id = 0x1A; }'
+        m = parse_udmf(text)
+        assert m.things[0].id == 0x1A
+
+    def test_hex_integer_uppercase(self) -> None:
+        # special is a named UdmfLinedef field
+        text = 'namespace = "doom";\nlinedef { v1 = 0; v2 = 1; sidefront = 0; special = 0xFF; }'
+        m = parse_udmf(text)
+        assert m.linedefs[0].special == 255
+
+    def test_hex_integer_negative(self) -> None:
+        # arg0 is not a named UdmfThing field, stays in props
+        text = 'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = -0x10; }'
+        m = parse_udmf(text)
+        assert m.things[0].props.get("arg0") == -16
+
+    def test_escaped_quote_in_string(self) -> None:
+        """Escaped quotes inside UDMF string values must be unescaped."""
+        # texturemiddle is a named UdmfSidedef field
+        text = r'namespace = "doom";' + "\n" + r'sidedef { texturemiddle = "A\"B"; sector = 0; }'
+        m = parse_udmf(text)
+        assert m.sidedefs[0].texturemiddle == 'A"B'
+
+    def test_escaped_backslash_in_string(self) -> None:
+        text = 'namespace = "doom";\n' + r'sidedef { texturemiddle = "A\\B"; sector = 0; }'
+        m = parse_udmf(text)
+        assert m.sidedefs[0].texturemiddle == "A\\B"
+
+    def test_decimal_integer_unchanged(self) -> None:
+        """Ordinary decimal integers must still parse correctly."""
+        text = 'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 7001; }'
+        m = parse_udmf(text)
+        assert m.things[0].type == 7001
+
+    def test_negative_decimal_unchanged(self) -> None:
+        text = 'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = -3; }'
+        m = parse_udmf(text)
+        assert m.things[0].props.get("arg0") == -3
