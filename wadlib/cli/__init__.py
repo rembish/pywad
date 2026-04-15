@@ -32,11 +32,11 @@ from .commands import (
     list_music,
     list_patches,
     list_scripts,
+    list_sndseq,
     list_sounds,
     list_sprites,
     list_stats,
     list_textures,
-    list_sndseq,
     scan_textures,
 )
 

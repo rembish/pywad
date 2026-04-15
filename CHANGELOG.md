@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-04-15
+
+### Added
+
+- **`wadlib/resolver.py`** — new `ResourceResolver` class:
+  - Accepts any mix of `WadFile` and `Pk3Archive` sources; searched in
+    priority order (first hit wins).
+  - `find_source(name) -> LumpSource | None` — returns the first matching
+    `LumpSource` regardless of origin (WAD `DirectoryEntry` or pk3
+    `MemoryLumpSource`).
+  - `read(name) -> bytes | None` — convenience shorthand for
+    `find_source(name).read_bytes()`.
+  - `__contains__`, `__len__`, `__repr__` for ergonomic use.
+  - Case-insensitive name matching.
+- `ResourceResolver` exported from `wadlib.__init__`.
+- `tests/test_resolver.py` — 20 tests covering empty resolver, pk3-only,
+  multi-source priority, WAD+pk3 priority and fallthrough.
+
 ## [0.1.6] - 2026-04-15
 
 ### Added

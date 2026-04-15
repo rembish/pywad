@@ -158,7 +158,9 @@ class Mus(BaseLump[Any]):
                         patch[mus_ch] = value
                         events.append((current_tick, bytes([0xC0 | midi_ch, value])))
                     elif ctrl in _CTRL_MIDI:
-                        events.append((current_tick, bytes([0xB0 | midi_ch, _CTRL_MIDI[ctrl], value])))
+                        events.append(
+                            (current_tick, bytes([0xB0 | midi_ch, _CTRL_MIDI[ctrl], value]))
+                        )
 
                 elif etype == 6:  # score end
                     break

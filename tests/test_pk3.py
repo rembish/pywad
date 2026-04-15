@@ -373,6 +373,7 @@ class TestPk3ArchiveResourceApi:
             with Pk3Archive(path, "r") as pk3:
                 # No voxels in this archive
                 from wadlib.pk3 import Pk3Archive as _A  # noqa: F401
+
                 assert pk3._category_dict("voxels") == {}
         finally:
             os.unlink(path)

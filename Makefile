@@ -27,7 +27,7 @@ pylint: ## Run pylint
 	$(BIN)/pylint wadlib
 
 test: ## Run pytest with coverage
-	$(BIN)/pytest
+	$(BIN)/pytest --durations=15
 
 check: format lint typecheck pylint test ## Run all checks
 
