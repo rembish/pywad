@@ -6,6 +6,7 @@ import struct
 
 import pytest
 
+from wadlib.exceptions import CorruptLumpError
 from wadlib.lumps.behavior import AcsScript, parse_behavior
 from wadlib.lumps.decorate import parse_decorate
 from wadlib.lumps.demo import DemoTic, parse_demo
@@ -210,11 +211,11 @@ class TestBehavior:
         assert info.scripts[0].script_type == 1  # open
 
     def test_too_short_raises(self) -> None:
-        with pytest.raises(ValueError, match="too short"):
+        with pytest.raises(CorruptLumpError, match="too short"):
             parse_behavior(b"\x00\x00")
 
     def test_bad_magic_raises(self) -> None:
-        with pytest.raises(ValueError, match="Unknown"):
+        with pytest.raises(CorruptLumpError, match="Unknown"):
             parse_behavior(b"XXXX\x00\x00\x00\x00")
 
     def test_script_type_name(self) -> None:

@@ -25,7 +25,9 @@ from .commands import (
     list_actors,
     list_animations,
     list_flats,
+    list_language,
     list_lumps,
+    list_mapinfo,
     list_maps,
     list_music,
     list_patches,
@@ -34,6 +36,7 @@ from .commands import (
     list_sprites,
     list_stats,
     list_textures,
+    list_sndseq,
     scan_textures,
 )
 
@@ -94,11 +97,20 @@ def main() -> None:
         list_subs.add_parser("animations", help="list ANIMDEFS flat/texture animation sequences")
     )
     list_flats.configure(list_subs.add_parser("flats", help="list floor/ceiling flat names"))
+    list_language.configure(
+        list_subs.add_parser("language", help="list LANGUAGE lump strings (with --locale support)")
+    )
     list_lumps.configure(list_subs.add_parser("lumps", help="list all directory entries"))
+    list_mapinfo.configure(
+        list_subs.add_parser("mapinfo", help="list MAPINFO / ZMAPINFO map entries")
+    )
     list_maps.configure(list_subs.add_parser("maps", help="list maps with thing/linedef counts"))
     list_music.configure(list_subs.add_parser("music", help="list music lumps with sizes"))
     list_patches.configure(list_subs.add_parser("patches", help="list patch names from PNAMES"))
     list_scripts.configure(list_subs.add_parser("scripts", help="list ACS scripts"))
+    list_sndseq.configure(
+        list_subs.add_parser("sndseq", help="list SNDSEQ sound sequence definitions")
+    )
     list_sounds.configure(list_subs.add_parser("sounds", help="list DMX sound lumps"))
     list_sprites.configure(
         list_subs.add_parser("sprites", help="list sprite lumps with dimensions")

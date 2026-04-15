@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-04-15
+
+### Added
+
+- **`wadcli list language`**: list LANGUAGE lump string keys/values with
+  `--locale LOCALE` to select a specific locale and `--locales` to enumerate
+  available locale names; `--json` supported.
+- **`wadcli list sndseq`**: list SNDSEQ sound sequence definitions with
+  `--detail` to show each sequence's individual commands; `--json` supported.
+- **`wadcli list mapinfo`**: list MAPINFO (Hexen) or ZMAPINFO (ZDoom) map
+  entries; automatically prefers ZMAPINFO when both lumps are present;
+  `--json` supported.
+
+### Fixed
+
+- **`tests/test_new_features.py`**: `TestBehavior.test_too_short_raises` and
+  `test_bad_magic_raises` now expect `CorruptLumpError` (changed in v0.0.99)
+  instead of `ValueError`.
+
 ## [0.1.1] - 2026-04-15
 
 ### Changed
