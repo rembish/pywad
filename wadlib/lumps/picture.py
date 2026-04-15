@@ -86,7 +86,12 @@ class Picture(BaseLump[Any]):
         width, height, _loff, _toff = unpack(_HEADER_FMT, hdr_raw)
         width, height = int(width), int(height)
 
-        col_raw = self.read(width * 4)
+        try:
+            col_raw = self.read(width * 4)
+        except EOFError as exc:
+            raise CorruptLumpError(
+                f"{self.name!r}: column offset table truncated (need {width * 4} bytes)"
+            ) from exc
         if col_raw is None or len(col_raw) < width * 4:
             raise CorruptLumpError(
                 f"{self.name!r}: column offset table truncated "

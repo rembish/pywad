@@ -119,6 +119,9 @@ class BaseLump[T]:
         assert self._size is not None
         assert self._buf is not None
 
+        if size == 0:
+            return b""
+
         if self._rposition >= self._size:
             raise EOFError()
 

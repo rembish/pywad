@@ -25,8 +25,10 @@ from hypothesis import strategies as st
 from wadlib.exceptions import CorruptLumpError
 from wadlib.lumps.behavior import parse_behavior
 from wadlib.lumps.mus import Mus
+from wadlib.lumps.picture import Picture
 from wadlib.lumps.sound import DmxSound
 from wadlib.lumps.textures import PNames, TextureList
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # Helpers — build minimal WAD bytes around a lump so we can open it
@@ -47,8 +49,6 @@ def _build_single_lump_wad(name: bytes, data: bytes) -> bytes:
 
 def _make_lump(name: str, data: bytes, cls: type) -> Any:
     """Write a single-lump WAD to a fresh temp directory and return the lump object."""
-    from wadlib.wad import WadFile
-
     raw = _build_single_lump_wad(name.encode().ljust(8, b"\x00")[:8], data)
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / f"{name}.wad"
@@ -171,3 +171,74 @@ class TestFuzzDmxSound:
         """DmxSound.to_wav on arbitrary bytes never raises except CorruptLumpError/ValueError."""
         lump = _make_lump("DSPISTOL", data, DmxSound)
         _assert_no_crash(lambda: lump.to_wav(), CorruptLumpError, ValueError)
+
+
+# ---------------------------------------------------------------------------
+# Picture.decode — lump-based
+# ---------------------------------------------------------------------------
+
+_FAKE_PALETTE = [(0, 0, 0)] * 256
+
+
+class TestFuzzPictureDecode:
+    @given(data=st.binary(max_size=512))
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_bytes_never_crash(self, data: bytes) -> None:
+        """Picture.decode on arbitrary bytes never raises except CorruptLumpError."""
+        lump = _make_lump("PATCH1", data, Picture)
+        _assert_no_crash(lambda: lump.decode(_FAKE_PALETTE), CorruptLumpError)
+
+    @given(
+        width=st.integers(min_value=1, max_value=8),
+        height=st.integers(min_value=1, max_value=8),
+        tail=st.binary(max_size=256),
+    )
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_valid_header_arbitrary_tail_never_crash(
+        self, width: int, height: int, tail: bytes
+    ) -> None:
+        """Valid picture header with arbitrary column/post data never crashes unexpectedly."""
+        header = struct.pack("<HHhh", width, height, 0, 0)
+        lump = _make_lump("PATCH1", header + tail, Picture)
+        _assert_no_crash(lambda: lump.decode(_FAKE_PALETTE), CorruptLumpError)
+
+    @given(
+        width=st.integers(min_value=1, max_value=4),
+        height=st.integers(min_value=1, max_value=4),
+        topdelta=st.integers(min_value=0, max_value=10),
+        post_len=st.integers(min_value=0, max_value=8),
+        pixel=st.integers(min_value=0, max_value=255),
+    )
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_single_post_never_crash(
+        self, width: int, height: int, topdelta: int, post_len: int, pixel: int
+    ) -> None:
+        """Structurally valid picture with one post per column never crashes unexpectedly.
+
+        Covers the out-of-bounds topdelta case (topdelta >= height) — must raise
+        CorruptLumpError, not IndexError.
+        """
+        col_data_offset = 8 + width * 4  # after header + offset table
+        header = struct.pack("<HHhh", width, height, 0, 0)
+        col_offsets = struct.pack(f"<{width}I", *([col_data_offset] * width))
+        # topdelta, post_len, pre-pad, pixels..., post-pad, end-of-column marker
+        post = bytes([topdelta, post_len, 0]) + bytes([pixel] * post_len) + bytes([0, 0xFF])
+        lump = _make_lump("PATCH1", header + col_offsets + post, Picture)
+        _assert_no_crash(lambda: lump.decode(_FAKE_PALETTE), CorruptLumpError)
+
+    @given(
+        height=st.integers(min_value=1, max_value=4),
+        topdelta=st.integers(min_value=0, max_value=8),
+    )
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_out_of_bounds_topdelta_raises_corrupt_not_index_error(
+        self, height: int, topdelta: int
+    ) -> None:
+        """When topdelta >= height the bounds check must fire; IndexError is never acceptable."""
+        header = struct.pack("<HHhh", 1, height, 0, 0)
+        col_data_offset = 8 + 4
+        col_offset = struct.pack("<I", col_data_offset)
+        # post_len=1 so we try to write exactly one pixel at row topdelta
+        post = bytes([topdelta, 1, 0, 0, 0, 0xFF])
+        lump = _make_lump("PATCH1", header + col_offset + post, Picture)
+        _assert_no_crash(lambda: lump.decode(_FAKE_PALETTE), CorruptLumpError)
