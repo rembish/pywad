@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-04-15
+
+### Added
+
+- **`WadFile.find_lumps(name)`** — returns `list[DirectoryEntry]` of every entry with
+  the given name across all loaded WADs, ordered highest-priority first (same ordering
+  as `find_lump`). `find_lumps(name)[0] == find_lump(name)` is guaranteed when at
+  least one entry exists. Differs from `get_lumps()` in both return type (raw
+  `DirectoryEntry` vs. `BaseLump`) and ordering (priority-first vs. base-WAD-first).
+- **Collision-complete `ResourceResolver._iter_source`** — WAD branch now calls
+  `find_lumps()` instead of `find_lump()`, so every duplicate lump within a WAD is
+  yielded. PK3 branch now calls `find_resources()` instead of `find_resource()`, so
+  every colliding pk3 entry (same 8-char lump name from multiple files) is yielded.
+  `find_all()` now returns the full shadow chain, not just the winner.
+- Tests: `TestFindAllWadDuplicates` (5 cases) and `TestFindAllPk3Collisions` (3 cases)
+  in `test_resolver.py`; 5 new `find_lumps` tests in `test_wad_accessors.py`.
+
 ## [0.2.7] - 2026-04-15
 
 ### Added

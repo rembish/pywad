@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import struct
 import tempfile
 
 import pytest
@@ -22,6 +23,23 @@ def _has_wad(path: str) -> bool:
 # ---------------------------------------------------------------------------
 # Helpers — build minimal in-memory WAD and pk3 fixtures
 # ---------------------------------------------------------------------------
+
+
+def _make_wad(lumps: list[tuple[str, bytes]]) -> str:
+    """Write a minimal PWAD with the given lumps and return the path."""
+    data_start = 12
+    lump_data = b"".join(d for _, d in lumps)
+    dir_offset = data_start + len(lump_data)
+    header = struct.pack("<4sII", b"PWAD", len(lumps), dir_offset)
+    directory = b""
+    offset = data_start
+    for name, data in lumps:
+        directory += struct.pack("<II8s", offset, len(data), name.encode().ljust(8, b"\x00"))
+        offset += len(data)
+    raw = header + lump_data + directory
+    with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+        f.write(raw)
+        return f.name
 
 
 def _make_pk3(entries: dict[str, bytes]) -> str:
@@ -351,6 +369,116 @@ class TestResourceRef:
             with Pk3Archive(path) as pk3:
                 ref = ResourceRef(name="DATA", archive=pk3, source=src)
                 assert ref.read_bytes() == b"payload"
+        finally:
+            os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# find_all — collision-complete: WAD duplicate lumps
+# ---------------------------------------------------------------------------
+
+
+class TestFindAllWadDuplicates:
+    """find_all must return every entry when a WAD contains duplicate lump names."""
+
+    def test_wad_duplicate_lumps_both_returned(self) -> None:
+        path = _make_wad([("MYDATA", b"first"), ("MYDATA", b"second")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("MYDATA")
+                assert len(refs) == 2
+                # Last directory entry is highest priority
+                assert refs[0].read_bytes() == b"second"
+                assert refs[1].read_bytes() == b"first"
+        finally:
+            os.unlink(path)
+
+    def test_wad_duplicate_first_ref_matches_find_source(self) -> None:
+        """find_all(name)[0] must agree with find_source(name) on the winner."""
+        path = _make_wad([("MYDATA", b"first"), ("MYDATA", b"second")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                winner = r.find_source("MYDATA")
+                refs = r.find_all("MYDATA")
+                assert winner is not None
+                assert refs[0].read_bytes() == winner.read_bytes()
+        finally:
+            os.unlink(path)
+
+    def test_wad_three_duplicates_all_returned(self) -> None:
+        path = _make_wad([("X", b"a"), ("X", b"b"), ("X", b"c")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("X")
+                assert len(refs) == 3
+                assert [ref.read_bytes() for ref in refs] == [b"c", b"b", b"a"]
+        finally:
+            os.unlink(path)
+
+    def test_wad_single_entry_no_duplication(self) -> None:
+        path = _make_wad([("MYDATA", b"only")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("MYDATA")
+            assert len(refs) == 1
+        finally:
+            os.unlink(path)
+
+    def test_archive_field_is_same_wad_for_all_dups(self) -> None:
+        path = _make_wad([("MYDATA", b"a"), ("MYDATA", b"b")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("MYDATA")
+                assert all(ref.archive is wad for ref in refs)
+        finally:
+            os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# find_all — collision-complete: PK3 lump-name collisions
+# ---------------------------------------------------------------------------
+
+
+class TestFindAllPk3Collisions:
+    """find_all must return every pk3 entry that maps to the same 8-char lump name."""
+
+    def test_pk3_two_files_same_lump_name_both_returned(self) -> None:
+        # Two files whose names (after stripping extension, uppercasing, 8-char trim)
+        # both produce "LONGNAME".
+        path = _make_pk3({"lumps/LONGNAME1.lmp": b"v1", "lumps/LONGNAME2.lmp": b"v2"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("LONGNAME")
+            # Both "LONGNAME1" and "LONGNAME2" truncate to "LONGNAME" (8 chars)
+            assert len(refs) == 2
+        finally:
+            os.unlink(path)
+
+    def test_pk3_collision_first_ref_matches_find_source(self) -> None:
+        path = _make_pk3({"lumps/LONGNAME1.lmp": b"first", "lumps/LONGNAME2.lmp": b"second"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                winner = r.find_source("LONGNAME")
+                refs = r.find_all("LONGNAME")
+            assert winner is not None
+            assert refs[0].read_bytes() == winner.read_bytes()
+        finally:
+            os.unlink(path)
+
+    def test_pk3_no_collision_returns_single(self) -> None:
+        path = _make_pk3({"lumps/UNIQUE.lmp": b"solo"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("UNIQUE")
+            assert len(refs) == 1
         finally:
             os.unlink(path)
 

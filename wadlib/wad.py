@@ -194,6 +194,28 @@ class WadFile:  # pylint: disable=too-many-public-methods
                     return entry
         return None
 
+    def find_lumps(self, name: str) -> "list[DirectoryEntry]":
+        """Return all directory entries with the given name, highest priority first.
+
+        Unlike :meth:`find_lump`, which stops at the first match, this returns
+        every entry across all loaded WADs (base + PWADs).  Entries are ordered
+        highest-priority first: PWADs before the base WAD, and within each WAD
+        the last directory entry comes first, matching ``W_CheckNumForName``
+        semantics.
+
+        ``find_lumps(name)[0] == find_lump(name)`` holds whenever the result is
+        non-empty.
+
+        Unlike :meth:`get_lumps`, which wraps entries in ``BaseLump`` and uses
+        base-WAD-first ordering, this method returns raw ``DirectoryEntry``
+        objects in priority order.
+        """
+        upper = name.upper()
+        result: list[DirectoryEntry] = []
+        for wad in self._all_wads:
+            result.extend(entry for entry in reversed(wad.directory) if entry.name == upper)
+        return result
+
     @cached_property
     def playpal(self) -> PlayPal | None:
         """Return the PLAYPAL lump (PWAD-aware), or None if not present."""

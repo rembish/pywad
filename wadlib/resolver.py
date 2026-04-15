@@ -93,15 +93,20 @@ class ResourceResolver:
     # ------------------------------------------------------------------
 
     def _iter_source(self, name_upper: str) -> Iterator[tuple[WadFile | Pk3Archive, LumpSource]]:
-        """Yield ``(archive, LumpSource)`` pairs for every hit across all sources."""
+        """Yield ``(archive, LumpSource)`` pairs for every hit across all sources.
+
+        For WAD sources every duplicate entry (same lump name appearing more than
+        once in the directory) is yielded individually, highest priority first,
+        via :meth:`WadFile.find_lumps`.  For pk3 sources every colliding entry
+        (multiple files that map to the same 8-char lump name) is yielded via
+        :meth:`Pk3Archive.find_resources`.
+        """
         for src in self._sources:
             if isinstance(src, WadFile):
-                entry = src.find_lump(name_upper)
-                if entry is not None:
+                for entry in src.find_lumps(name_upper):
                     yield src, entry
             else:
-                pk3_entry = src.find_resource(name_upper)
-                if pk3_entry is not None:
+                for pk3_entry in src.find_resources(name_upper):
                     lump_src: LumpSource = MemoryLumpSource(
                         pk3_entry.lump_name, src.read(pk3_entry.path)
                     )
