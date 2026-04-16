@@ -905,3 +905,91 @@ class TestCollisions:
         finally:
             os.unlink(path_a)
             os.unlink(path_b)
+
+    def test_map_sub_lumps_not_reported_as_collisions(self) -> None:
+        """A two-map WAD repeats THINGS/LINEDEFS/etc. — these must NOT appear
+        as collisions because they are scoped under map markers, not global."""
+        # Build a minimal two-map WAD: MAP01 marker + THINGS, MAP02 marker + THINGS.
+        lumps = [
+            ("MAP01", b""),
+            ("THINGS", b"\x00" * 10),
+            ("LINEDEFS", b"\x00" * 14),
+            ("MAP02", b""),
+            ("THINGS", b"\x00" * 10),
+            ("LINEDEFS", b"\x00" * 14),
+        ]
+        path = _make_wad(lumps)
+        try:
+            with WadFile(path) as wad:
+                clashes = ResourceResolver(wad).collisions()
+                assert "THINGS" not in clashes
+                assert "LINEDEFS" not in clashes
+        finally:
+            os.unlink(path)
+
+    def test_global_duplicates_still_reported(self) -> None:
+        """True global duplicates (e.g. duplicate PLAYPAL) must still be caught."""
+        path = _make_wad([("PLAYPAL", b"a" * 10), ("PLAYPAL", b"b" * 10)])
+        try:
+            with WadFile(path) as wad:
+                clashes = ResourceResolver(wad).collisions()
+                assert "PLAYPAL" in clashes
+        finally:
+            os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# PK3 category alias normalization
+# ---------------------------------------------------------------------------
+
+
+class TestPk3CategoryAliases:
+    """Pk3Entry.category must return canonical names via _CATEGORY_ALIASES."""
+
+    def test_sfx_normalises_to_sounds(self) -> None:
+        path = _make_pk3({"sfx/DSPISTOL.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                entries = [e for e in pk3.infolist() if e.name == "DSPISTOL.lmp"]
+                assert entries[0].category == "sounds"
+        finally:
+            os.unlink(path)
+
+    def test_sound_normalises_to_sounds(self) -> None:
+        path = _make_pk3({"sound/DSPISTOL.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                entries = [e for e in pk3.infolist() if e.name == "DSPISTOL.lmp"]
+                assert entries[0].category == "sounds"
+        finally:
+            os.unlink(path)
+
+    def test_flat_normalises_to_flats(self) -> None:
+        path = _make_pk3({"flat/FLOOR0.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                entries = [e for e in pk3.infolist() if e.name == "FLOOR0.lmp"]
+                assert entries[0].category == "flats"
+        finally:
+            os.unlink(path)
+
+    def test_sounds_canonical_unchanged(self) -> None:
+        path = _make_pk3({"sounds/DSPISTOL.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                entries = [e for e in pk3.infolist() if e.name == "DSPISTOL.lmp"]
+                assert entries[0].category == "sounds"
+        finally:
+            os.unlink(path)
+
+    def test_iter_resources_sfx_matches_sounds_filter(self) -> None:
+        """iter_resources(category='sounds') must find sfx/ entries."""
+        path = _make_pk3({"sfx/DSPISTOL.lmp": b"\x00"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = list(r.iter_resources(category="sounds"))
+                names = {ref.name for ref in refs}
+                assert "DSPISTOL" in names
+        finally:
+            os.unlink(path)

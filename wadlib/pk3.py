@@ -110,9 +110,16 @@ class Pk3Entry:
 
     @property
     def category(self) -> str:
-        """The top-level directory (flats, sprites, sounds, etc.) or empty string."""
+        """The canonical category (flats, sprites, sounds, etc.) or empty string.
+
+        Raw directory names are normalized through ``_CATEGORY_ALIASES`` so
+        that ``sfx/`` → ``sounds``, ``flat/`` → ``flats``, etc.
+        """
         parts = self.path.replace("\\", "/").split("/")
-        return parts[0].lower() if len(parts) > 1 else ""
+        if len(parts) <= 1:
+            return ""
+        raw = parts[0].lower()
+        return _CATEGORY_ALIASES.get(raw, raw)
 
     def __repr__(self) -> str:
         return f"<Pk3Entry {self.path!r} {self.size} bytes>"

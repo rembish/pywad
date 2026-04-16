@@ -626,7 +626,8 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Map inspection | Stable | All vanilla + Hexen map lump types; UDMF full read/write; ZNODES (compressed BSP) |
 | Textures / compositing | Stable | TEXTURE1/2 + PNAMES binary; ZDoom TEXTURES text format; `TextureCompositor` |
 | Audio | Stable | DMX PCM, MUS → MIDI, OGG/MP3/MIDI; WAV ↔ DMX, MIDI ↔ MUS conversions |
-| CLI (`wadcli`) | Stable | Export, diff, check, list, render, complevel; `wadmount` FUSE filesystem |
+| CLI (`wadcli`) | Stable | Export, diff, check, list, render, complevel |
+| FUSE mount (`wadmount`) | Beta | Virtual WAD filesystem; OS/libfuse dependent; no CI mount integration tests |
 | PK3 / ZIP support | Beta | Read, write, WAD↔PK3 conversion; PK3-embedded WAD maps; namespace mapping |
 | UDMF maps | Beta | Full parse/serialize; `strict` mode; unknown props preserved; no namespace validation |
 | ZMAPINFO | Beta | Maps, episodes, clusters, defaultmap; `props` catch-all; round-trip serialiser |

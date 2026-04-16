@@ -41,6 +41,15 @@ from .wad import WadFile
 if TYPE_CHECKING:
     from .lumps.map import BaseMapEntry
 
+# Lump names that are map-local sub-lumps, scoped under a map marker (e.g.
+# MAP01, E1M1).  These names appear once per map in multi-map WADs and must
+# NOT be treated as global resource collisions by collisions().
+_MAP_SUB_LUMPS: frozenset[str] = frozenset({
+    "THINGS", "VERTEXES", "LINEDEFS", "SIDEDEFS", "SECTORS",
+    "SEGS", "SSECTORS", "NODES", "REJECT", "BLOCKMAP",
+    "ZNODES", "BEHAVIOR", "TEXTMAP", "SCRIPTS", "ENDMAP",
+})
+
 
 @dataclass(frozen=True)
 class ResourceRef:
@@ -307,7 +316,14 @@ class ResourceResolver:
                     name_counts[pk3_entry.lump_name] += 1
 
         # Only fetch refs (which reads bytes) for actually-colliding names.
-        return {name: self.find_all(name) for name, count in name_counts.items() if count > 1}
+        # Map-local lump names (THINGS, LINEDEFS, etc.) appear once per map in
+        # multi-map WADs but are scoped under map markers — they are NOT global
+        # resource collisions and must be excluded from this report.
+        return {
+            name: self.find_all(name)
+            for name, count in name_counts.items()
+            if count > 1 and name not in _MAP_SUB_LUMPS
+        }
 
     # ------------------------------------------------------------------
     # Map assembly

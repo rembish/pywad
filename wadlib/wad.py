@@ -42,6 +42,7 @@ from .lumps.sndinfo import SndInfo
 from .lumps.sndseq import SndSeqLump
 from .lumps.sound import _HEADER_SIZE as _DMX_HEADER_SIZE
 from .lumps.sound import DmxSound
+from .lumps.strife_conversation import ConversationLump
 from .lumps.textures import PNames, TextureList
 from .lumps.zmapinfo import ZMapInfoLump
 from .registry import assemble_maps
@@ -467,6 +468,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
         """Return the DECORATE lump (ZDoom actor definitions, PWAD-aware), or None."""
         entry = self.find_lump("DECORATE")
         return DecorateLump(entry) if entry else None
+
+    @cached_property
+    def dialogue(self) -> ConversationLump | None:
+        """Return the DIALOGUE lump (Strife conversation data), or None if not present."""
+        entry = self.find_lump("DIALOGUE")
+        return ConversationLump(entry) if entry else None
 
     @cached_property
     def stcfn(self) -> dict[int, Picture]:

@@ -48,9 +48,9 @@ Usage::
     for page in pages[:3]:
         print(page.name, "->", [c.text for c in page.choices if c.text])
 
-    # Via WadFile (registry maps "DIALOGUE" → ConversationLump automatically):
+    # Via WadFile convenience property:
     with WadFile("STRIFE1.WAD") as wad:
-        lump = wad.get_lump("DIALOGUE")  # ConversationLump
+        lump = wad.dialogue  # ConversationLump | None
         if lump:
             print(len(lump.pages), "pages in base WAD")
 """

@@ -1,6 +1,12 @@
 """Tests for REJECT and BLOCKMAP lumps."""
 
+import struct
+
+import pytest
+
+from wadlib.exceptions import CorruptLumpError
 from wadlib.lumps.blockmap import BlockMap, Reject, build_blockmap
+from wadlib.source import MemoryLumpSource
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -146,3 +152,35 @@ def test_build_blockmap_covers_lines() -> None:
         if val < 3:  # linedef index
             found.add(val)
     assert found == {0, 1, 2}
+
+
+# ---------------------------------------------------------------------------
+# BLOCKMAP truncation hardening
+# ---------------------------------------------------------------------------
+
+
+def test_blockmap_truncated_offset_table_raises_corrupt() -> None:
+    """A valid 8-byte header followed by a truncated offset table must raise
+    CorruptLumpError rather than leaking struct.error."""
+    # Header: origin=(0,0), cols=4, rows=4 → 16 blocks → needs 32 bytes of offsets.
+    # Provide only 4 bytes of offsets — deliberately truncated.
+    header = struct.pack("<hhHH", 0, 0, 4, 4)
+    truncated_data = header + b"\x00" * 4  # only 4 bytes of a 32-byte table
+
+    src = MemoryLumpSource("BLOCKMAP", truncated_data)
+    with pytest.raises(CorruptLumpError, match="truncated"):
+        BlockMap(src)
+
+
+def test_blockmap_exact_offset_table_ok() -> None:
+    """A header whose offset table is exactly the right size must parse cleanly."""
+    # 2 blocks → 2 x 2 = 4 bytes of offsets.
+    header = struct.pack("<hhHH", 0, 0, 1, 2)
+    offsets = struct.pack("<HH", 10, 11)  # dummy offsets
+    raw = header + offsets
+
+    src = MemoryLumpSource("BLOCKMAP", raw)
+    bm = BlockMap(src)
+    assert bm.columns == 1
+    assert bm.rows == 2
+    assert len(bm.offsets) == 2

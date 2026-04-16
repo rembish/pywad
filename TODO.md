@@ -10,40 +10,33 @@ This section is for the next feature direction after the current correctness,
 docs, and fuzzing cleanup lands. It intentionally skips the short-term fixes
 already in progress.
 
-### Resource stack / `ResourceResolver` v2 ✓ core done (v0.2.4)
+### Resource stack / `ResourceResolver` v2 ✓ done (v0.2.4 – v0.3.5)
 
-Core APIs landed:
+All planned resolver APIs are implemented:
 - `ResourceResolver(WAD | PK3, ...)` — priority-order constructor (first wins).
-- `ResourceResolver.doom_load_order(base, *patches)` — last patch wins, matching
-  `doom -iwad base -file p1 p2` semantics.
-- `find_all(name) -> list[ResourceRef]` — all matches, highest priority first.
-- `ResourceRef` frozen dataclass: `name`, `archive`, `source`, `read_bytes()`.
-- `read(name) -> bytes | None` and `find_source(name) -> LumpSource | None`.
+- `ResourceResolver.doom_load_order(base, *patches)` — last patch wins.
+- `find_all(name) -> list[ResourceRef]` — collision-complete; all matches,
+  highest priority first.
+- `ResourceRef` frozen dataclass: `name`, `archive`, `source`, `read_bytes()`,
+  `size`, `namespace`, `kind`, `load_order_index`.
+- `iter_resources(category=None)` — iterate unique resources; canonical category
+  aliases applied (`sfx/` → `sounds`, `flat/` → `flats`, etc.).
+- `shadowed(name)` / `collisions()` — shadowing and collision inspection.
+  `collisions()` correctly excludes map-local lump names (THINGS, LINEDEFS,
+  etc.) that appear once per map in multi-map WADs.
+- `Pk3Entry.category` returns canonical category names via `_CATEGORY_ALIASES`.
 
-Remaining goals (not yet implemented):
-- `iter_resources(category=None)` — iterate all unique resources across the stack.
-- `shadowed(name)` / `collisions()` — explicit shadowing/collision inspection APIs.
-- Full `ResourceRef` metadata: size, namespace/category, lookup kind
-  (`wad-name`, `pk3-path`, `pk3-lump-name`), load-order index.
-- Collision-safe PK3 APIs: `Pk3Archive.find_resources(name)` returning all matches
-  within a single archive (entries that collide after uppercasing/truncation).
-- Keep PK3 path lookup canonical; WAD-style lump-name lookup should be explicitly
-  marked as lossy when names collide.
+Remaining / future:
+- Add `path` and `directory_index` fields to `ResourceRef` for exact origin
+  identity in diagnostics (medium priority).
 
-### Unified map assembly over generic resources
-Once resource lookup is source-agnostic, map assembly should work over generic
-ordered resources rather than only WAD directory entries.
+### Unified map assembly over generic resources ✓ done (v0.3.1)
 
-Formats to support through the same map-facing API:
-- classic WAD map markers followed by map lumps
-- Hexen-format maps with BEHAVIOR
-- UDMF maps with `TEXTMAP` / `ENDMAP`
-- PK3 decomposed maps such as `maps/MAP01/THINGS.lmp`
-- PK3 embedded WAD maps such as `maps/MAP01.wad`
-
-The output should preserve origin metadata so callers can tell whether a map
-came from the base WAD, a PWAD, an embedded WAD inside a PK3, or decomposed PK3
-map files.
+`Pk3Archive.maps` supports both embedded WAD maps and decomposed
+`maps/MAP01/*.lmp` layouts.  `ResourceResolver.maps()` merges maps across WAD
+and PK3 sources with priority order and origin metadata.  `WadFile.from_bytes()`
+enables embedded WAD maps inside PK3 archives.  `attach_map_lumps()` works over
+generic `LumpSource` objects.
 
 ### Validation and diagnostics layer ✓ done (v0.3.2)
 After resource resolution is reliable, add a structured analysis API that goes
@@ -88,6 +81,10 @@ Remaining / future:
 - ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
   compositing APIs.
 
+Completed in v0.3.3–v0.3.5:
+- DECORATE: `#include` path handling and `replaces` mapping implemented.
+- DECORATE include handling is no longer an open item.
+
 Full ZScript execution or full DECORATE behavior simulation should stay out of
 scope unless the project deliberately becomes a source-port analysis engine.
 
@@ -109,7 +106,7 @@ Implementing this requires:
 - `LumpSource` protocol to support both offset-based (WAD) and pre-loaded bytes
   (pk3 ZIP entries) — `MemoryLumpSource` decouples `BaseLump` from WAD fd ✓ done (v0.1.6)
 - PNG/TGA/JPG image decoding for flats, sprites, textures ✓ done (v0.1.9)
-- Embedded WAD-format maps inside `maps/MAP01.wad` entries
+- Embedded WAD-format maps inside `maps/MAP01.wad` entries ✓ done (v0.3.1)
 
 ### UDMF map format ✓ done (v0.0.89, tokenizer hardened v0.2.2)
 Universal Doom Map Format (text-based, used by myhouse.pk3 and most modern maps).

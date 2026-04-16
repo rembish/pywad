@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-04-16
+
+### Added
+
+- **`WadFile.dialogue`** — `cached_property` returning `ConversationLump | None`
+  for the Strife `DIALOGUE` lump; replaces the previous need to call
+  `get_lump("DIALOGUE")` which returned a `BaseLump`.
+- **`_MAP_SUB_LUMPS` exclusion in `ResourceResolver.collisions()`** — map-local
+  lump names (`THINGS`, `LINEDEFS`, `SIDEDEFS`, `VERTEXES`, `SECTORS`, `SEGS`,
+  `SSECTORS`, `NODES`, `REJECT`, `BLOCKMAP`, `ZNODES`, `BEHAVIOR`, `TEXTMAP`,
+  `SCRIPTS`, `ENDMAP`) are no longer reported as resource collisions in
+  multi-map WADs, where they correctly appear once per map under a map marker.
+- **Canonical PK3 category aliases in `Pk3Entry.category`** — raw directory
+  names are now normalized through `_CATEGORY_ALIASES`: `sfx/` → `sounds`,
+  `sound/` → `sounds`, `flat/` → `flats`, `mus/` → `music`, etc.  This makes
+  `iter_resources(category="sounds")` correctly find entries under `sfx/`.
+- **9 new regression tests** covering: map-local lump collision exclusion,
+  PK3 category alias normalization (`sfx`, `sound`, `flat`, `sounds`),
+  `iter_resources` with aliased categories, and `BlockMap` truncated offset
+  table handling.
+
+### Fixed
+
+- **`BlockMap` truncated offset table** — a BLOCKMAP with a valid 8-byte header
+  but an incomplete offset table now raises `CorruptLumpError` instead of
+  leaking `struct.error`.
+- **`strife_conversation.py` docstring** — corrected the usage example to use
+  `wad.dialogue` (the new property) instead of the incorrect
+  `wad.get_lump("DIALOGUE")` which returned `BaseLump`.
+
+### Changed
+
+- **Stability table** — `wadmount` / FUSE is now listed separately from
+  `wadcli` as **Beta** (OS/libfuse dependent; no CI mount integration tests).
+- **TODO.md** — moved completed resolver, map assembly, and DECORATE include
+  items to done sections; updated remaining open items to match v0.3.x reality.
+
 ## [0.3.4] - 2026-04-16
 
 ### Added

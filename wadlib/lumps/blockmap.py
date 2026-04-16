@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from struct import calcsize, pack, unpack
 
+from ..exceptions import CorruptLumpError
 from ..source import LumpSource
 
 BLOCKMAP_HEADER_FORMAT = "<hhHH"
@@ -95,6 +96,11 @@ class BlockMap:
         self._columns = int(cols)
         self._rows = int(rows)
         num_blocks = self._columns * self._rows
+        required = hdr_size + num_blocks * 2
+        if len(raw_all) < required:
+            raise CorruptLumpError(
+                f"BLOCKMAP offset table truncated: need {required} bytes, got {len(raw_all)}"
+            )
         self._offsets = [
             int(v) for v in unpack(f"<{num_blocks}H", raw_all[hdr_size : hdr_size + num_blocks * 2])
         ]
