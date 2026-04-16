@@ -32,6 +32,7 @@ classifiers = [
 Homepage = "https://github.com/rembish/wadlib"
 Repository = "https://github.com/rembish/wadlib"
 "Bug Tracker" = "https://github.com/rembish/wadlib/issues"
+Documentation = "https://rembish.github.io/wadlib/"
 Changelog = "https://github.com/rembish/wadlib/blob/master/CHANGELOG.md"
 
 [project.scripts]
@@ -40,6 +41,7 @@ wadmount = "wadlib.cli.mount:main"
 
 [project.optional-dependencies]
 fuse = ["fusepy>=3.0"]
+docs = ["mkdocs-material>=9.5"]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",

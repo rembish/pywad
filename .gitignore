@@ -35,6 +35,9 @@ wads/*
 !wads/freedoom2.wad
 !wads/blasphem.wad
 
+# MkDocs build output
+site/
+
 # OMC orchestration state
 .omc/
 
