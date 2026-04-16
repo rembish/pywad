@@ -320,9 +320,185 @@ class TestUdmfWarnings:
         assert any("linedef" in w and "sidefront" in w for w in m.warnings)
 
     def test_complete_linedef_no_warning(self) -> None:
-        m = parse_udmf('namespace = "doom";\nlinedef { v1 = 0; v2 = 1; sidefront = 0; }')
+        # Must include matching vertices, a sidedef, and a sector so that
+        # the cross-reference integrity checks do not fire.
+        text = (
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; }\n'
+            'vertex { x = 64.0; y = 0.0; }\n'
+            'sector { texturefloor = "FLAT"; textureceiling = "CEIL"; }\n'
+            'sidedef { sector = 0; }\n'
+            'linedef { v1 = 0; v2 = 1; sidefront = 0; }'
+        )
+        m = parse_udmf(text)
         assert not m.warnings
 
     def test_warnings_field_in_default_udmfmap(self) -> None:
         m = UdmfMap()
         assert m.warnings == []
+
+
+# ---------------------------------------------------------------------------
+# Namespace-specific semantic validation (Step 7)
+# ---------------------------------------------------------------------------
+
+# Minimal complete UDMF map used as a clean base for namespace tests.
+_MINIMAL_DOOM_MAP = (
+    'namespace = "doom";\n'
+    'vertex { x = 0.0; y = 0.0; }\n'
+    'vertex { x = 64.0; y = 0.0; }\n'
+    'sector { texturefloor = "FLAT"; textureceiling = "CEIL"; }\n'
+    'sidedef { sector = 0; }\n'
+    'linedef { v1 = 0; v2 = 1; sidefront = 0; }\n'
+    'thing { x = 32.0; y = 32.0; type = 1; }\n'
+)
+
+
+class TestUdmfRequiredFields:
+    """New per-block required-field warnings."""
+
+    def test_thing_missing_type_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nthing { x = 0.0; y = 0.0; }')
+        assert any("thing" in w and "type" in w for w in m.warnings)
+
+    def test_thing_with_type_no_required_warning(self) -> None:
+        m = parse_udmf('namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; }')
+        assert not any("missing required field 'type'" in w for w in m.warnings)
+
+    def test_sidedef_missing_sector_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsidedef { texturemiddle = "BRICK"; }')
+        assert any("sidedef" in w and "sector" in w for w in m.warnings)
+
+    def test_sidedef_with_sector_no_required_warning(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsidedef { sector = 0; }')
+        assert not any("missing required field 'sector'" in w for w in m.warnings)
+
+    def test_sector_missing_texturefloor_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsector { textureceiling = "CEIL"; }')
+        assert any("sector" in w and "texturefloor" in w for w in m.warnings)
+
+    def test_sector_missing_textureceiling_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsector { texturefloor = "FLAT"; }')
+        assert any("sector" in w and "textureceiling" in w for w in m.warnings)
+
+    def test_sector_with_both_textures_no_required_warning(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'sector { texturefloor = "FLAT"; textureceiling = "CEIL"; }'
+        )
+        assert not any("missing required field" in w for w in m.warnings)
+
+
+class TestUdmfCrossReferences:
+    """Geometry cross-reference integrity checks."""
+
+    def test_linedef_v1_out_of_range(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; }\n'
+            'linedef { v1 = 99; v2 = 0; sidefront = 0; }'
+        )
+        assert any("v1=99" in w and "out of range" in w for w in m.warnings)
+
+    def test_linedef_v2_out_of_range(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; }\n'
+            'linedef { v1 = 0; v2 = 99; sidefront = 0; }'
+        )
+        assert any("v2=99" in w and "out of range" in w for w in m.warnings)
+
+    def test_linedef_sidefront_out_of_range(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; }\n'
+            'vertex { x = 64.0; y = 0.0; }\n'
+            'linedef { v1 = 0; v2 = 1; sidefront = 99; }'
+        )
+        assert any("sidefront=99" in w and "out of range" in w for w in m.warnings)
+
+    def test_linedef_sideback_out_of_range(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; }\n'
+            'vertex { x = 64.0; y = 0.0; }\n'
+            'sidedef { sector = 0; }\n'
+            'linedef { v1 = 0; v2 = 1; sidefront = 0; sideback = 99; }'
+        )
+        assert any("sideback=99" in w and "out of range" in w for w in m.warnings)
+
+    def test_linedef_sideback_minus_one_not_flagged(self) -> None:
+        """sideback = -1 means no back sidedef — must not produce a warning."""
+        m = parse_udmf(_MINIMAL_DOOM_MAP)
+        assert not any("sideback" in w for w in m.warnings)
+
+    def test_sidedef_sector_out_of_range(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsidedef { sector = 99; }')
+        assert any("sidedef" in w and "sector=99" in w and "out of range" in w for w in m.warnings)
+
+    def test_valid_minimal_map_no_crossref_warnings(self) -> None:
+        m = parse_udmf(_MINIMAL_DOOM_MAP)
+        crossref = [w for w in m.warnings if "out of range" in w]
+        assert not crossref
+
+
+class TestUdmfNamespaceFields:
+    """Namespace-specific field checks (zfloor/zceiling, arg0-arg4)."""
+
+    def test_doom_vertex_zfloor_warns(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; zfloor = 0.0; }'
+        )
+        assert any("zfloor" in w and "ZDoom extension" in w for w in m.warnings)
+
+    def test_doom_vertex_zceiling_warns(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'vertex { x = 0.0; y = 0.0; zceiling = 128.0; }'
+        )
+        assert any("zceiling" in w and "ZDoom extension" in w for w in m.warnings)
+
+    def test_zdoom_vertex_zfloor_no_warning(self) -> None:
+        """zdoom namespace supports z-height vertex fields — no warning."""
+        m = parse_udmf(
+            'namespace = "zdoom";\n'
+            'vertex { x = 0.0; y = 0.0; zfloor = 0.0; }'
+        )
+        assert not any("zfloor" in w for w in m.warnings)
+
+    def test_heretic_vertex_zceiling_warns(self) -> None:
+        m = parse_udmf(
+            'namespace = "heretic";\n'
+            'vertex { x = 0.0; y = 0.0; zceiling = 64.0; }'
+        )
+        assert any("zceiling" in w for w in m.warnings)
+
+    def test_doom_thing_args_warn(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\n'
+            'thing { x = 0.0; y = 0.0; type = 1; arg0 = 5; arg1 = 10; }'
+        )
+        assert any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+
+    def test_hexen_thing_args_no_warning(self) -> None:
+        """hexen namespace uses arg0-arg4 on things — no warning."""
+        m = parse_udmf(
+            'namespace = "hexen";\n'
+            'thing { x = 0.0; y = 0.0; type = 1; arg0 = 5; arg1 = 10; }'
+        )
+        assert not any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+
+    def test_zdoom_thing_args_no_warning(self) -> None:
+        m = parse_udmf(
+            'namespace = "zdoom";\n'
+            'thing { x = 0.0; y = 0.0; type = 1; arg0 = 42; }'
+        )
+        assert not any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+
+    def test_strife_thing_args_warn(self) -> None:
+        m = parse_udmf(
+            'namespace = "strife";\n'
+            'thing { x = 0.0; y = 0.0; type = 1; arg0 = 1; }'
+        )
+        assert any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)

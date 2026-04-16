@@ -50,6 +50,13 @@ _KNOWN_NAMESPACES: frozenset[str] = frozenset(
     {"doom", "heretic", "hexen", "strife", "zdoom", "gzdoom", "eternity", "vavoom"}
 )
 
+# Namespaces that use Hexen-style action specials on things and linedefs
+# (arg0-arg4 fields are valid there but not in classic Doom/Heretic/Strife).
+_HEXEN_STYLE_NS: frozenset[str] = frozenset({"hexen", "zdoom", "gzdoom", "eternity", "vavoom"})
+
+# Namespaces where vertex z-height fields (zfloor/zceiling) make sense.
+_ZHEIGHT_NS: frozenset[str] = frozenset({"zdoom", "gzdoom", "eternity", "vavoom"})
+
 
 @dataclass
 class UdmfThing:
@@ -167,6 +174,73 @@ class UdmfMap:
     warnings: list[str] = field(default_factory=list)
 
 
+def _validate_by_namespace(result: UdmfMap) -> list[str]:
+    """Return structural and namespace-specific warnings for a parsed UdmfMap.
+
+    Checks performed:
+
+    * **Required fields** — things must declare ``type``; sidedefs must
+      declare ``sector``; sectors must declare ``texturefloor`` and
+      ``textureceiling``.
+    * **Cross-reference integrity** — linedef vertex indices must be in range;
+      linedef sidedef indices must be in range; sidedef sector indices must be
+      in range.  These are geometry-breaking errors in every namespace.
+    * **Namespace-specific field use** — vertex z-height fields (``zfloor``,
+      ``zceiling``) are only meaningful in ZDoom-family namespaces.  Thing
+      ``arg0``-``arg4`` fields are only meaningful in Hexen-style namespaces.
+    """
+    warnings: list[str] = []
+    ns = result.namespace.lower()
+    n_verts = len(result.vertices)
+    n_sides = len(result.sidedefs)
+    n_sectors = len(result.sectors)
+
+    # --- Cross-reference integrity ---
+    for i, ld in enumerate(result.linedefs):
+        if not (0 <= ld.v1 < n_verts):
+            warnings.append(
+                f"linedef {i}: v1={ld.v1} out of range (map has {n_verts} vertices)"
+            )
+        if not (0 <= ld.v2 < n_verts):
+            warnings.append(
+                f"linedef {i}: v2={ld.v2} out of range (map has {n_verts} vertices)"
+            )
+        if ld.sidefront >= 0 and not (ld.sidefront < n_sides):
+            warnings.append(
+                f"linedef {i}: sidefront={ld.sidefront} out of range (map has {n_sides} sidedefs)"
+            )
+        if ld.sideback >= 0 and not (ld.sideback < n_sides):
+            warnings.append(
+                f"linedef {i}: sideback={ld.sideback} out of range (map has {n_sides} sidedefs)"
+            )
+
+    for i, sd in enumerate(result.sidedefs):
+        if not (0 <= sd.sector < n_sectors):
+            warnings.append(
+                f"sidedef {i}: sector={sd.sector} out of range (map has {n_sectors} sectors)"
+            )
+
+    # --- Namespace-specific field checks ---
+    if ns not in _ZHEIGHT_NS:
+        for i, v in enumerate(result.vertices):
+            if "zfloor" in v.props or "zceiling" in v.props:
+                warnings.append(
+                    f"vertex {i}: z-height fields (zfloor/zceiling) are a ZDoom extension "
+                    f"and are not meaningful in '{ns}' namespace"
+                )
+
+    if ns not in _HEXEN_STYLE_NS:
+        _arg_fields = {"arg0", "arg1", "arg2", "arg3", "arg4"}
+        for i, t in enumerate(result.things):
+            if _arg_fields & t.props.keys():
+                warnings.append(
+                    f"thing {i}: arg0-arg4 are Hexen/ZDoom action special fields "
+                    f"and are not meaningful in '{ns}' namespace"
+                )
+
+    return warnings
+
+
 class UdmfParseError(ValueError):
     """Raised by :func:`parse_udmf` when ``strict=True`` and the text is malformed."""
 
@@ -232,6 +306,9 @@ def parse_udmf(text: str, *, strict: bool = False) -> UdmfMap:
                 props[key] = int(m.group(5), 0)  # decimal or hex (0x…)
 
         if block_type == "thing":
+            idx = len(result.things)
+            if "type" not in props:
+                result.warnings.append(f"thing {idx}: missing required field 'type'")
             result.things.append(UdmfThing(props=props))
         elif block_type == "vertex":
             if "x" not in props:
@@ -249,10 +326,19 @@ def parse_udmf(text: str, *, strict: bool = False) -> UdmfMap:
                 result.warnings.append(f"linedef {idx} missing sidefront")
             result.linedefs.append(UdmfLinedef(props=props))
         elif block_type == "sidedef":
+            idx = len(result.sidedefs)
+            if "sector" not in props:
+                result.warnings.append(f"sidedef {idx}: missing required field 'sector'")
             result.sidedefs.append(UdmfSidedef(props=props))
         elif block_type == "sector":
+            idx = len(result.sectors)
+            if "texturefloor" not in props:
+                result.warnings.append(f"sector {idx}: missing required field 'texturefloor'")
+            if "textureceiling" not in props:
+                result.warnings.append(f"sector {idx}: missing required field 'textureceiling'")
             result.sectors.append(UdmfSector(props=props))
 
+    result.warnings.extend(_validate_by_namespace(result))
     return result
 
 
