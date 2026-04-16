@@ -617,6 +617,32 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 
 ---
 
+## Stability and coverage
+
+| Area | Status | Notes |
+|---|---|---|
+| Classic WAD reading | Stable | All binary lumps: maps, textures, flats, sprites, sounds, music, palettes, colormaps |
+| WAD writing / round-trip | Stable | `WadWriter`, `WadArchive` write + validate; all binary types support `to_bytes()` |
+| Map inspection | Stable | All vanilla + Hexen map lump types; UDMF full read/write; ZNODES (compressed BSP) |
+| Textures / compositing | Stable | TEXTURE1/2 + PNAMES binary; ZDoom TEXTURES text format; `TextureCompositor` |
+| Audio | Stable | DMX PCM, MUS → MIDI, OGG/MP3/MIDI; WAV ↔ DMX, MIDI ↔ MUS conversions |
+| CLI (`wadcli`) | Stable | Export, diff, check, list, render, complevel; `wadmount` FUSE filesystem |
+| PK3 / ZIP support | Beta | Read, write, WAD↔PK3 conversion; PK3-embedded WAD maps; namespace mapping |
+| UDMF maps | Beta | Full parse/serialize; `strict` mode; unknown props preserved; no namespace validation |
+| ZMAPINFO | Beta | Maps, episodes, clusters, defaultmap; `props` catch-all; round-trip serialiser |
+| DECORATE | Beta | Actors, flags, states, inheritance; `#include` paths; `replaces` mapping; no ZScript |
+| LANGUAGE / SNDINFO / SNDSEQ | Beta | Parsed for metadata; no engine-runtime semantics |
+| Compatibility analysis | Beta | `detect_complevel`, `check_downgrade`, `convert_complevel`; structured `analyze()` report |
+| ANIMDEFS / TEXTURES (ZDoom) | Beta | Parsed for metadata; animation sequencing not implemented |
+| Full ZScript | Not supported | Out of scope; would require a source-port runtime |
+| ACS bytecode execution | Not supported | ACS `BEHAVIOR` lump is read as bytes only; no interpreter |
+
+> **Stable** — API is production-quality; breaking changes would be semver-major.
+> **Beta** — API is functional and tested but may evolve as more real-world WADs are tested.
+> **Not supported** — explicitly excluded; contributions welcome.
+
+---
+
 ## Supported games / formats
 
 | Game | IWAD | Notes |

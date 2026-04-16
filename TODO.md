@@ -91,17 +91,11 @@ Remaining / future:
 Full ZScript execution or full DECORATE behavior simulation should stay out of
 scope unless the project deliberately becomes a source-port analysis engine.
 
-### Release-shape documentation
-Before a broader release, document the split between classic-WAD stability and
-modern source-port coverage.
-
-Suggested positioning:
-- stable/mature: classic WAD reading, writing, inspection, maps, textures,
-  palettes, sounds, music, and common CLI export workflows
-- beta: source-port metadata, UDMF, PK3, DECORATE, ZMAPINFO, compatibility
-  conversion, and FUSE
-- explicitly unsupported or partial: full ZScript, full engine behavior,
-  source-port runtime semantics
+### Release-shape documentation ✓ done
+The README now includes a "Stability and coverage" table documenting the split:
+- stable/mature: classic WAD reading, writing, maps, textures, audio, CLI
+- beta: UDMF, PK3, ZMAPINFO, DECORATE, LANGUAGE, compatibility analysis, FUSE
+- not supported: ZScript, ACS execution, source-port runtime semantics
 
 ---
 
