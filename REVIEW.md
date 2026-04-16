@@ -2,33 +2,35 @@
 
 Review date: 2026-04-16
 
-Repository state reviewed: v0.3.4-era code after ResourceResolver phase 1,
-collision-complete lookup, Strife DIALOGUE parsing, unified PK3/WAD map assembly,
-structured diagnostics, parser maturity work, README release-shape docs, examples,
-and the latest BLOCKMAP empty-lump fix.
+Repository state reviewed: current v0.3.7-era tree after resolver hardening,
+Strife conversation serialization, parser maturity work, real-IWAD smoke-test
+work, and the latest mypy cleanup.
+
+Important caveat: this review was made while the worktree was dirty. At the
+time of review, these user-owned changes were present and not touched here:
+`tests/conftest.py`, `tests/test_hexen.py`, `wadlib/lumps/sidedefs.py`, and
+untracked `tests/test_iwad_smoke.py`.
 
 ## Overall Score
 
-**8.7 / 10**
+**8.4 / 10**
 
-`wadlib` has moved from "promising and broad" to a serious Doom-engine WAD
-library. The earlier high-priority correctness issues are gone, the resolver is
-now a real resource stack instead of a thin convenience wrapper, Strife data
-support is materially better, and the project now has a useful diagnostics layer.
+The project is substantially stronger than the earlier review. The resolver
+work is no longer superficial, the old map-local collision problem is fixed,
+PK3 category aliases are canonical, BLOCKMAP parsing is hardened, Strife
+conversation records round-trip in synthetic tests, and parser coverage for
+UDMF/TEXTURES/DEHACKED has improved.
 
-For classic Doom-engine WAD workflows - Doom, Doom II, Final Doom-style WADs,
-Heretic, Hexen, and most Strife data reading - I would rate it around
-**9.0 / 10**.
+I would not call the library "classic Doom complete" yet. Doom, Doom II,
+Heretic, Hexen, and most classic WAD workflows are in good shape, but real
+Strife support is still not complete at the public API level: the provided
+`STRIFE1.WAD` uses `SCRIPTxx` conversation lumps, while the current high-level
+API and registry only expose `DIALOGUE`.
 
-For modern source-port content - GZDoom WADs, PK3s, UDMF, DECORATE, ZMAPINFO,
-resource overlays, and diagnostics - I would rate it around **8.0 / 10**.
-
-The combined score stays below 9 because several new features are good but still
-semantically young: resolver collision reports confuse map-local lumps with
-global resources, PK3 namespace aliases are inconsistent, Strife's DIALOGUE
-support is read-only and not exposed through a clean `WadFile` convenience API,
-and the new diagnostics layer is useful but not yet authoritative for PK3/ZDoom
-content.
+For modern source-port content - PK3s, UDMF, ZDoom TEXTURES, DECORATE,
+ZMAPINFO, compatibility diagnostics - the project is useful, but still beta.
+That is the right label. The remaining gaps are semantic, not just missing
+syntax.
 
 ## Verification Run
 
@@ -38,8 +40,9 @@ All checks below were run from the project `.venv`.
 .venv/bin/ruff check wadlib tests
 .venv/bin/mypy wadlib
 .venv/bin/pylint wadlib
-.venv/bin/pytest tests/test_blockmap.py tests/test_resolver.py tests/test_phase2_maps.py tests/test_phase3_analysis.py tests/test_strife_conversation.py --no-cov -q
+.venv/bin/pytest tests/test_blockmap.py tests/test_resolver.py tests/test_phase2_maps.py tests/test_phase3_analysis.py tests/test_strife_conversation.py tests/test_phase4_parsers.py --no-cov -q
 .venv/bin/pytest -m 'not slow' --no-cov -q
+.venv/bin/pytest tests/test_iwad_smoke.py -m slow -k 'Strife or Voices' --no-cov -q
 ```
 
 Results:
@@ -47,191 +50,230 @@ Results:
 - Ruff: passed.
 - Mypy: passed, no issues in 112 source files.
 - Pylint: exited successfully, rating **9.98 / 10**. Remaining messages are
-  design/complexity warnings in parser/export/FUSE modules.
-- Targeted resolver/map/analysis/Strife/BLOCKMAP tests: passed.
-- Non-slow test suite: passed with coverage disabled.
+  design/complexity warnings, mainly in parser/export/FUSE modules.
+- Targeted resolver/map/analysis/Strife/parser tests: passed.
+- Full non-slow suite: **failed** against the provided `wads/HEXEN.WAD` fixture:
+  `tests/test_hexen.py::test_hexen_map_count`,
+  `test_hexen_thing_count_is_sane`, and `test_hexen_linedef_count_is_sane`.
+- Slow Strife/Voices smoke subset: **failed** for real `STRIFE1.WAD`
+  assumptions around `is_iwad`, `get_map`, and global `DIALOGUE`.
 
-I did not run slow tests in this pass. I also did not collect a fresh coverage
-number because the review runs used `--no-cov` to measure the fast path.
+Manual probes:
 
-Manual probes found the current review findings below:
+- Two-map WAD collision report now correctly excludes map-local `THINGS` and
+  `LINEDEFS`.
+- PK3 `sfx/DSPISTOL.lmp` now canonicalizes to namespace `sounds`, and
+  `iter_resources(category="sounds")` finds it.
+- `ResourceResolver.find_all()` includes `origin_path` for PK3 refs and
+  `directory_index` for WAD refs.
+- `ResourceResolver.iter_resources()` does **not** include those origin fields.
+- `parse_textures()` mishandles inline patch property blocks like
+  `Patch "P1", 0, 0 { FlipX }`.
+- The provided `STRIFE1.WAD` contains `SCRIPT00`, `SCRIPT01`, ... conversation
+  lumps. These are parseable by the current conversation parser, but are not
+  exposed through a clean Strife API.
 
-- A two-map WAD reports `THINGS` and `LINEDEFS` as resource collisions.
-- A PK3 entry under `sfx/` exposes namespace `sfx`, and
-  `iter_resources(category="sounds")` misses it.
-- `wad.get_lump("DIALOGUE")` returns `BaseLump`, not `ConversationLump`.
-- A BLOCKMAP with a valid header but truncated offset table still leaks
-  `struct.error`.
+## What Is Good
 
-## What Improved
+### Resolver
 
-### Resource Stack
+- `find_all()` is collision-complete for duplicate WAD lumps and PK3 names that
+  collide after 8-character truncation.
+- `shadowed()`, `collisions()`, and `iter_resources()` are real public APIs.
+- Map-local sub-lumps are no longer reported as global collisions.
+- PK3 aliases such as `sfx/` and `flat/` normalize to canonical categories.
+- `ResourceRef` now has exact origin identity for `find_all()` results.
 
-- `ResourceResolver.find_all()` is now collision-complete for WAD duplicate
-  lumps and PK3 8-character lump-name collisions.
-- `ResourceRef` now carries useful metadata: `size`, `kind`, `namespace`, and
-  `load_order_index`.
-- `shadowed(name)`, `collisions()`, and `iter_resources(category=None)` are now
-  public APIs.
-- `doom_load_order(base, *patches)` remains the right API for normal Doom
-  load-order semantics.
+This is a good architecture direction. Cross-archive behavior belongs in the
+resolver, not in `WadFile`.
 
-This addresses the largest resolver concerns from the previous review.
+### Classic WAD Parsing
 
-### Map Assembly
+- Classic WAD map parsing remains broad and practical.
+- Hexen-format structures are typed and covered by synthetic fixtures.
+- Real commercial WAD smoke testing has started, which is the right move for a
+  project claiming engine-format compatibility.
 
-- `WadFile.from_bytes()` enables embedded WAD maps inside PK3 archives.
-- `Pk3Archive.maps` supports both embedded WAD maps and decomposed
-  `maps/MAP01/*.lmp` layouts.
-- `ResourceResolver.maps()` merges maps across WAD and PK3 sources with priority
-  order and origin metadata.
-- `attach_map_lumps()` now works over generic `LumpSource` objects, not only WAD
-  directory entries.
+The current HEXEN failures look more like fixture/version expectation problems
+than obvious parser corruption, but they still matter because the advertised
+test command is red with the provided fixture.
 
-This is the right architecture direction. It keeps `WadFile` as the classic WAD
-facade while moving cross-source behavior into the resolver/PK3 layer.
+### Strife Parser Core
 
-### Strife
+- The `ConversationPage` / `ConversationChoice` model is useful.
+- Synthetic parser tests are focused and cover malformed sizes.
+- Serialization now round-trips synthetic conversation records.
+- Real `SCRIPTxx` lumps from `STRIFE1.WAD` appear to be structurally compatible
+  with the parser.
 
-- Strife thing counts are now consistent at 262 in README/docs.
-- `DIALOGUE` / CONVERSATION data has a real parser with `ConversationPage` and
-  `ConversationChoice` dataclasses.
-- The parser has a focused synthetic test suite and domain errors for malformed
-  lump sizes.
+The parser core is good. The public API is the weak part.
 
-This is enough to say Strife support is no longer just a thing catalog.
+### Diagnostics And Modern Parsers
 
-### Diagnostics
+- `analyze()` now reports explicit diagnostic failures instead of silently
+  swallowing broad exceptions.
+- UDMF parsing now records basic warnings.
+- ZDoom `TEXTURES` preserves more unknown properties.
+- DEHACKED now stores pointer blocks and BEX `[CHEATS]`.
 
-- `analyze()` gives callers a structured `ValidationReport`.
-- It checks map references, missing textures/flats, PNAMES patch indices,
-  resource collisions, and compatibility level.
-- Reports are JSON-serializable and work on `WadFile`, `Pk3Archive`, and
-  `ResourceResolver` inputs.
-
-This is a strong foundation for CLI and library-side validation.
-
-### Docs And Examples
-
-- README now documents the resolver, unified map assembly, diagnostics, stability
-  levels, and example scripts.
-- Release-shape docs are much clearer: stable classic WAD workflows, beta modern
-  source-port workflows, explicit no-go areas like ZScript execution.
+These are meaningful maturity improvements. They should still be described as
+metadata extraction, not source-port behavior emulation.
 
 ## Current Major Findings
 
-### 1. Resolver Collision Diagnostics Misclassify Map-Local Lumps ✓ done (v0.3.5)
+### 1. Real Strife Support Is Still Incomplete
 
-`_MAP_SUB_LUMPS` frozenset added to `ResourceResolver`; `collisions()` now
-excludes `THINGS`, `LINEDEFS`, `SIDEDEFS`, `VERTEXES`, `SECTORS`, `SEGS`,
-`SSECTORS`, `NODES`, `REJECT`, `BLOCKMAP`, `ZNODES`, `BEHAVIOR`, `TEXTMAP`,
-`SCRIPTS`, and `ENDMAP` from global collision reports.  Regression tests added
-for a two-map WAD confirming these names no longer appear as collisions.
+Priority: **high**
 
-### 2. PK3 Namespace Aliases Are Not Canonical In Resolver Results ✓ done (v0.3.5)
+The library can parse Strife conversation records, but the real IWAD path is
+not wired correctly. The provided `STRIFE1.WAD` has `SCRIPT00`, `SCRIPT01`,
+..., not a global `DIALOGUE` lump. Current public API:
 
-`Pk3Entry.category` now normalizes raw directory names through `_CATEGORY_ALIASES`
-(`sfx/` → `sounds`, `sound/` → `sounds`, `flat/` → `flats`, `mus/` → `music`,
-etc.).  `ResourceRef.namespace` and `iter_resources(category=...)` both use the
-canonical name.  Tests cover `sfx`, `sound`, `sounds`, `flat`, `flats` aliases.
+- registers only `DIALOGUE` as `ConversationLump`;
+- exposes `wad.dialogue` by looking for `DIALOGUE`;
+- has no `wad.strife_dialogues`, `wad.conversations`, or map-aware `SCRIPTxx`
+  access;
+- has slow smoke tests that currently expect unavailable/stale APIs.
 
-### 3. `ResourceRef` Still Lacks Canonical Origin Identity ✓ done (v0.3.6)
+This blocks any "classic Doom complete" claim. The right fix is not to rename
+the parser; it is to support both names/shapes:
 
-`ResourceRef` now carries `origin_path: str | None` (full PK3 archive path)
-and `directory_index: int | None` (WAD directory position), plus an `origin`
-property that formats these as a human-readable string for diagnostics.
-`_iter_source` populates both fields for every ref it yields.
+- `DIALOGUE` / `CONVERSATION` for loose lumps and source-port material;
+- `SCRIPTxx` for real Strife IWAD conversation pages;
+- a public API that returns a mapping like `{ "SCRIPT00": ConversationLump }`
+  or `{ map_name: ConversationLump }`, depending on how the project wants to
+  model Strife.
 
-### 4. Strife Is Close, But The "Full" Claim Is Slightly Ahead Of The API ✓ done (v0.3.5–v0.3.6)
+### 2. Full Non-Slow Suite Is Red With Provided HEXEN.WAD
 
-`wad.dialogue` property added in v0.3.5.  Serialization completed in v0.3.6:
-`ConversationChoice.to_bytes()`, `ConversationPage.to_bytes()`,
-`conversation_to_bytes()`, and `ConversationLump.to_bytes()`.  DIALOGUE is
-now a complete read/write format.  Real-IWAD coverage remains synthetic only.
+Priority: **high until classified**
 
-### 5. BLOCKMAP Parsing Still Has A Truncation Edge ✓ done (v0.3.5)
+`.venv/bin/pytest -m 'not slow' --no-cov -q` currently fails:
 
-Before unpacking offsets, `BlockMap` now checks
-`len(raw_all) >= hdr_size + num_blocks * 2` and raises `CorruptLumpError`
-for a truncated offset table.  Regression test added.
+- expected 31 maps, observed 32;
+- expected MAP01 things 350, observed 346;
+- expected MAP01 linedefs 1770, observed 1769.
 
-### 6. `analyze()` Is Useful But Still Beta ✓ partially done (v0.3.6)
+The local fixture SHA1 observed during review:
+`ac129c4331bf26f0f080c4a56aaa40d64969c98a`.
 
-Bare exception swallows replaced with explicit diagnostics:
-`MAP_ASSEMBLY_FAILED`, `TEXTURE_PARSE_FAILED`, `COLLISION_CHECK_FAILED`.
-`UDMF_TEXTURE_CHECK_SKIPPED` emitted once per report listing all UDMF maps.
-Texture collection expanded: PK3 `textures/`/`patches/` directories and
-ZDoom `TEXTURES` text lump (best-effort).  `_wad_texture_names` now resilient
-to parse errors.  UDMF semantic checks and full ZDoom texture resolution
-remain out of scope.
+This may be stale test data for a different Hexen release rather than a parser
+bug. Still, the practical outcome is the same: the default non-slow suite is
+not a reliable green signal when commercial WAD fixtures are present.
 
-### 7. TODO.md Is Now Stale ✓ done (v0.3.6)
+Fix direction:
 
-- Resource stack section updated to include `origin_path`, `directory_index`,
-  `origin` (v0.3.6) and the outdated "Remaining" bullet removed.
-- DECORATE section updated to reflect include/replacements done in v0.3.3.
-- Strife DIALOGUE real-IWAD note added: no freely redistributable Strife IWAD
-  exists; **Animosity** (community libre replacement) is in progress but
-  unreleased.  Slow-test pattern documented for user-provided fixture.
+- either mark commercial-WAD checks as `slow`;
+- or make them tolerate known version differences;
+- or assert against the actual fixture hash/version before checking exact
+  counts.
 
-### 8. FUSE Should Not Be Bundled Into "Stable CLI" Yet ✓ done (v0.3.5)
+### 3. `TEXTURES` Inline Patch Blocks Are Parsed Incorrectly
 
-README stability table already splits `wadcli` (Stable) and `wadmount` (Beta,
-with OS/libfuse dependency note) into separate rows.
+Priority: **high**
 
-## Current Backlog
+`parse_textures()` supports multi-line patch property blocks, but not inline
+blocks:
 
-High / medium-high priority:
+```text
+Patch "P1", 0, 0 { FlipX }
+```
 
-1. ✓ Fix collision semantics for map-local lumps (v0.3.5).
-2. ✓ Canonicalize PK3 category aliases in resolver namespaces (v0.3.5).
-3. ✓ Finish Strife DIALOGUE integration: `wad.dialogue`, serializer (v0.3.5–v0.3.6).
-4. ✓ Add PK3 path and WAD directory identity to `ResourceRef` (v0.3.6).
+The module docstring shows this syntax, but a manual probe produced the wrong
+result: `FlipX` was not set, the next patch was dropped, and the following
+texture definition was consumed into the first texture.
 
-Medium priority:
+This is a real parser correctness bug, not just missing coverage. It can
+silently corrupt metadata extraction for common ZDoom `TEXTURES` files.
 
-1. ✓ Harden BLOCKMAP offset-table parsing (v0.3.5).
-2. ✓ Expand `analyze()` texture collection and add explicit failure diagnostics (v0.3.6).
-3. Real-IWAD smoke coverage for Strife — blocked: no freely redistributable
-   Strife IWAD exists.  Animosity project is in progress.  Add slow test gated
-   on user-supplied `wads/strife1.wad` when available.
-4. UDMF semantic checks incrementally.
+Fix direction:
 
-Low / maintenance priority:
+- parse `{ ... }` content already present on the patch line before consuming
+  later lines;
+- detect an inline closing brace;
+- add regression tests for one-line patch props and mixed inline/multi-line
+  definitions.
 
-1. ✓ Update TODO.md to match v0.3.x reality (v0.3.6).
-2. ✓ Reclassify FUSE separately from stable CLI (v0.3.5).
-3. Refactor high-complexity parser/export functions when touching them for
-   functional work.
-4. Continue examples/docs polish for PyPI readiness.
+### 4. `iter_resources()` Drops Origin Metadata
+
+Priority: **medium**
+
+`ResourceRef.origin_path`, `directory_index`, and `origin` are populated by
+`find_all()`, but not by `iter_resources()`.
+
+Observed:
+
+- `find_all("DSPISTOL")[0].origin == "sfx/DSPISTOL.lmp"`;
+- `next(iter_resources(category="sounds")).origin == ""`;
+- WAD refs yielded by `iter_resources()` also have `directory_index is None`.
+
+That weakens diagnostics and CLI output exactly where iteration is likely to be
+used. This is probably a small implementation fix: reuse `_iter_source()` for
+the winning ref or mirror the origin-population logic inside `iter_resources()`.
+
+### 5. Slow Smoke Tests Need API Reality Cleanup
+
+Priority: **medium**
+
+`tests/test_iwad_smoke.py` is the right idea, but it currently assumes APIs
+that do not exist on `WadFile`:
+
+- `is_iwad`;
+- `get_map`.
+
+The same file also assumes global Strife `DIALOGUE`, which does not match the
+provided real IWAD. Fixing the tests is part of fixing the claim. Smoke tests
+should document actual public API, not desired future API.
+
+### 6. `analyze()` Is Useful But Still Beta
+
+Priority: **medium**
+
+The diagnostics layer is much better than before, but it is still not an
+authoritative source-port validator:
+
+- UDMF texture/flat validation is still skipped with a warning.
+- UDMF checks are structural and basic, not namespace-specific semantic checks.
+- ZDoom texture resolution is best-effort metadata extraction.
+- DECORATE/ZScript runtime behavior remains out of scope, correctly.
+
+This is fine if documented as beta. It would be a problem only if marketed as
+full GZDoom validation.
+
+## Lower-Priority Backlog
+
+- ANIMDEFS is parsed, but not connected to texture/flat lookup or compositing.
+- DMX format-0 PC speaker sound is still missing.
+- High-complexity parser functions should be refactored opportunistically, not
+  as a standalone churn project.
+- Packaging/PyPI/versioned docs remain a release-readiness task.
+- Real-WAD smoke coverage should be split cleanly between default quick tests
+  and opt-in licensed/slow tests.
 
 ## Recommended Order Of Operations
 
-All original high/medium-priority items are now addressed (v0.3.5–v0.3.6).
-Remaining work:
-
-1. ✓ Fix diagnostic correctness (map sub-lumps) — v0.3.5.
-2. ✓ Normalize PK3 namespaces — v0.3.5.
-3. ✓ Complete Strife public API (dialogue property + serialization) — v0.3.5–v0.3.6.
-4. ✓ Add exact-origin metadata to `ResourceRef` — v0.3.6.
-5. ✓ BLOCKMAP hardening — v0.3.5.
-6. ✓ Update TODO and release docs — v0.3.6.
-
-**Next priorities:**
-- Strife real-IWAD smoke test (user-supplied fixture; blocked on Animosity).
-- UDMF namespace-specific semantic validation.
-- PyPI release preparation (versioned docs, final API review).
+1. Get the default non-slow suite green again. Classify the HEXEN failures as
+   fixture-version mismatch or parser regression, then make the tests reflect
+   that decision.
+2. Fix real Strife conversation integration: support `SCRIPTxx`, update the
+   public API, and make the slow Strife smoke tests pass against
+   `STRIFE1.WAD`.
+3. Fix the `TEXTURES` inline patch block parser bug and add regression tests.
+4. Populate `ResourceRef` origin metadata consistently from `iter_resources()`.
+5. Re-run `.venv/bin/ruff`, `.venv/bin/mypy`, `.venv/bin/pylint`, targeted
+   parser/resolver tests, the non-slow suite, and the opt-in slow Strife smoke
+   subset.
+6. Only after that, continue with UDMF semantic checks, ANIMDEFS integration,
+   and packaging polish.
 
 ## Final Verdict
 
-The project is now strong. Classic WAD reading/writing is near release quality,
-and the modern-source-port side is no longer just partial stubs: resolver,
-PK3 maps, diagnostics, UDMF, DECORATE, ZMAPINFO, and Strife DIALOGUE all have
-substantial implementation and tests.
+The addressed review items are mostly genuinely addressed. The resolver is much
+better, the API is more honest, and the parser surface has matured. However,
+the current tree still has enough red flags that I would not raise the score
+above 8.4 yet.
 
-The remaining issues are mostly semantic precision and public API maturity. The
-highest-risk one is collision reporting, because it can produce misleading
-diagnostics on normal multi-map WADs. Fix that, canonicalize PK3 namespaces, and
-tighten the Strife API/docs, and the project can credibly claim classic
-Doom-engine WAD completeness while keeping PK3/GZDoom features correctly labeled
-as beta.
+The biggest strategic issue is Strife. With the provided real IWADs, it is now
+clear that synthetic `DIALOGUE` support is not enough. Finish `SCRIPTxx`
+conversation support and get the smoke tests green, then the library can make a
+much stronger "classic Doom-family complete" claim.

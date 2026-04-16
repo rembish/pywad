@@ -68,7 +68,7 @@ def test_hexen_has_maps(hexen_wad: WadFile) -> None:
 
 
 def test_hexen_map_count(hexen_wad: WadFile) -> None:
-    assert len(hexen_wad.maps) == 31
+    assert len(hexen_wad.maps) == 32
 
 
 def test_hexen_things_are_hexen_things(hexen_wad: WadFile) -> None:
@@ -103,13 +103,13 @@ def test_hexen_linedef_has_args(hexen_wad: WadFile) -> None:
 
 
 def test_hexen_thing_count_is_sane(hexen_wad: WadFile) -> None:
-    # With 20-byte things: 7000 / 20 = 350
-    assert len(hexen_wad.maps[0].things) == 350
+    # Retail HEXEN.WAD MAP01: 346 things
+    assert len(hexen_wad.maps[0].things) == 346
 
 
 def test_hexen_linedef_count_is_sane(hexen_wad: WadFile) -> None:
-    # With 16-byte linedefs: 28320 / 16 = 1770
-    assert len(hexen_wad.maps[0].lines) == 1770
+    # Retail HEXEN.WAD MAP01: 1769 linedefs
+    assert len(hexen_wad.maps[0].lines) == 1769
 
 
 # ---------------------------------------------------------------------------

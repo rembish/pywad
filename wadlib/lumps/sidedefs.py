@@ -9,7 +9,7 @@ SIDEDEF_FORMAT = "<hh8s8s8sH"
 
 def _encode_texture(name: str) -> bytes:
     """Encode a texture name to 8-byte null-padded ASCII."""
-    return name.encode("ascii")[:8].ljust(8, b"\x00")
+    return name.encode("latin-1")[:8].ljust(8, b"\x00")
 
 
 @dataclass
@@ -23,11 +23,11 @@ class SideDef:
 
     def __post_init__(self) -> None:
         if isinstance(self.upper_texture, bytes):
-            self.upper_texture = self.upper_texture.decode("ascii").rstrip("\x00")
+            self.upper_texture = self.upper_texture.decode("latin-1").rstrip("\x00")
         if isinstance(self.lower_texture, bytes):
-            self.lower_texture = self.lower_texture.decode("ascii").rstrip("\x00")
+            self.lower_texture = self.lower_texture.decode("latin-1").rstrip("\x00")
         if isinstance(self.middle_texture, bytes):
-            self.middle_texture = self.middle_texture.decode("ascii").rstrip("\x00")
+            self.middle_texture = self.middle_texture.decode("latin-1").rstrip("\x00")
 
     def to_bytes(self) -> bytes:
         return pack(

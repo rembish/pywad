@@ -471,8 +471,13 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     @cached_property
     def dialogue(self) -> ConversationLump | None:
-        """Return the DIALOGUE lump (Strife conversation data), or None if not present."""
-        entry = self.find_lump("DIALOGUE")
+        """Return the DIALOGUE or SCRIPT00 lump (Strife conversation data), or None.
+
+        The Strife demo WAD names this lump ``DIALOGUE``.  The retail Strife v1.2
+        WAD splits conversation data across ``SCRIPT00``–``SCRIPT??`` lumps.
+        This property returns the first one found, preferring ``DIALOGUE``.
+        """
+        entry = self.find_lump("DIALOGUE") or self.find_lump("SCRIPT00")
         return ConversationLump(entry) if entry else None
 
     @cached_property

@@ -15,6 +15,10 @@ DOOM1_WAD = WADS_DIR / "DOOM.WAD"
 DOOM2_WAD = WADS_DIR / "DOOM2.WAD"
 HERETIC_WAD = WADS_DIR / "HERETIC.WAD"
 HEXEN_WAD = WADS_DIR / "HEXEN.WAD"
+PLUTONIA_WAD = WADS_DIR / "PLUTONIA.WAD"
+TNT_WAD = WADS_DIR / "TNT.WAD"
+STRIFE1_WAD = WADS_DIR / "STRIFE1.WAD"
+VOICES_WAD = WADS_DIR / "VOICES.WAD"
 FREEDOOM1_WAD = WADS_DIR / "freedoom1.wad"
 FREEDOOM2_WAD = WADS_DIR / "freedoom2.wad"
 BLASPHEMER_WAD = WADS_DIR / "blasphem.wad"
@@ -98,6 +102,42 @@ def hexen_wad() -> Generator[WadFile, None, None]:
     if not HEXEN_WAD.exists():
         pytest.skip("HEXEN.WAD not found in wads/")
     with WadFile(str(HEXEN_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def plutonia_wad() -> Generator[WadFile, None, None]:
+    """Open PLUTONIA.WAD for the entire test session."""
+    if not PLUTONIA_WAD.exists():
+        pytest.skip("PLUTONIA.WAD not found in wads/")
+    with WadFile(str(PLUTONIA_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def tnt_wad() -> Generator[WadFile, None, None]:
+    """Open TNT.WAD (Final Doom: Evilution) for the entire test session."""
+    if not TNT_WAD.exists():
+        pytest.skip("TNT.WAD not found in wads/")
+    with WadFile(str(TNT_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def strife1_wad() -> Generator[WadFile, None, None]:
+    """Open STRIFE1.WAD for the entire test session."""
+    if not STRIFE1_WAD.exists():
+        pytest.skip("STRIFE1.WAD not found in wads/")
+    with WadFile(str(STRIFE1_WAD)) as w:
+        yield w
+
+
+@pytest.fixture(scope="session")
+def voices_wad() -> Generator[WadFile, None, None]:
+    """Open VOICES.WAD (Strife voice data) for the entire test session."""
+    if not VOICES_WAD.exists():
+        pytest.skip("VOICES.WAD not found in wads/")
+    with WadFile(str(VOICES_WAD)) as w:
         yield w
 
 
