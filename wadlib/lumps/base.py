@@ -66,6 +66,16 @@ class BaseLump[T]:
             raise StopIteration
         return self.read_item()
 
+    @property
+    def byte_size(self) -> int:
+        """Raw byte size of the lump data, independent of domain semantics.
+
+        Use this when you need the actual number of bytes on disk.  ``len()``
+        returns a domain-specific count (row count for binary lumps, page count
+        for ``ConversationLump``, etc.) which is not the same thing.
+        """
+        return self._size or 0
+
     def __bool__(self) -> bool:
         """Return ``True`` if this lump contains any data."""
         return self._size is not None and self._size > 0

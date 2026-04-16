@@ -205,6 +205,9 @@ class DecoderRegistry:
     (plug-ins, game-specific tooling) can extend the built-in ``LUMP_REGISTRY``
     without touching wadlib's source.
 
+    Constructors accept any :class:`~wadlib.source.LumpSource` — both WAD
+    ``DirectoryEntry`` and PK3 ``MemoryLumpSource`` work transparently.
+
     Example::
 
         from wadlib.registry import LUMP_REGISTRY
@@ -217,15 +220,20 @@ class DecoderRegistry:
     """
 
     def __init__(self) -> None:
-        self._registry: dict[str, Callable[[DirectoryEntry], BaseLump[Any]]] = {}
+        self._registry: dict[str, Callable[[LumpSource], BaseLump[Any]]] = {}
 
-    def register(self, name: str, constructor: Callable[[DirectoryEntry], BaseLump[Any]]) -> None:
-        """Register *constructor* as the decoder for lumps named *name*."""
+    def register(self, name: str, constructor: Callable[[LumpSource], BaseLump[Any]]) -> None:
+        """Register *constructor* as the decoder for lumps named *name*.
+
+        *constructor* must accept any :class:`~wadlib.source.LumpSource` — the
+        same interface used by :class:`~wadlib.lumps.base.BaseLump`.
+        """
         self._registry[name] = constructor
 
-    def decode(self, name: str, entry: DirectoryEntry) -> BaseLump[Any]:
+    def decode(self, name: str, entry: LumpSource) -> BaseLump[Any]:
         """Decode *entry* using the registered constructor for *name*.
 
+        *entry* may be a WAD ``DirectoryEntry`` or a PK3 ``MemoryLumpSource``.
         Falls back to ``BaseLump`` when no constructor is registered, so callers
         can always get *something* even for unknown lump types.
         """
@@ -258,7 +266,7 @@ class DecoderRegistry:
 
 LUMP_REGISTRY: DecoderRegistry = DecoderRegistry()
 
-_SIMPLE_LUMPS: list[tuple[str, Callable[[DirectoryEntry], BaseLump[Any]]]] = [
+_SIMPLE_LUMPS: list[tuple[str, Callable[[LumpSource], BaseLump[Any]]]] = [
     ("PLAYPAL", PlayPal),
     ("COLORMAP", ColormapLump),
     ("PNAMES", PNames),
