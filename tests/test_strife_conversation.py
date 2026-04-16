@@ -545,11 +545,13 @@ def test_strife_scripts_multiple_script_lumps() -> None:
     raw0 = _pack_page(speaker_id=10)
     raw1 = _pack_page(speaker_id=20)
     raw2 = _pack_page(speaker_id=30)
-    path = _make_wad_with_lumps([
-        (b"SCRIPT00", raw0),
-        (b"SCRIPT01", raw1),
-        (b"SCRIPT02", raw2),
-    ])
+    path = _make_wad_with_lumps(
+        [
+            (b"SCRIPT00", raw0),
+            (b"SCRIPT01", raw1),
+            (b"SCRIPT02", raw2),
+        ]
+    )
     try:
         with WadFile(path) as wad:
             scripts = wad.strife_scripts
@@ -563,11 +565,13 @@ def test_strife_scripts_multiple_script_lumps() -> None:
 
 def test_strife_scripts_sorted_by_name() -> None:
     raw = _pack_page()
-    path = _make_wad_with_lumps([
-        (b"SCRIPT02", raw),
-        (b"SCRIPT00", raw),
-        (b"SCRIPT01", raw),
-    ])
+    path = _make_wad_with_lumps(
+        [
+            (b"SCRIPT02", raw),
+            (b"SCRIPT00", raw),
+            (b"SCRIPT01", raw),
+        ]
+    )
     try:
         with WadFile(path) as wad:
             assert list(wad.strife_scripts) == ["SCRIPT00", "SCRIPT01", "SCRIPT02"]

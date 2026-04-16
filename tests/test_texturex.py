@@ -237,12 +237,7 @@ class TestTexturesPatchInlineBlock:
 
     def test_inline_does_not_consume_next_patch(self) -> None:
         """An inline block must not swallow the next Patch line."""
-        text = (
-            'Texture "T", 64, 64\n{\n'
-            '    Patch "P1", 0, 0 { FlipX }\n'
-            '    Patch "P2", 32, 0\n'
-            "}\n"
-        )
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { FlipX }\n    Patch "P2", 32, 0\n}\n'
         defs = parse_textures(text)
         assert len(defs[0].patches) == 2
         assert defs[0].patches[0].name == "P1"

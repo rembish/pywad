@@ -499,9 +499,8 @@ class WadFile:  # pylint: disable=too-many-public-methods
         for wad in reversed(self._all_wads):
             for entry in wad.directory:
                 name = entry.name.upper()
-                if (
-                    name not in result
-                    and (name in ("DIALOGUE", "CONVERSATION") or _SCRIPT_RE.match(name))
+                if name not in result and (
+                    name in ("DIALOGUE", "CONVERSATION") or _SCRIPT_RE.match(name)
                 ):
                     result[name] = ConversationLump(entry)
         return dict(sorted(result.items()))

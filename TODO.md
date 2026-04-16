@@ -252,19 +252,22 @@ antiflags, states, and doomednum from parent chains; cycles are detected and bro
 `DecorateLump.includes` and `.replacements` implemented in v0.3.3.
 Not yet covered: full ZScript, expression evaluation.
 
-### Strife DIALOGUE real-IWAD smoke tests
-`ConversationLump` / `ConversationPage` / `ConversationChoice` fully tested
-with synthetic binary fixtures.  Real-world coverage requires `STRIFE1.WAD`
-or `VOICES.WAD` (both proprietary — Rogue Entertainment / Velocity 1996).
+### Strife DIALOGUE / SCRIPTxx real-IWAD smoke tests ✓ done
+`ConversationLump` / `ConversationPage` / `ConversationChoice` are tested
+with synthetic binary fixtures and real-world slow smoke tests.  Retail
+`STRIFE1.WAD` stores conversation data in `SCRIPTxx` lumps; source-port/demo
+material may use `DIALOGUE` / `CONVERSATION`.  `WadFile.dialogue` exposes the
+primary conversation lump and `WadFile.strife_scripts` enumerates all Strife
+conversation lumps.
+
+Real-world coverage requires `STRIFE1.WAD` or `VOICES.WAD` fixtures (both
+proprietary — Rogue Entertainment / Velocity 1996).  These are gated behind
+`pytest -m slow` and are never committed.
 
 No freely redistributable Strife IWAD exists as of 2026-04:
 - **Animosity** is an in-progress community project (analogous to Freedoom
   for Doom) but has not yet produced a playable IWAD.
 - `STRIFE0.WAD` (demo) has ambiguous redistribution status.
-
-Action: add a `pytest --slow` smoke test gated on the user providing their
-own `wads/strife1.wad` fixture path, similar to the `wads/freedoom2.wad`
-pattern already used elsewhere.
 
 ### Packaging and publishing
 - Publish to PyPI once API is stable
