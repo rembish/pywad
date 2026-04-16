@@ -120,60 +120,20 @@ This is a strong foundation for CLI and library-side validation.
 
 ## Current Major Findings
 
-### 1. Resolver Collision Diagnostics Misclassify Map-Local Lumps
+### 1. Resolver Collision Diagnostics Misclassify Map-Local Lumps ✓ done (v0.3.5)
 
-`ResourceResolver.collisions()` currently counts every repeated lump name in the
-WAD directory. That is correct for global resources like `PLAYPAL`, but wrong for
-map-local lumps. A normal multi-map WAD contains repeated `THINGS`, `LINEDEFS`,
-`SIDEDEFS`, `VERTEXES`, and so on. Those are not collisions; they are scoped
-under different map markers.
+`_MAP_SUB_LUMPS` frozenset added to `ResourceResolver`; `collisions()` now
+excludes `THINGS`, `LINEDEFS`, `SIDEDEFS`, `VERTEXES`, `SECTORS`, `SEGS`,
+`SSECTORS`, `NODES`, `REJECT`, `BLOCKMAP`, `ZNODES`, `BEHAVIOR`, `TEXTMAP`,
+`SCRIPTS`, and `ENDMAP` from global collision reports.  Regression tests added
+for a two-map WAD confirming these names no longer appear as collisions.
 
-Manual probe result:
+### 2. PK3 Namespace Aliases Are Not Canonical In Resolver Results ✓ done (v0.3.5)
 
-```text
-['LINEDEFS', 'THINGS'] {'THINGS': 2, 'LINEDEFS': 2}
-```
-
-This means `analyze()` can warn about harmless map sub-lumps in normal multi-map
-WADs, because it delegates collision checks to `resolver.collisions()`.
-
-Recommended fix:
-
-1. Teach `collisions()` to ignore map sub-lumps when they are inside map groups,
-   or report them with map scope instead of global scope.
-2. Keep true global duplicate detection for resources outside map groups.
-3. Add tests with a two-map WAD that repeats `THINGS` and `LINEDEFS` without
-   producing resource collision warnings.
-
-Priority: **high**. This is the biggest current semantic bug because it affects
-the new diagnostics layer and user trust in collision reports.
-
-### 2. PK3 Namespace Aliases Are Not Canonical In Resolver Results
-
-`Pk3Archive` has category aliases such as `sfx` -> `sounds` and `flat` ->
-`flats`, but `ResourceResolver` exposes `pk3_entry.category` directly. That
-property returns the raw top-level directory, not the canonical category.
-
-Manual probe:
-
-```text
-namespace for sfx/DSPISTOL.lmp: sfx
-iter_resources(category="sounds"): []
-```
-
-This contradicts the intent of the category API: `Pk3Archive.sounds` treats
-`sfx/` as sounds, while `ResourceResolver.iter_resources(category="sounds")`
-does not.
-
-Recommended fix:
-
-1. Centralize PK3 category normalization in one public or internal helper.
-2. Use the canonical category for `ResourceRef.namespace`.
-3. Make `iter_resources(category=...)` accept canonical names consistently.
-4. Add tests for `sound/`, `sounds/`, `sfx/`, `flat/`, `flats/`, and similar
-   aliases through both `Pk3Archive` and `ResourceResolver`.
-
-Priority: **medium-high**.
+`Pk3Entry.category` now normalizes raw directory names through `_CATEGORY_ALIASES`
+(`sfx/` → `sounds`, `sound/` → `sounds`, `flat/` → `flats`, `mus/` → `music`,
+etc.).  `ResourceRef.namespace` and `iter_resources(category=...)` both use the
+canonical name.  Tests cover `sfx`, `sound`, `sounds`, `flat`, `flats` aliases.
 
 ### 3. `ResourceRef` Still Lacks Canonical Origin Identity ✓ done (v0.3.6)
 
@@ -189,25 +149,11 @@ property that formats these as a human-readable string for diagnostics.
 `conversation_to_bytes()`, and `ConversationLump.to_bytes()`.  DIALOGUE is
 now a complete read/write format.  Real-IWAD coverage remains synthetic only.
 
-### 5. BLOCKMAP Parsing Still Has A Truncation Edge
+### 5. BLOCKMAP Parsing Still Has A Truncation Edge ✓ done (v0.3.5)
 
-The empty/stub BLOCKMAP case was fixed, and the mypy issue was fixed. However a
-BLOCKMAP with a valid 8-byte header and an incomplete offset table still leaks a
-low-level `struct.error`.
-
-Manual probe:
-
-```text
-struct.error: unpack requires a buffer of 8 bytes
-```
-
-Recommended fix:
-
-1. Before unpacking offsets, check that `len(raw_all) >= hdr_size + num_blocks * 2`.
-2. Raise `CorruptLumpError` for a truncated offset table.
-3. Add a regression test and include BLOCKMAP in fuzz coverage.
-
-Priority: **medium**. It is small and concrete.
+Before unpacking offsets, `BlockMap` now checks
+`len(raw_all) >= hdr_size + num_blocks * 2` and raises `CorruptLumpError`
+for a truncated offset table.  Regression test added.
 
 ### 6. `analyze()` Is Useful But Still Beta ✓ partially done (v0.3.6)
 
@@ -219,42 +165,19 @@ ZDoom `TEXTURES` text lump (best-effort).  `_wad_texture_names` now resilient
 to parse errors.  UDMF semantic checks and full ZDoom texture resolution
 remain out of scope.
 
-### 7. TODO.md Is Now Stale
+### 7. TODO.md Is Now Stale ✓ done (v0.3.6)
 
-Several TODO items are no longer accurate:
+- Resource stack section updated to include `origin_path`, `directory_index`,
+  `origin` (v0.3.6) and the outdated "Remaining" bullet removed.
+- DECORATE section updated to reflect include/replacements done in v0.3.3.
+- Strife DIALOGUE real-IWAD note added: no freely redistributable Strife IWAD
+  exists; **Animosity** (community libre replacement) is in progress but
+  unreleased.  Slow-test pattern documented for user-provided fixture.
 
-- Resource stack "remaining goals" still lists `iter_resources`,
-  `shadowed`, `collisions`, full metadata, and `Pk3Archive.find_resources()` as
-  not implemented.
-- Unified map assembly is described as future work, but much of it landed in
-  v0.3.1.
-- DECORATE still says include handling is not covered, but includes and
-  replacements are now implemented.
-- Embedded PK3 WAD maps are still listed as open in the older PK3 section.
+### 8. FUSE Should Not Be Bundled Into "Stable CLI" Yet ✓ done (v0.3.5)
 
-Recommended fix:
-
-1. Move completed resolver/map items into a "done" subsection.
-2. Keep only the remaining semantic issues: map-local collision scoping, PK3
-   canonical origin/path metadata, richer diagnostics, and source-port edge
-   cases.
-
-Priority: **low-medium**.
-
-### 8. FUSE Should Not Be Bundled Into "Stable CLI" Yet
-
-README's stability table marks CLI as Stable and includes `wadmount` in that
-row. The FUSE implementation has tests for the virtual tree and operations, but
-not a real mount/unmount integration path in this review environment. It is also
-OS/libfuse dependent.
-
-Recommended fix:
-
-1. Keep `wadcli` stable.
-2. Mark `wadmount` / FUSE as Beta or Experimental unless CI runs real mount
-   integration tests somewhere suitable.
-
-Priority: **low-medium**.
+README stability table already splits `wadcli` (Stable) and `wadmount` (Beta,
+with OS/libfuse dependency note) into separate rows.
 
 ## Current Backlog
 
@@ -269,40 +192,35 @@ Medium priority:
 
 1. ✓ Harden BLOCKMAP offset-table parsing (v0.3.5).
 2. ✓ Expand `analyze()` texture collection and add explicit failure diagnostics (v0.3.6).
-3. Add real-IWAD smoke coverage for Strife if fixtures are available.
+3. Real-IWAD smoke coverage for Strife — blocked: no freely redistributable
+   Strife IWAD exists.  Animosity project is in progress.  Add slow test gated
+   on user-supplied `wads/strife1.wad` when available.
 4. UDMF semantic checks incrementally.
 
 Low / maintenance priority:
 
-1. Update TODO.md to match v0.3.x reality.
-2. Reclassify FUSE separately from stable CLI unless real mount tests exist.
+1. ✓ Update TODO.md to match v0.3.x reality (v0.3.6).
+2. ✓ Reclassify FUSE separately from stable CLI (v0.3.5).
 3. Refactor high-complexity parser/export functions when touching them for
    functional work.
 4. Continue examples/docs polish for PyPI readiness.
 
 ## Recommended Order Of Operations
 
-1. **Fix diagnostic correctness first.**
-   Map sub-lumps should not appear as global resource collisions. This directly
-   affects `collisions()` and `analyze()`.
+All original high/medium-priority items are now addressed (v0.3.5–v0.3.6).
+Remaining work:
 
-2. **Normalize PK3 namespaces.**
-   `sfx`, `sound`, and `sounds` need one canonical category path through both
-   `Pk3Archive` and `ResourceResolver`.
+1. ✓ Fix diagnostic correctness (map sub-lumps) — v0.3.5.
+2. ✓ Normalize PK3 namespaces — v0.3.5.
+3. ✓ Complete Strife public API (dialogue property + serialization) — v0.3.5–v0.3.6.
+4. ✓ Add exact-origin metadata to `ResourceRef` — v0.3.6.
+5. ✓ BLOCKMAP hardening — v0.3.5.
+6. ✓ Update TODO and release docs — v0.3.6.
 
-3. **Complete Strife's public API story.**
-   Add `wad.dialogue`, fix docs, and decide whether DIALOGUE needs serialization
-   before claiming Strife Full under the README's read/write definition.
-
-4. **Add exact-origin metadata to `ResourceRef`.**
-   Diagnostics need paths and WAD entry identities, especially for collisions.
-
-5. **Patch BLOCKMAP hardening.**
-   It is a small fix with a clear regression test.
-
-6. **Then update TODO and release docs.**
-   Once the semantics are corrected, align TODO.md and the stability matrix with
-   the actual v0.3.x state.
+**Next priorities:**
+- Strife real-IWAD smoke test (user-supplied fixture; blocked on Animosity).
+- UDMF namespace-specific semantic validation.
+- PyPI release preparation (versioned docs, final API review).
 
 ## Final Verdict
 

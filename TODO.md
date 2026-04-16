@@ -10,7 +10,7 @@ This section is for the next feature direction after the current correctness,
 docs, and fuzzing cleanup lands. It intentionally skips the short-term fixes
 already in progress.
 
-### Resource stack / `ResourceResolver` v2 ✓ done (v0.2.4 – v0.3.5)
+### Resource stack / `ResourceResolver` v2 ✓ done (v0.2.4 – v0.3.6)
 
 All planned resolver APIs are implemented:
 - `ResourceResolver(WAD | PK3, ...)` — priority-order constructor (first wins).
@@ -18,17 +18,16 @@ All planned resolver APIs are implemented:
 - `find_all(name) -> list[ResourceRef]` — collision-complete; all matches,
   highest priority first.
 - `ResourceRef` frozen dataclass: `name`, `archive`, `source`, `read_bytes()`,
-  `size`, `namespace`, `kind`, `load_order_index`.
+  `size`, `namespace`, `kind`, `load_order_index`, `origin_path`, `directory_index`,
+  `origin` property.
 - `iter_resources(category=None)` — iterate unique resources; canonical category
   aliases applied (`sfx/` → `sounds`, `flat/` → `flats`, etc.).
 - `shadowed(name)` / `collisions()` — shadowing and collision inspection.
   `collisions()` correctly excludes map-local lump names (THINGS, LINEDEFS,
   etc.) that appear once per map in multi-map WADs.
 - `Pk3Entry.category` returns canonical category names via `_CATEGORY_ALIASES`.
-
-Remaining / future:
-- Add `path` and `directory_index` fields to `ResourceRef` for exact origin
-  identity in diagnostics (medium priority).
+- `ResourceRef.origin_path` / `directory_index` / `origin` — exact source
+  identity for PK3 paths and WAD directory positions (v0.3.6).
 
 ### Unified map assembly over generic resources ✓ done (v0.3.1)
 
@@ -63,7 +62,7 @@ Useful checks:
 The CLI can layer on this as `wadcli check --strict` or richer JSON output, but
 the core report should live in the library first.
 
-### Modern source-port parser maturity ✓ done (v0.3.3)
+### Modern source-port parser maturity ✓ done (v0.3.3–v0.3.5)
 After the resolver and diagnostics foundation is in place, improve modern text
 format support incrementally. The goal should be "accurate metadata extraction"
 before attempting anything like a source-port runtime.
@@ -75,15 +74,14 @@ Completed in v0.3.3:
 - TEXTURES: `TexturesPatch.translation`, `.blend`, `.raw_props`; serialiser updated.
 - DECORATE: `_INCLUDE_RE` multiline fix; `DecorateLump.includes` and `.replacements`.
 
+Completed in v0.3.3–v0.3.5:
+- DECORATE: `#include` path handling and `replaces` mapping — fully implemented.
+
 Remaining / future:
 - UDMF: namespace-specific validation, semantic checks.
 - TEXTURES: graceful handling of unsupported clauses beyond raw_props.
 - ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
   compositing APIs.
-
-Completed in v0.3.3–v0.3.5:
-- DECORATE: `#include` path handling and `replaces` mapping implemented.
-- DECORATE include handling is no longer an open item.
 
 Full ZScript execution or full DECORATE behavior simulation should stay out of
 scope unless the project deliberately becomes a source-port analysis engine.
@@ -234,13 +232,28 @@ click things to see their type, hover sectors to see their properties.
 and `Demo.player_path()` for reconstructing approximate player movement from
 recorded inputs.  Round-trip `to_bytes()` serialisation is also supported.
 
-### DECORATE / ZScript stub parser ✓ done (v0.0.89+, inheritance v0.2.2)
+### DECORATE / ZScript stub parser ✓ done (v0.0.89+, inheritance v0.2.2, includes v0.3.3)
 `wadlib/lumps/decorate.py` provides `parse_decorate`, `DecorateActor`
 (name, parent, doomednum, properties, flags, states), and `DecorateLump`.
 `wadcli list actors` surfaces all actors with their DoomEdNums.
 `resolve_inheritance(actors)` added in v0.2.2: fills inherited properties, flags,
 antiflags, states, and doomednum from parent chains; cycles are detected and broken.
-Not yet covered: full ZScript, include handling, expression evaluation.
+`DecorateLump.includes` and `.replacements` implemented in v0.3.3.
+Not yet covered: full ZScript, expression evaluation.
+
+### Strife DIALOGUE real-IWAD smoke tests
+`ConversationLump` / `ConversationPage` / `ConversationChoice` fully tested
+with synthetic binary fixtures.  Real-world coverage requires `STRIFE1.WAD`
+or `VOICES.WAD` (both proprietary — Rogue Entertainment / Velocity 1996).
+
+No freely redistributable Strife IWAD exists as of 2026-04:
+- **Animosity** is an in-progress community project (analogous to Freedoom
+  for Doom) but has not yet produced a playable IWAD.
+- `STRIFE0.WAD` (demo) has ambiguous redistribution status.
+
+Action: add a `pytest --slow` smoke test gated on the user providing their
+own `wads/strife1.wad` fixture path, similar to the `wads/freedoom2.wad`
+pattern already used elsewhere.
 
 ### Packaging and publishing
 - Publish to PyPI once API is stable
