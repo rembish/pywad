@@ -105,6 +105,41 @@ class TestDoomIwad:
     def test_has_music(self, doom1_wad: WadFile) -> None:
         assert len(doom1_wad.music) > 0
 
+    def test_has_sounds(self, doom1_wad: WadFile) -> None:
+        assert len(doom1_wad.sounds) > 50
+
+    def test_has_sprites(self, doom1_wad: WadFile) -> None:
+        assert len(doom1_wad.sprites) > 100
+
+    def test_has_flats(self, doom1_wad: WadFile) -> None:
+        assert len(doom1_wad.flats) > 20
+
+    def test_has_endoom(self, doom1_wad: WadFile) -> None:
+        assert doom1_wad.endoom is not None
+
+    def test_endoom_size(self, doom1_wad: WadFile) -> None:
+        # ENDOOM is always 80x25 chars x 2 bytes (char + attribute) = 4000 bytes
+        assert len(doom1_wad.endoom.raw()) == 4000
+
+    def test_stcfn_font_glyphs(self, doom1_wad: WadFile) -> None:
+        assert len(doom1_wad.stcfn) >= 64
+
+    def test_e1m1_has_sidedefs(self, doom1_wad: WadFile) -> None:
+        m = _map_by_name(doom1_wad, "E1M1")
+        assert m is not None
+        assert m.sidedefs is not None
+        assert len(m.sidedefs) > 100
+
+    def test_e1m1_has_blockmap(self, doom1_wad: WadFile) -> None:
+        m = _map_by_name(doom1_wad, "E1M1")
+        assert m is not None
+        assert m.blockmap is not None
+
+    def test_e1m1_has_reject(self, doom1_wad: WadFile) -> None:
+        m = _map_by_name(doom1_wad, "E1M1")
+        assert m is not None
+        assert m.reject is not None
+
 
 # ===========================================================================
 # DOOM2.WAD
@@ -151,6 +186,40 @@ class TestDoom2Iwad:
         assert doom2_wad.playpal is not None
         assert doom2_wad.playpal.num_palettes == 14
 
+    def test_has_sounds(self, doom2_wad: WadFile) -> None:
+        assert len(doom2_wad.sounds) > 50
+
+    def test_has_sprites(self, doom2_wad: WadFile) -> None:
+        assert len(doom2_wad.sprites) > 100
+
+    def test_has_flats(self, doom2_wad: WadFile) -> None:
+        assert len(doom2_wad.flats) > 20
+
+    def test_has_endoom(self, doom2_wad: WadFile) -> None:
+        assert doom2_wad.endoom is not None
+
+    def test_endoom_size(self, doom2_wad: WadFile) -> None:
+        assert len(doom2_wad.endoom.raw()) == 4000
+
+    def test_stcfn_font_glyphs(self, doom2_wad: WadFile) -> None:
+        assert len(doom2_wad.stcfn) >= 64
+
+    def test_map01_has_sidedefs(self, doom2_wad: WadFile) -> None:
+        m = _map_by_name(doom2_wad, "MAP01")
+        assert m is not None
+        assert m.sidedefs is not None
+        assert len(m.sidedefs) > 50
+
+    def test_map01_has_blockmap(self, doom2_wad: WadFile) -> None:
+        m = _map_by_name(doom2_wad, "MAP01")
+        assert m is not None
+        assert m.blockmap is not None
+
+    def test_map01_has_reject(self, doom2_wad: WadFile) -> None:
+        m = _map_by_name(doom2_wad, "MAP01")
+        assert m is not None
+        assert m.reject is not None
+
 
 # ===========================================================================
 # HERETIC.WAD  (v1.2 registered — 3 episodes)
@@ -188,6 +257,25 @@ class TestHereticIwad:
     def test_colormap(self, heretic_wad: WadFile) -> None:
         assert heretic_wad.colormap is not None
 
+    def test_fonta_glyphs(self, heretic_wad: WadFile) -> None:
+        # Heretic uses FONTA large-font glyphs instead of STCFN
+        assert len(heretic_wad.fonta) >= 59
+
+    def test_has_sounds(self, heretic_wad: WadFile) -> None:
+        assert len(heretic_wad.sounds) > 50
+
+    def test_has_sprites(self, heretic_wad: WadFile) -> None:
+        assert len(heretic_wad.sprites) > 50
+
+    def test_has_flats(self, heretic_wad: WadFile) -> None:
+        assert len(heretic_wad.flats) > 10
+
+    def test_e1m1_has_sidedefs(self, heretic_wad: WadFile) -> None:
+        m = _map_by_name(heretic_wad, "E1M1")
+        assert m is not None
+        assert m.sidedefs is not None
+        assert len(m.sidedefs) > 10
+
 
 # ===========================================================================
 # HEXEN.WAD
@@ -223,6 +311,31 @@ class TestHexenIwad:
 
     def test_playpal(self, hexen_wad: WadFile) -> None:
         assert hexen_wad.playpal is not None
+
+    def test_has_sndinfo(self, hexen_wad: WadFile) -> None:
+        # Hexen uses SNDINFO for sound definitions (unique among classic IWADs)
+        assert hexen_wad.sndinfo is not None
+
+    def test_has_sndseq(self, hexen_wad: WadFile) -> None:
+        # Hexen uses SNDSEQ for ambient sound sequences
+        assert hexen_wad.sndseq is not None
+
+    def test_fonta_glyphs(self, hexen_wad: WadFile) -> None:
+        assert len(hexen_wad.fonta) >= 59
+
+    def test_has_sounds(self, hexen_wad: WadFile) -> None:
+        assert len(hexen_wad.sounds) > 100
+
+    def test_has_sprites(self, hexen_wad: WadFile) -> None:
+        assert len(hexen_wad.sprites) > 100
+
+    def test_map01_has_sidedefs(self, hexen_wad: WadFile) -> None:
+        m = hexen_wad.maps[0]
+        assert m.sidedefs is not None
+        assert len(m.sidedefs) > 100
+
+    def test_map01_has_blockmap(self, hexen_wad: WadFile) -> None:
+        assert hexen_wad.maps[0].blockmap is not None
 
 
 # ===========================================================================
@@ -372,6 +485,15 @@ class TestVoicesWad:
     def test_lump_names_are_strings(self, voices_wad: WadFile) -> None:
         for entry in voices_wad.directory[:10]:
             assert isinstance(entry.name, str)
+
+    def test_sounds_are_voice_data(self, voices_wad: WadFile) -> None:
+        # VOICES.WAD is a pure sound archive — almost every lump is a sound
+        assert len(voices_wad.sounds) > 300
+
+    def test_sounds_are_non_empty(self, voices_wad: WadFile) -> None:
+        # All voice lumps should contain actual audio data
+        for snd in list(voices_wad.sounds.values())[:5]:
+            assert len(snd.raw()) > 0
 
 
 # ===========================================================================
