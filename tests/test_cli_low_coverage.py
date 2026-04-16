@@ -227,6 +227,7 @@ class TestExportObj:
             )
         assert exc.value.code == 1
 
+    @pytest.mark.slow
     def test_basic_obj_export(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         from wadlib.cli.commands import export_obj
 
@@ -237,6 +238,7 @@ class TestExportObj:
         assert Path(out).exists()
         assert Path(out).stat().st_size > 0
 
+    @pytest.mark.slow
     def test_obj_with_materials(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         from wadlib.cli.commands import export_obj
 
