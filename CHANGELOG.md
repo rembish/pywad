@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-04-16
+
+### Added
+
+- **`TexturesDef.raw_props`** (`dict[str, str]`) — captures unknown
+  texture-level clauses (e.g. `NullTexture`, `Brightmap`) that the parser does
+  not handle explicitly.  The serialiser emits them before the patch list so
+  round-trips preserve unrecognised properties.
+- **`UdmfMap.warnings`** (`list[str]`) — populated during `parse_udmf` with
+  semantic diagnostics: unknown namespace (not in doom/heretic/hexen/strife/
+  zdoom/gzdoom/eternity/vavoom), vertex missing x or y coordinate, linedef
+  missing v1, v2, or sidefront.  Normal valid maps produce an empty list.
+- **`DehackedPatch.pointers`** (`dict[int, int]`) — maps each Pointer block
+  index to its `Codep Frame` value so callers can inspect code-pointer
+  assignments without reaching into raw props.
+- **`DehackedPatch.cheats`** (`dict[str, str]`) — parses the BEX `[CHEATS]`
+  section into a cheat-name → sequence mapping.
+- **`_KNOWN_NAMESPACES`** constant in `wadlib.lumps.udmf` — the set of
+  namespaces recognised as standard; used by the new warning logic.
+- **36 new tests** across `test_texturex.py`, `test_udmf.py`, and the new
+  `test_dehacked.py` covering all additions above.
+- **TODO.md** — marked Thing-sprites-on-map and Automap-rendering-mode as done
+  (both were already fully implemented in the renderer).
+
 ## [0.3.6] - 2026-04-16
 
 ### Added

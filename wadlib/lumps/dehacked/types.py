@@ -149,6 +149,8 @@ class DehackedPatch:
     par_times: dict[str, int] = field(default_factory=dict)
     bex_strings: dict[str, str] = field(default_factory=dict)
     bex_codeptr: dict[int, str] = field(default_factory=dict)
+    pointers: dict[int, int] = field(default_factory=dict)
+    cheats: dict[str, str] = field(default_factory=dict)
 
     @property
     def things(self) -> dict[int, DehackedThing]:

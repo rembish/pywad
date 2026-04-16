@@ -46,6 +46,10 @@ _ASSIGNMENT_RE = re.compile(
 _BLOCK_START_RE = re.compile(r"(\w+)\s*\{")
 _BLOCK_END_RE = re.compile(r"\}")
 
+_KNOWN_NAMESPACES: frozenset[str] = frozenset(
+    {"doom", "heretic", "hexen", "strife", "zdoom", "gzdoom", "eternity", "vavoom"}
+)
+
 
 @dataclass
 class UdmfThing:
@@ -160,6 +164,7 @@ class UdmfMap:
     linedefs: list[UdmfLinedef] = field(default_factory=list)
     sidedefs: list[UdmfSidedef] = field(default_factory=list)
     sectors: list[UdmfSector] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 class UdmfParseError(ValueError):
@@ -186,6 +191,11 @@ def parse_udmf(text: str, *, strict: bool = False) -> UdmfMap:
     ns_match = re.search(r'namespace\s*=\s*"([^"]+)"\s*;', text)
     if ns_match:
         result.namespace = ns_match.group(1)
+        if result.namespace.lower() not in _KNOWN_NAMESPACES:
+            result.warnings.append(
+                f"unknown namespace '{result.namespace}'; "
+                f"known: {', '.join(sorted(_KNOWN_NAMESPACES))}"
+            )
     elif strict and text.strip():
         raise UdmfParseError("no namespace declaration found in TEXTMAP")
 
@@ -224,8 +234,19 @@ def parse_udmf(text: str, *, strict: bool = False) -> UdmfMap:
         if block_type == "thing":
             result.things.append(UdmfThing(props=props))
         elif block_type == "vertex":
+            if "x" not in props:
+                result.warnings.append(f"vertex {len(result.vertices)} missing x coordinate")
+            if "y" not in props:
+                result.warnings.append(f"vertex {len(result.vertices)} missing y coordinate")
             result.vertices.append(UdmfVertex(props=props))
         elif block_type == "linedef":
+            idx = len(result.linedefs)
+            if "v1" not in props:
+                result.warnings.append(f"linedef {idx} missing v1")
+            if "v2" not in props:
+                result.warnings.append(f"linedef {idx} missing v2")
+            if "sidefront" not in props:
+                result.warnings.append(f"linedef {idx} missing sidefront")
             result.linedefs.append(UdmfLinedef(props=props))
         elif block_type == "sidedef":
             result.sidedefs.append(UdmfSidedef(props=props))

@@ -77,9 +77,17 @@ Completed in v0.3.3:
 Completed in v0.3.3–v0.3.5:
 - DECORATE: `#include` path handling and `replaces` mapping — fully implemented.
 
+Completed in v0.3.7:
+- TEXTURES: `TexturesDef.raw_props` captures unknown texture-level clauses;
+  serialiser emits them before the patch list.
+- UDMF: `UdmfMap.warnings` list populated during parse: unknown namespace,
+  vertex missing x/y, linedef missing v1/v2/sidefront.
+- DEHACKED: Pointer blocks now stored in `DehackedPatch.pointers`
+  (pointer_index → codep_frame_index); `[CHEATS]` BEX section parsed into
+  `DehackedPatch.cheats`.
+
 Remaining / future:
-- UDMF: namespace-specific validation, semantic checks.
-- TEXTURES: graceful handling of unsupported clauses beyond raw_props.
+- UDMF: namespace-specific semantic checks (per-namespace field allowlists).
 - ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
   compositing APIs.
 
@@ -162,13 +170,16 @@ an isometric screenshot than a schematic.
 Sector `light_level` + COLORMAP used to tint floor pixels at render time,
 approximating in-game lighting.
 
-### Thing sprites on map
-Render actual sprite frames (first rotation, front-facing) at thing positions
-instead of coloured circles, giving a "screenshot from above" feel.
+### Thing sprites on map ✓ done
+`RenderOptions.show_sprites = True` enables sprite rendering via
+`MapRenderer._get_sprite_image()`.  Falls back to category shape when the
+sprite lump is not found.  Requires a WadFile with PLAYPAL.
 
-### Automap-style rendering mode
-A thin-line automap renderer (à la the in-game automap) with secret-line
-highlighting, keyed doors, etc.
+### Automap-style rendering mode ✓ done
+`MapRenderer._linedef_colour()` assigns automap-style colours to all linedefs:
+solid wall (white), passable step (yellow), passable ceiling-only (light grey),
+secret (magenta), door/trigger special (cyan), plain two-sided (grey).
+`RenderOptions.alpha = True` adds a black outline pass on exterior walls.
 
 ---
 

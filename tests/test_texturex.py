@@ -137,3 +137,60 @@ class TestSerialize:
         text = serialize_textures([d])
         assert 'Texture "NEW", 64, 64' in text
         assert '"P1"' in text
+
+
+# ---------------------------------------------------------------------------
+# TexturesDef.raw_props — texture-level unknown properties
+# ---------------------------------------------------------------------------
+
+
+class TestTexturesDefRawProps:
+    def test_default_empty(self) -> None:
+        d = TexturesDef(kind="texture", name="T", width=64, height=64)
+        assert d.raw_props == {}
+
+    def test_unknown_texture_level_line_captured(self) -> None:
+        text = 'Texture "TEST", 64, 64\n{\n    NullTexture\n    Patch "P1", 0, 0\n}\n'
+        defs = parse_textures(text)
+        assert len(defs) == 1
+        assert "nulltexture" in defs[0].raw_props
+        assert defs[0].raw_props["nulltexture"] == "NullTexture"
+
+    def test_multiple_unknown_texture_props(self) -> None:
+        text = (
+            'Texture "TEST", 64, 64\n{\n    NullTexture\n    Brightmap\n    Patch "P1", 0, 0\n}\n'
+        )
+        defs = parse_textures(text)
+        assert "nulltexture" in defs[0].raw_props
+        assert "brightmap" in defs[0].raw_props
+
+    def test_known_props_not_in_raw(self) -> None:
+        text = (
+            'Texture "TEST", 64, 64\n{\n'
+            "    WorldPanning\n"
+            "    Optional\n"
+            "    NoDecals\n"
+            '    Patch "P1", 0, 0\n'
+            "}\n"
+        )
+        defs = parse_textures(text)
+        assert defs[0].raw_props == {}
+
+    def test_serializer_emits_texture_raw_props(self) -> None:
+        d = TexturesDef(
+            kind="texture",
+            name="TEST",
+            width=64,
+            height=64,
+            raw_props={"nulltexture": "NullTexture", "brightmap": "Brightmap"},
+        )
+        text = serialize_textures([d])
+        assert "NullTexture" in text
+        assert "Brightmap" in text
+
+    def test_texture_raw_props_round_trip(self) -> None:
+        text = 'Texture "TEST", 64, 64\n{\n    NullTexture\n    Patch "P1", 0, 0\n}\n'
+        defs = parse_textures(text)
+        out = serialize_textures(defs)
+        defs2 = parse_textures(out)
+        assert "nulltexture" in defs2[0].raw_props

@@ -126,6 +126,8 @@ def parse_dehacked(text: str) -> DehackedPatch:  # pylint: disable=too-many-bran
                 i = _parse_bex_strings(lines, i, patch)
             elif section_name == "CODEPTR":
                 i = _parse_bex_codeptr(lines, i, patch)
+            elif section_name == "CHEATS":
+                i = _parse_bex_cheats(lines, i, patch)
             continue
 
         tm = _TEXT_RE.match(line)
@@ -164,6 +166,10 @@ def _dispatch_block(
         patch.sounds[index] = DehackedSound(index, name, props)
     elif block_type == "misc":
         patch.misc[index] = _build_misc(index, props)
+    elif block_type == "pointer":
+        codep_val = props.get("codep frame", "").strip()
+        if codep_val.lstrip("-").isdigit():
+            patch.pointers[index] = int(codep_val)
 
 
 def _parse_block_props(lines: list[str], i: int) -> tuple[dict[str, str], int]:
@@ -296,6 +302,20 @@ def _parse_bex_codeptr(lines: list[str], i: int, patch: DehackedPatch) -> int:
         if m:
             patch.bex_codeptr[int(m.group(1))] = m.group(2)
         i += 1
+    return i
+
+
+def _parse_bex_cheats(lines: list[str], i: int, patch: DehackedPatch) -> int:
+    while i < len(lines):
+        line = lines[i].rstrip()
+        if _SECTION_RE.match(line):
+            break
+        i += 1
+        if not line or line.startswith("#"):
+            continue
+        m = re.match(r"^(\w+)\s*=\s*(.+)$", line)
+        if m:
+            patch.cheats[m.group(1)] = m.group(2).strip()
     return i
 
 

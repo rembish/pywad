@@ -269,3 +269,60 @@ class TestUdmfTokenizer:
         text = 'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = -3; }'
         m = parse_udmf(text)
         assert m.things[0].props.get("arg0") == -3
+
+
+# ---------------------------------------------------------------------------
+# UdmfMap.warnings — namespace and required-field validation
+# ---------------------------------------------------------------------------
+
+
+class TestUdmfWarnings:
+    def test_known_namespace_no_warning(self) -> None:
+        for ns in ("doom", "heretic", "hexen", "strife", "zdoom", "gzdoom", "eternity", "vavoom"):
+            m = parse_udmf(f'namespace = "{ns}";')
+            assert not any("namespace" in w for w in m.warnings), f"unexpected warning for {ns!r}"
+
+    def test_unknown_namespace_produces_warning(self) -> None:
+        m = parse_udmf('namespace = "myport";')
+        assert any("unknown namespace" in w for w in m.warnings)
+        assert any("myport" in w for w in m.warnings)
+
+    def test_unknown_namespace_case_insensitive(self) -> None:
+        m = parse_udmf('namespace = "Doom";')
+        assert not any("namespace" in w for w in m.warnings)
+
+    def test_no_namespace_no_warning(self) -> None:
+        m = parse_udmf("thing { x = 0.0; y = 0.0; type = 1; }")
+        assert not m.warnings
+
+    def test_vertex_missing_x_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nvertex { y = 1.0; }')
+        assert any("vertex" in w and "x" in w for w in m.warnings)
+
+    def test_vertex_missing_y_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nvertex { x = 1.0; }')
+        assert any("vertex" in w and "y" in w for w in m.warnings)
+
+    def test_vertex_with_both_coords_no_warning(self) -> None:
+        m = parse_udmf('namespace = "doom";\nvertex { x = 0.0; y = 0.0; }')
+        assert not m.warnings
+
+    def test_linedef_missing_v1_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nlinedef { v2 = 1; sidefront = 0; }')
+        assert any("linedef" in w and "v1" in w for w in m.warnings)
+
+    def test_linedef_missing_v2_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nlinedef { v1 = 0; sidefront = 0; }')
+        assert any("linedef" in w and "v2" in w for w in m.warnings)
+
+    def test_linedef_missing_sidefront_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nlinedef { v1 = 0; v2 = 1; }')
+        assert any("linedef" in w and "sidefront" in w for w in m.warnings)
+
+    def test_complete_linedef_no_warning(self) -> None:
+        m = parse_udmf('namespace = "doom";\nlinedef { v1 = 0; v2 = 1; sidefront = 0; }')
+        assert not m.warnings
+
+    def test_warnings_field_in_default_udmfmap(self) -> None:
+        m = UdmfMap()
+        assert m.warnings == []

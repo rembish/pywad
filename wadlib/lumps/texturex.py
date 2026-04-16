@@ -85,6 +85,7 @@ class TexturesDef:
     optional: bool = False
     world_panning: bool = False
     no_decals: bool = False
+    raw_props: dict[str, str] = field(default_factory=dict)
 
 
 def parse_textures(text: str) -> list[TexturesDef]:
@@ -225,6 +226,10 @@ def parse_textures(text: str) -> list[TexturesDef]:
                             if km:
                                 patch.raw_props[km.group(1).lower()] = pline
                 tex.patches.append(patch)
+            else:
+                km = re.match(r"(\w+)", bline)
+                if km:
+                    tex.raw_props[km.group(1).lower()] = bline
 
         result.append(tex)
 
@@ -256,6 +261,8 @@ def serialize_textures(defs: list[TexturesDef]) -> str:
             parts.append("    NoDecals")
         if tex.namespace:
             parts.append(f'    Namespace "{tex.namespace}"')
+        for raw_val in tex.raw_props.values():
+            parts.append(f"    {raw_val}")
 
         for p in tex.patches:
             has_props = (
