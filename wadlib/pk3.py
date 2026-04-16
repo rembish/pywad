@@ -40,14 +40,18 @@ import zipfile
 from dataclasses import dataclass
 from functools import cached_property
 from io import BytesIO
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from PIL import Image as _PIL
 
 from .constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
 from .enums import MapData, WadType
+from .exceptions import BadHeaderWadException, InvalidDirectoryError, TruncatedWadError
 from .wad import WadFile
 from .writer import WadWriter
+
+if TYPE_CHECKING:
+    from .lumps.map import BaseMapEntry
 
 # Canonical category names used by all resource properties.
 # Keys are the normalized lowercase directory names found in real pk3 files;
@@ -336,6 +340,86 @@ class Pk3Archive:
         """
         entry = self.find_resource(name)
         return self.read(entry.path) if entry else None
+
+    @cached_property
+    def maps(self) -> dict[str, BaseMapEntry]:
+        """Return all maps assembled from this PK3 archive.
+
+        Two PK3 map formats are supported:
+
+        Embedded WAD (``maps/MAP01.wad``)
+            The WAD bytes are parsed in memory and assembled exactly as if
+            they were a standalone WAD file.
+
+        Decomposed (``maps/MAP01/THINGS.lmp``, ``maps/MAP01/SECTORS.lmp``, …)
+            Lump files are grouped by map name and assembled via the standard
+            ``attach_map_lumps`` dispatch.
+
+        When both formats contribute the same map name the embedded WAD
+        takes precedence (it carries richer data).
+
+        The :attr:`~wadlib.lumps.map.BaseMapEntry.origin` attribute of each
+        returned map is set to the path that contributed it — e.g.
+        ``"mod.pk3/maps/MAP01.wad"`` or ``"mod.pk3/maps/MAP01/"``.
+        """
+        from .lumps.map import MapEntry
+        from .registry import assemble_maps, attach_map_lumps
+        from .source import MemoryLumpSource
+
+        result: dict[str, BaseMapEntry] = {}
+        embedded_names: set[str] = set()
+
+        # --- embedded WADs (maps/MAP01.wad) ----------------------------------
+        for entry in self.infolist():
+            parts = entry.path.replace("\\", "/").split("/")
+            if len(parts) != 2:
+                continue
+            if parts[0].lower() not in ("maps", "map"):
+                continue
+            if os.path.splitext(parts[1])[1].lower() != ".wad":
+                continue
+            map_stem = os.path.splitext(parts[1])[0].upper()
+            if not (DOOM1_MAP_NAME_REGEX.match(map_stem) or DOOM2_MAP_NAME_REGEX.match(map_stem)):
+                continue
+            try:
+                embedded = WadFile.from_bytes(self.read(entry.path), name=entry.path)
+            except (BadHeaderWadException, TruncatedWadError, InvalidDirectoryError):
+                continue
+            seen, _ = assemble_maps([embedded.directory])
+            for map_name, map_entry in seen.items():
+                map_entry.origin = f"{self._filename}/maps/{parts[1]}"
+                result[map_name] = map_entry
+                embedded_names.add(map_name)
+
+        # --- decomposed maps (maps/MAP01/THINGS.lmp) -------------------------
+        decomposed: dict[str, list[tuple[str, bytes]]] = {}
+        for entry in self.infolist():
+            parts = entry.path.replace("\\", "/").split("/")
+            if len(parts) != 3:
+                continue
+            if parts[0].lower() not in ("maps", "map"):
+                continue
+            map_name = parts[1].upper()
+            if not (DOOM1_MAP_NAME_REGEX.match(map_name) or DOOM2_MAP_NAME_REGEX.match(map_name)):
+                continue
+            lump_name = os.path.splitext(parts[2])[0].upper()[:8]
+            decomposed.setdefault(map_name, []).append((lump_name, self.read(entry.path)))
+
+        for map_name, lumps in decomposed.items():
+            if map_name in embedded_names:
+                continue  # embedded WAD takes precedence
+            marker = MemoryLumpSource(map_name, b"")
+            try:
+                map_entry = MapEntry(marker)
+            except ValueError:
+                continue
+            lump_sources = [MemoryLumpSource(lump_name, data) for lump_name, data in lumps]
+            hexen = any(ln == "BEHAVIOR" for ln, _ in lumps)
+            attach_map_lumps(map_entry, lump_sources, hexen)
+            map_entry.origin = f"{self._filename}/maps/{map_name}/"
+            result[map_name] = map_entry
+
+        return result
 
 
 # ---------------------------------------------------------------------------

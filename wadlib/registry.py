@@ -61,6 +61,7 @@ from .lumps.udmf import UdmfLump
 from .lumps.vertices import Vertices
 from .lumps.zmapinfo import ZMapInfoLump
 from .lumps.znodes import ZNodesLump
+from .source import LumpSource
 
 # ---------------------------------------------------------------------------
 # Protocol — anything with find_lump
@@ -72,7 +73,6 @@ class WadLike(Protocol):
 
     def find_lump(self, name: str) -> DirectoryEntry | None:
         """Return the directory entry for *name*, or ``None``."""
-        ...  # pragma: no cover
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ class WadLike(Protocol):
 # ---------------------------------------------------------------------------
 
 # Doom-format lump dispatch: name -> (attach method, constructor)
-_DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
+_DOOM_DISPATCH: dict[str, tuple[str, Callable[[LumpSource], object]]] = {
     "THINGS": ("attach_things", Things),
     "VERTEXES": ("attach_vertices", Vertices),
     "LINEDEFS": ("attach_linedefs", Lines),
@@ -97,19 +97,24 @@ _DOOM_DISPATCH: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
 }
 
 # Hexen overrides only differ for THINGS and LINEDEFS
-_HEXEN_OVERRIDES: dict[str, tuple[str, Callable[[DirectoryEntry], object]]] = {
+_HEXEN_OVERRIDES: dict[str, tuple[str, Callable[[LumpSource], object]]] = {
     "THINGS": ("attach_things", HexenThings),
     "LINEDEFS": ("attach_linedefs", HexenLineDefs),
 }
 
 
-def attach_map_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen: bool) -> None:
+def attach_map_lumps(map_entry: BaseMapEntry, lumps: Sequence[LumpSource], hexen: bool) -> None:
     """Attach *lumps* to *map_entry* using the appropriate dispatch table.
 
     This is the canonical implementation of the Doom map-lump wiring step,
     previously inlined as ``_attach_lumps`` in ``wad.py``.  Hexen maps use a
     different ``THINGS`` and ``LINEDEFS`` layout; set *hexen=True* to activate
     those overrides.
+
+    *lumps* may be any sequence of :class:`~wadlib.source.LumpSource` objects —
+    :class:`~wadlib.directory.DirectoryEntry` (WAD file-backed) or
+    :class:`~wadlib.source.MemoryLumpSource` (PK3 decomposed maps) are both
+    accepted.
     """
     dispatch = dict(_DOOM_DISPATCH)
     if hexen:
@@ -127,8 +132,8 @@ def attach_map_lumps(map_entry: BaseMapEntry, lumps: list[DirectoryEntry], hexen
 
 
 def scan_map_groups(
-    entries: Sequence[DirectoryEntry],
-) -> list[tuple[DirectoryEntry, list[DirectoryEntry]]]:
+    entries: Sequence[LumpSource],
+) -> list[tuple[LumpSource, list[LumpSource]]]:
     """Find map marker/lump groups in a single WAD directory sequence.
 
     Scans *entries* for map-name markers (E1M1, MAP01, etc.) and collects
@@ -136,9 +141,9 @@ def scan_map_groups(
 
     Returns a list of ``(marker, lumps)`` pairs in directory order.
     """
-    groups: list[tuple[DirectoryEntry, list[DirectoryEntry]]] = []
-    current_lumps: list[DirectoryEntry] = []
-    marker: DirectoryEntry | None = None
+    groups: list[tuple[LumpSource, list[LumpSource]]] = []
+    current_lumps: list[LumpSource] = []
+    marker: LumpSource | None = None
 
     for entry in entries:
         is_marker = bool(
@@ -159,7 +164,7 @@ def scan_map_groups(
 
 
 def assemble_maps(
-    directories: Sequence[Sequence[DirectoryEntry]],
+    directories: Sequence[Sequence[LumpSource]],
 ) -> tuple[dict[str, BaseMapEntry], list[str]]:
     """Build a ``(seen, order)`` map from a stack of WAD directories.
 

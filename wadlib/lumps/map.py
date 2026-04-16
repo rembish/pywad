@@ -47,6 +47,7 @@ class BaseMapEntry(BaseLump[Any]):
         self.blockmap: BlockMap | None = None
         self.behavior: object | None = None  # BehaviorLump if Hexen/ZDoom ACS
         self.udmf: UdmfLump | None = None  # TEXTMAP lump if UDMF format
+        self.origin: str = ""  # source file/archive that contributed this map
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}>"

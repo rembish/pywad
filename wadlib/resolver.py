@@ -32,11 +32,14 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from .pk3 import Pk3Archive
 from .source import LumpSource, MemoryLumpSource
 from .wad import WadFile
+
+if TYPE_CHECKING:
+    from .lumps.map import BaseMapEntry
 
 
 @dataclass(frozen=True)
@@ -233,7 +236,7 @@ class ResourceResolver:
         seen: set[str] = set()
         for load_order_index, src in enumerate(self._sources):
             if isinstance(src, WadFile):
-                for wad in src._all_wads:  # PWADs first (higher priority)
+                for wad in src.all_wads:  # PWADs first (higher priority)
                     for entry in reversed(wad.directory):
                         upper = entry.name.upper()
                         if upper in seen:
@@ -296,7 +299,7 @@ class ResourceResolver:
         name_counts: dict[str, int] = defaultdict(int)
         for src in self._sources:
             if isinstance(src, WadFile):
-                for wad in src._all_wads:
+                for wad in src.all_wads:
                     for entry in wad.directory:
                         name_counts[entry.name.upper()] += 1
             else:
@@ -305,6 +308,48 @@ class ResourceResolver:
 
         # Only fetch refs (which reads bytes) for actually-colliding names.
         return {name: self.find_all(name) for name, count in name_counts.items() if count > 1}
+
+    # ------------------------------------------------------------------
+    # Map assembly
+    # ------------------------------------------------------------------
+
+    def maps(self) -> dict[str, BaseMapEntry]:
+        """Return all assembled maps across every source, highest priority wins.
+
+        Maps are collected from all sources (WAD files and PK3 archives) and
+        merged so the highest-priority source's version of each map name wins,
+        matching Doom load-order semantics.
+
+        The :attr:`~wadlib.lumps.map.BaseMapEntry.origin` attribute of each
+        returned map records the file that contributed it.  For WAD sources
+        this is the WAD's filename; for PK3 sources it is the path within the
+        archive (e.g. ``"mod.pk3/maps/MAP01.wad"`` or
+        ``"mod.pk3/maps/MAP01/"``).
+
+        Returns:
+            A ``dict`` mapping each map name (``"E1M1"``, ``"MAP01"``, etc.)
+            to its assembled :class:`~wadlib.lumps.map.BaseMapEntry`.
+        """
+        from .lumps.map import BaseMapEntry as _BaseMapEntry
+        from .registry import assemble_maps
+
+        result: dict[str, _BaseMapEntry] = {}
+
+        # Process sources lowest-priority first so higher-priority sources
+        # overwrite.  In ResourceResolver, sources[0] is highest priority, so
+        # we iterate in reverse.
+        for src in reversed(self._sources):
+            if isinstance(src, WadFile):
+                seen, _ = assemble_maps([w.directory for w in reversed(src.all_wads)])
+                wad_name: str = getattr(src.fd, "name", repr(src))
+                for name, map_entry in seen.items():
+                    map_entry.origin = wad_name
+                    result[name] = map_entry
+            else:
+                for name, map_entry in src.maps.items():
+                    result[name] = map_entry
+
+        return result
 
     # ------------------------------------------------------------------
     # Convenience

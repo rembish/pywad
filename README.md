@@ -204,6 +204,39 @@ r = ResourceResolver.doom_load_order(base_wad, patch1, patch2)
 | `ResourceRef.size` | Byte size |
 | `ResourceRef.load_order_index` | Source position (0 = highest priority) |
 
+### Unified map assembly
+
+Maps can now be assembled from WAD files, PK3 embedded WADs, and PK3 decomposed
+map directories through a single API.
+
+```python
+# Maps from a single PK3 (embedded WAD or decomposed directory)
+with Pk3Archive("mod.pk3") as pk3:
+    maps = pk3.maps                  # dict[str, BaseMapEntry]
+    m = maps["MAP01"]
+    m.origin                         # "mod.pk3/maps/MAP01.wad" or "mod.pk3/maps/MAP01/"
+
+# Maps from a WAD parsed in memory (e.g. extracted from a PK3)
+with open("maps/MAP01.wad", "rb") as f:
+    wad = WadFile.from_bytes(f.read())
+    print(wad.maps)                  # list[BaseMapEntry] as usual
+
+# All maps across a resolver, highest-priority source wins
+with WadFile("DOOM2.WAD") as base, Pk3Archive("megawad.pk3") as mod:
+    r = ResourceResolver(mod, base)  # mod overrides base
+    maps = r.maps()                  # dict[str, BaseMapEntry]
+    for name, m in maps.items():
+        print(name, m.origin)        # shows which file contributed each map
+```
+
+| API | Description |
+|---|---|
+| `WadFile.from_bytes(data)` | Parse a WAD from raw bytes (no file needed) |
+| `WadFile.all_wads` | PWAD stack, highest-priority first |
+| `Pk3Archive.maps` | `dict[str, BaseMapEntry]` from embedded WADs + decomposed dirs |
+| `ResourceResolver.maps()` | Merged maps across all sources, priority order |
+| `BaseMapEntry.origin` | Source path that contributed this map entry |
+
 ### `WadWriter` (low-level writer)
 
 | Method | Description |

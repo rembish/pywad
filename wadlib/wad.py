@@ -1,6 +1,6 @@
 import re
 from functools import cached_property
-from io import SEEK_END, SEEK_SET
+from io import SEEK_END, SEEK_SET, BytesIO
 from struct import calcsize, unpack
 from typing import Any, BinaryIO
 
@@ -90,6 +90,56 @@ class WadFile:  # pylint: disable=too-many-public-methods
         self._pwads: list[WadFile] = []
 
     @classmethod
+    def from_bytes(cls, data: bytes, *, name: str = "<embedded>") -> "WadFile":
+        """Parse a WAD from an in-memory *data* buffer.
+
+        This is primarily used for embedded WAD maps inside PK3 archives
+        (``maps/MAP01.wad`` entries), where the WAD is stored as raw bytes
+        inside a ZIP entry rather than as a standalone file.
+
+        The returned ``WadFile`` has no real file descriptor; its internal
+        ``fd`` is a :class:`io.BytesIO` buffer.  Calling :meth:`close` on it
+        is safe but is effectively a no-op — the buffer is released when the
+        object is garbage-collected.
+
+        Args:
+            data: Raw WAD bytes.
+            name: Optional label used in error messages (default ``"<embedded>"``).
+
+        Raises:
+            :exc:`~wadlib.exceptions.TruncatedWadError`: *data* is too short.
+            :exc:`~wadlib.exceptions.BadHeaderWadException`: bad magic bytes.
+            :exc:`~wadlib.exceptions.InvalidDirectoryError`: directory out of bounds.
+        """
+        wad = object.__new__(cls)
+        wad.fd = BytesIO(data)
+        header_size = calcsize(HEADER_FORMAT)
+        raw_header = wad.fd.read(header_size)
+        if len(raw_header) < header_size:
+            raise TruncatedWadError(
+                f"{name!r}: buffer too short for WAD header: "
+                f"{len(raw_header)} bytes (expected {header_size})"
+            )
+        magic_raw, wad.directory_size, wad._directory_offset = unpack(HEADER_FORMAT, raw_header)
+        if not magic_raw.isascii():
+            raise BadHeaderWadException(repr(magic_raw))
+        magic = magic_raw.decode("ascii")
+        if magic not in WadType.names():
+            raise BadHeaderWadException(magic)
+        wad.fd.seek(0, SEEK_END)
+        file_size = wad.fd.tell()
+        dir_end = wad._directory_offset + wad.directory_size * calcsize(DIRECTORY_ENTRY_FORMAT)
+        if wad._directory_offset < 0 or dir_end > file_size:
+            raise InvalidDirectoryError(
+                f"{name!r}: directory table out of bounds: "
+                f"offset={wad._directory_offset}, entries={wad.directory_size}, "
+                f"file_size={file_size}"
+            )
+        wad.wad_type = WadType[magic]
+        wad._pwads = []
+        return wad
+
+    @classmethod
     def open(cls, base: str, *pwads: str) -> "WadFile":
         """Open a base WAD with zero or more PWADs layered on top.
 
@@ -127,6 +177,16 @@ class WadFile:  # pylint: disable=too-many-public-methods
     def _all_wads(self) -> "list[WadFile]":
         """PWAD-first order: later (higher-priority) WADs come first."""
         return [*list(reversed(self._pwads)), self]
+
+    @property
+    def all_wads(self) -> "list[WadFile]":
+        """All WAD files in this PWAD stack, highest-priority first.
+
+        The base WAD is last; each layered PWAD precedes it.  This is the
+        canonical order for resource resolution (first match wins) and is
+        the public counterpart of the internal ``_all_wads`` property.
+        """
+        return self._all_wads
 
     @cached_property
     def directory(self) -> list[DirectoryEntry]:

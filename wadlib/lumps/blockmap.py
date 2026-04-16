@@ -11,10 +11,8 @@ offsets into a variable-length list of linedefs per block.
 from __future__ import annotations
 
 from struct import calcsize, pack, unpack
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ..directory import DirectoryEntry
+from ..source import LumpSource
 
 BLOCKMAP_HEADER_FORMAT = "<hhHH"
 
@@ -22,9 +20,8 @@ BLOCKMAP_HEADER_FORMAT = "<hhHH"
 class Reject:
     """Raw bitfield mapping sector-to-sector visibility."""
 
-    def __init__(self, entry: DirectoryEntry) -> None:
-        entry.owner.fd.seek(entry.offset)
-        self._data: bytes = entry.owner.fd.read(entry.size)
+    def __init__(self, entry: LumpSource) -> None:
+        self._data: bytes = entry.read_bytes()
 
     @classmethod
     def from_bytes(cls, data: bytes) -> Reject:
@@ -80,11 +77,9 @@ class Reject:
 class BlockMap:
     """Spatial acceleration structure for linedef collision queries."""
 
-    def __init__(self, entry: DirectoryEntry) -> None:
-        fd = entry.owner.fd
+    def __init__(self, entry: LumpSource) -> None:
         hdr_size = calcsize(BLOCKMAP_HEADER_FORMAT)
-        fd.seek(entry.offset)
-        raw_all = fd.read(entry.size)
+        raw_all = entry.read_bytes()
         ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, raw_all[:hdr_size])
         self._origin_x: int = int(ox)
         self._origin_y: int = int(oy)

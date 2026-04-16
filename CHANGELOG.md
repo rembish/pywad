@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-04-16
+
+### Added
+
+- **`WadFile.from_bytes(data, *, name="<embedded>")`** — parse a WAD entirely
+  from an in-memory buffer (`BytesIO`).  Raises the same exceptions as the file
+  constructor.  Primarily used for embedded WAD maps inside PK3 archives.
+- **`WadFile.all_wads`** — public property that returns all WAD files in the
+  current PWAD stack, highest-priority first (public counterpart of `_all_wads`).
+- **`Pk3Archive.maps`** — cached property returning `dict[str, BaseMapEntry]`
+  assembled from the archive.  Handles two formats:
+  - *Embedded WAD* (`maps/MAP01.wad`) — WAD bytes parsed in memory via
+    `WadFile.from_bytes()` and assembled exactly like a standalone WAD.
+  - *Decomposed* (`maps/MAP01/THINGS.lmp`, …) — lump files grouped by map name
+    and assembled via `attach_map_lumps`.  Embedded WAD wins when both formats
+    contribute the same map name.
+  - `BaseMapEntry.origin` is set to the source path
+    (e.g. `"mod.pk3/maps/MAP01.wad"` or `"mod.pk3/maps/MAP01/"`).
+- **`ResourceResolver.maps()`** — merges maps from all sources in priority order,
+  highest-priority source wins per map name.  `BaseMapEntry.origin` records which
+  file contributed each map.
+- **`BaseMapEntry.origin: str`** — new attribute (default `""`) recording the
+  source file or archive path that produced the map entry.
+
+### Changed
+
+- `attach_map_lumps` and `scan_map_groups` in `registry.py` now accept
+  `Sequence[LumpSource]` instead of `Sequence[DirectoryEntry]`, enabling PK3
+  decomposed-map assembly without WAD-specific types.
+- `assemble_maps` signature widened from `Sequence[Sequence[DirectoryEntry]]` to
+  `Sequence[Sequence[LumpSource]]` for the same reason.
+- `Reject.__init__` and `BlockMap.__init__` in `blockmap.py` now accept
+  `LumpSource` (use `entry.read_bytes()`) instead of `DirectoryEntry` (which
+  bypassed the protocol by seeking `entry.owner.fd` directly).
+
 ## [0.3.0] - 2026-04-16
 
 ### Added
