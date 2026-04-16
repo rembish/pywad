@@ -34,18 +34,25 @@ All checks run from the project `.venv`.
 ```bash
 .venv/bin/ruff check wadlib tests
 .venv/bin/mypy wadlib
+.venv/bin/pylint wadlib
 .venv/bin/pytest tests/test_udmf.py tests/test_animdefs.py tests/test_archive.py tests/test_pk3.py --no-cov -q
 .venv/bin/pytest -m 'not slow' --no-cov -q
 .venv/bin/pytest -m 'not slow' -q
+.venv/bin/pytest -m slow --no-cov -q
 ```
 
 Results (v0.4.0):
 
 - Ruff: passed, all checks clean.
 - Mypy: passed, no issues.
+- Pylint: exits 0, rating **9.97/10**.  It is not warning-free: the remaining
+  messages are known complexity/style findings in parser, renderer, FUSE, and
+  export paths.  No correctness-class lint failures were found.
 - Targeted regression tests (UDMF, ANIMDEFS, archive, PK3): passed.
 - Full non-slow suite: **1 574 tests passed** (up from 1 542 in v0.3.7).
-- Non-slow coverage: above 80% gate with branch coverage enabled.
+- Non-slow coverage: **88.28%** total, above the 80% gate with branch coverage
+  enabled.
+- Slow suite: passed locally against the available real WAD fixtures.
 
 ## What Improved (v0.4.0)
 
@@ -185,11 +192,11 @@ now in place.  The parser handles all known edge cases.  Refactor deferred per
 the previous recommendation: wait until grammar pressure makes the hand-rolled
 approach clearly insufficient.
 
-### 7. Test Gaps ✓ RESOLVED (v0.4.0)
+### 7. Test Gaps ✓ RESOLVED FOR RELEASE (v0.4.0)
 
 ~~Priority: medium~~
 
-All specific gaps from the previous finding are addressed:
+All specific correctness gaps from the previous finding are addressed:
 
 - `TestDuplicateLumpSemantics` — append-mode duplicate regression.
 - `TestWadToPk3EdgeCases` — duplicate names, alias preservation, integrity.
@@ -201,6 +208,14 @@ All specific gaps from the previous finding are addressed:
 Typed decode as an end-to-end contract is still not a single test because the
 unified decode path does not exist yet (Finding 3).  FUSE coverage remains
 system-dependent.  Commercial IWAD smoke tests remain behind `-m slow`.
+
+There is one remaining coverage nuance rather than a missing-test bug:
+some CLI success branches are still low in the **non-slow** coverage report
+because their meaningful paths depend on real IWAD fixtures:
+`export_animation.py` (16%), `list_mapinfo.py` (39%), and `list_sndseq.py`
+(31%).  Those paths are exercised in the slow suite and passed locally.  If the
+public CI cannot run proprietary fixtures, adding tiny synthetic MAPINFO/SNDSEQ/
+ANIMDEFS fixtures would make these checks reproducible in the fast gate too.
 
 ### 8. Release Claim Wording ✓ RESOLVED (v0.4.0)
 
@@ -220,6 +235,13 @@ No structural changes were made.  Watch list unchanged:
 - `wadlib/compat.py` (~650 LOC): branch-heavy policy logic.
 - `wadlib/analysis.py` (~550 LOC): acceptable now, split if UDMF analysis grows.
 - `wadlib/lumps/texturex.py` (~368 LOC): covered by fuzz; refactor deferred.
+- `wadlib/fuse.py`: environment-dependent and branchy; keep isolated from core
+  archive semantics.
+- `wadlib/export3d.py`, `wadlib/resolver.py`, `wadlib/lumps/blockmap.py`,
+  `wadlib/lumps/decorate.py`, `wadlib/lumps/mid2mus.py`,
+  `wadlib/lumps/udmf.py`, and `wadlib/lumps/colormap.py`: Pylint flags
+  function-level complexity, but these are localized algorithm/parser hotspots
+  rather than project-level god modules.
 
 The practical discipline holds: keep `WadFile` and `Pk3Archive` as facades;
 put new behavior into focused helper modules.
@@ -234,6 +256,9 @@ put new behavior into focused helper modules.
   base `arg0`-`arg4` / z-height checks now in place).
 - ANIMDEFS compositor integration: given an ordered name list and a tick count,
   return the active flat/texture name.  `resolve_frames()` is the foundation.
+- Synthetic fast-gate fixtures for CLI paths currently covered only by slow
+  real-IWAD tests, if public CI needs those branches covered without licensed
+  data.
 - DMX format-0 PC speaker sound synthesis.
 - Versioned docs (Sphinx or MkDocs) — `pyproject.toml` is PyPI-ready at v0.4.0.
 - Parser/module complexity cleanup when touching those modules for feature work,
@@ -259,7 +284,8 @@ for a v0.4.0 release.
 Classic Doom-family WAD support is mature: every major format is parsed, tested
 with real IWADs, and round-trippable.  Modern source-port support is functional
 and accurately described as beta.  The test suite is large (1 574 non-slow
-tests), the type checker is clean, and the linter is clean.
+tests), the type checker is clean, Ruff is clean, and Pylint exits cleanly while
+still reporting known complexity/style debt.
 
 The right next step is a PyPI publish followed by real-world user feedback.
 Architectural improvements (unified decode path, map subclass modeling, TEXTURES
