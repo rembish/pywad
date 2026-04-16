@@ -5,12 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wadlib"
 version = "0.3.3"
-description = "Python library to read, write, and analyse id Doom WAD files"
+description = "Python library to read, write, and analyse id Software WAD files"
+readme = "README.md"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]
-license = { text = "BSD-2-Clause" }
+license = { file = "LICENSE" }
 requires-python = ">=3.12"
 dependencies = ["Pillow>=9.2"]
-keywords = ["doom", "wad", "game", "id-software", "modding"]
+keywords = [
+    "doom", "wad", "game", "id-software", "modding",
+    "doom2", "heretic", "hexen", "strife", "gzdoom", "zdoom",
+    "game-tools", "level-editor", "pwad", "iwad",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -27,6 +32,7 @@ classifiers = [
 Homepage = "https://github.com/arembish/wadlib"
 Repository = "https://github.com/arembish/wadlib"
 "Bug Tracker" = "https://github.com/arembish/wadlib/issues"
+Changelog = "https://github.com/arembish/wadlib/blob/master/CHANGELOG.md"
 
 [project.scripts]
 wadcli = "wadlib.cli:main"
@@ -46,6 +52,9 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["wadlib*"]
+
+[tool.setuptools.package-data]
+wadlib = ["py.typed"]
 
 # ---------------------------------------------------------------------------
 # ruff — linting + formatting (replaces flake8, isort, pyupgrade, etc.)

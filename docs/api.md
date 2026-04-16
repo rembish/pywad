@@ -47,12 +47,12 @@ manager or call `close()` when done.
 | `sndinfo` | `SndInfo` -- ZDoom/Heretic sound name mappings, or `None` |
 | `sndseq` | `SndSeqLump` -- Hexen sound sequence scripts, or `None` |
 | `mapinfo` | `MapInfoLump` -- Hexen MAPINFO (numeric map IDs, titles), or `None` |
-| `zmapinfo` | `ZMapInfoLump` -- ZDoom ZMAPINFO (string map names, music, sky), or `None` |
+| `zmapinfo` | `ZMapInfoLump` -- ZDoom ZMAPINFO (maps, episodes, clusters, defaultmap), or `None` |
 | `animdefs` | `AnimDefsLump` -- Hexen/ZDoom animation sequences, or `None` |
 | `dehacked` | `DehackedLump` -- embedded DeHackEd patch, or `None` |
 | `load_deh(path)` | Load an external `.deh` file, overriding any embedded DEHACKED |
 | `language` | `LanguageLump` -- ZDoom LANGUAGE string tables, or `None` |
-| `decorate` | `DecorateLump` -- ZDoom DECORATE actor definitions (PWAD-aware), or `None` |
+| `decorate` | `DecorateLump` -- ZDoom DECORATE actor definitions with `.includes` and `.replacements` (PWAD-aware), or `None` |
 | `load_pwad(path)` | Dynamically layer another PWAD on top, invalidating all caches |
 
 ---
@@ -281,6 +281,41 @@ with WadFile("mod.wad") as wad:
 
 ---
 
+## ZMAPINFO
+
+ZDoom ZMAPINFO lump — brace-delimited map metadata blocks.
+
+```python
+from wadlib.lumps.zmapinfo import ZMapInfoLump, ZMapInfoEntry, ZMapInfoEpisode, ZMapInfoCluster
+
+with WadFile("mod.wad") as wad:
+    zi = wad.zmapinfo
+    if zi:
+        for entry in zi.maps:
+            print(entry.map_name, entry.title, entry.sky1, entry.music)
+            print(entry.props)          # unknown keys captured here
+        for ep in zi.episodes:
+            print(ep.map, ep.name or ep.name_lookup, ep.pic_name)
+        for cl in zi.clusters:
+            print(cl.cluster_num, cl.exittext, cl.music)
+        dm = zi.defaultmap             # ZMapInfoEntry | None
+```
+
+| Class / Property | Description |
+|---|---|
+| `ZMapInfoLump` | Parsed ZMAPINFO lump |
+| `ZMapInfoLump.maps` | `list[ZMapInfoEntry]` — all map blocks |
+| `ZMapInfoLump.episodes` | `list[ZMapInfoEpisode]` — all episode blocks |
+| `ZMapInfoLump.clusters` | `list[ZMapInfoCluster]` — all cluster blocks |
+| `ZMapInfoLump.defaultmap` | `ZMapInfoEntry \| None` — baseline for all maps |
+| `ZMapInfoLump.get_map(name)` | Return entry by map name (case-insensitive), or `None` |
+| `ZMapInfoEntry` | Dataclass: `map_name`, `title`, `title_lookup`, `levelnum`, `next`, `secretnext`, `sky1`, `music`, `titlepatch`, `cluster`, `par`, `props` (catch-all dict) |
+| `ZMapInfoEpisode` | Dataclass: `map`, `name`, `name_lookup`, `pic_name`, `key`, `no_skill_menu` |
+| `ZMapInfoCluster` | Dataclass: `cluster_num`, `exittext`, `entertext`, `exittextislump`, `entertextislump`, `music`, `flat` |
+| `serialize_zmapinfo(entries)` | Serialize a list of `ZMapInfoEntry` back to ZMAPINFO text |
+
+---
+
 ## DECORATE
 
 ZDoom actor definitions. Parses `DoomEdNum`, `Radius`, `Height`, and `States`
@@ -294,14 +329,23 @@ with WadFile.open("DOOM2.WAD", "mod.wad") as wad:
     dec = wad.decorate
     if dec:
         for actor in dec.actors:
-            print(f"{actor.name}  ednum={actor.editor_number}")
+            print(f"{actor.name}  ednum={actor.doomednum}")
+        # #include paths in declaration order (comments stripped)
+        print(dec.includes)        # ["actors/monsters.dec", ...]
+        # Actors that replace a base game actor
+        print(dec.replacements)    # {"ZombieMan": "MyZombie", ...}
 ```
 
 | Class / Property | Description |
 |---|---|
-| `DecorateLump` | Parsed DECORATE lump; `.actors` returns list of `DecorateActor`; `.editor_numbers` returns `dict[int, DecorateActor]` |
-| `DecorateActor` | Dataclass with fields: `name`, `parent`, `doomednum`, `replaces`, `properties`, `flags`, `states`; computed properties `health`, `radius`, `height`, `speed`, `is_monster`, `is_item` |
+| `DecorateLump` | Parsed DECORATE lump |
+| `DecorateLump.actors` | `list[DecorateActor]` — all actor definitions |
+| `DecorateLump.editor_numbers` | `dict[int, DecorateActor]` — actors with a DoomEdNum |
+| `DecorateLump.includes` | `list[str]` — `#include` file paths in declaration order |
+| `DecorateLump.replacements` | `dict[str, str]` — maps replaced actor name → replacing actor name |
+| `DecorateActor` | Dataclass with fields: `name`, `parent`, `doomednum`, `replaces`, `properties`, `flags`, `antiflags`, `states`; computed properties `health`, `radius`, `height`, `speed`, `is_monster`, `is_item` |
 | `parse_decorate(text)` | Parse raw DECORATE text into a list of `DecorateActor` objects |
+| `resolve_inheritance(actors)` | Fill inherited properties, flags, states, and doomednum through parent chains |
 
 ---
 
@@ -387,7 +431,8 @@ from wadlib.lumps.udmf import (
 | `UdmfLinedef` | UDMF linedef with fields: `v1`, `v2`, `sidefront`, `sideback`, `special`, `id`, `props` dict |
 | `UdmfSidedef` | UDMF sidedef with fields: `sector`, `texturetop`, `texturebottom`, `texturemiddle`, `offsetx`, `offsety`, `props` dict |
 | `UdmfSector` | UDMF sector with fields: `heightfloor`, `heightceiling`, `texturefloor`, `textureceiling`, `lightlevel`, `special`, `id`, `props` dict |
-| `parse_udmf(text)` | Parse a UDMF TEXTMAP string into a `UdmfMap` |
+| `UdmfParseError` | `ValueError` subclass raised by `parse_udmf(strict=True)` when no namespace is found |
+| `parse_udmf(text, *, strict=False)` | Parse a UDMF TEXTMAP string into a `UdmfMap`; `strict=True` raises `UdmfParseError` on missing namespace |
 | `serialize_udmf(udmf_map)` | Serialize a `UdmfMap` back to a UDMF TEXTMAP string |
 
 All UDMF data classes store extended/unknown properties in a `props: dict[str, Any]`
