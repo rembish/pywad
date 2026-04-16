@@ -33,6 +33,7 @@ from wadlib.lumps.mus import Mus
 from wadlib.lumps.picture import Picture
 from wadlib.lumps.sound import DmxSound
 from wadlib.lumps.textures import PNames, TextureList
+from wadlib.lumps.texturex import parse_textures, serialize_textures
 from wadlib.lumps.udmf import parse_udmf
 from wadlib.lumps.zmapinfo import ZMapInfoLump
 from wadlib.wad import WadFile
@@ -347,3 +348,126 @@ class TestFuzzMapInfo:
         data = text.encode("utf-8", errors="replace")
         lump = _make_lump("MAPINFO", data, MapInfoLump)
         _assert_no_crash(lambda: lump.maps)
+
+
+# ---------------------------------------------------------------------------
+# parse_textures / serialize_textures — ZDoom TEXTURES text format
+# ---------------------------------------------------------------------------
+
+
+class TestFuzzParseTextures:
+    """parse_textures is a lenient text parser — must never raise on any input."""
+
+    @given(text=st.text(max_size=512))
+    @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_text_never_crash(self, text: str) -> None:
+        """parse_textures on arbitrary text must never raise any exception."""
+        _assert_no_crash(lambda: parse_textures(text))
+
+    @given(text=st.text(max_size=256))
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_arbitrary_bytes_as_text_never_crash(self, text: str) -> None:
+        """Arbitrary unicode text fed to parse_textures must not crash."""
+        _assert_no_crash(lambda: parse_textures(text))
+
+    @given(
+        kind=st.sampled_from(["Texture", "Flat", "Sprite", "WallTexture", "texture", "flat"]),
+        name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", min_size=1, max_size=8),
+        width=st.integers(min_value=1, max_value=4096),
+        height=st.integers(min_value=1, max_value=4096),
+        body=st.text(max_size=128),
+    )
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_valid_header_arbitrary_body_never_crash(
+        self, kind: str, name: str, width: int, height: int, body: str
+    ) -> None:
+        """A valid texture header followed by arbitrary body never crashes."""
+        text = f'{kind} "{name}", {width}, {height}\n{{\n{body}\n}}\n'
+        _assert_no_crash(lambda: parse_textures(text))
+
+    @given(
+        name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8),
+        patch_name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8),
+        x=st.integers(min_value=-1000, max_value=1000),
+        y=st.integers(min_value=-1000, max_value=1000),
+        flags=st.lists(
+            st.sampled_from(["FlipX", "FlipY", "Rotate 90", "Alpha 0.5", "Style Translucent"]),
+            max_size=3,
+        ),
+    )
+    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
+    def test_patch_with_inline_block_never_crash(
+        self, name: str, patch_name: str, x: int, y: int, flags: list[str]
+    ) -> None:
+        """Patch with inline block properties never crashes."""
+        flag_str = " ".join(flags)
+        text = (
+            f'Texture "{name}", 64, 64\n'
+            f'{{\n'
+            f'    Patch "{patch_name}", {x}, {y} {{ {flag_str} }}\n'
+            f'}}\n'
+        )
+        _assert_no_crash(lambda: parse_textures(text))
+
+    @given(
+        defs=st.lists(
+            st.fixed_dictionaries(
+                {
+                    "name": st.text(
+                        alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8
+                    ),
+                    "width": st.integers(min_value=1, max_value=256),
+                    "height": st.integers(min_value=1, max_value=256),
+                    "num_patches": st.integers(min_value=0, max_value=4),
+                }
+            ),
+            max_size=5,
+        )
+    )
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_multiple_textures_never_crash(self, defs: list[dict]) -> None:  # type: ignore[type-arg]
+        """Multiple texture definitions in one input must not crash."""
+        lines = []
+        for d in defs:
+            lines.append(f'Texture "{d["name"]}", {d["width"]}, {d["height"]}')
+            lines.append("{")
+            for i in range(d["num_patches"]):
+                lines.append(f'    Patch "P{i}", 0, 0')
+            lines.append("}")
+        _assert_no_crash(lambda: parse_textures("\n".join(lines)))
+
+
+class TestFuzzSerializeTextures:
+    """serialize_textures on parse_textures output must be stable and round-trip safe."""
+
+    @given(text=st.text(max_size=256))
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_serialize_parsed_never_crash(self, text: str) -> None:
+        """serialize_textures(parse_textures(x)) must never crash."""
+
+        def _round_trip() -> None:
+            defs = parse_textures(text)
+            serialize_textures(defs)
+
+        _assert_no_crash(_round_trip)
+
+    @given(
+        kind=st.sampled_from(["Texture", "Flat", "Sprite"]),
+        name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", min_size=1, max_size=8),
+        width=st.integers(min_value=1, max_value=256),
+        height=st.integers(min_value=1, max_value=256),
+        patch_name=st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8),
+    )
+    @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
+    def test_round_trip_parsed_output_stable(
+        self, kind: str, name: str, width: int, height: int, patch_name: str
+    ) -> None:
+        """parse → serialize → parse must produce same count of defs and patches."""
+        text = f'{kind} "{name}", {width}, {height}\n{{\n    Patch "{patch_name}", 0, 0\n}}\n'
+        defs1 = parse_textures(text)
+        if not defs1:
+            return
+        text2 = serialize_textures(defs1)
+        defs2 = parse_textures(text2)
+        assert len(defs1) == len(defs2)
+        assert len(defs1[0].patches) == len(defs2[0].patches)

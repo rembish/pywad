@@ -619,3 +619,57 @@ class TestExceptionSafety:
             assert wad.replace("ALPHA", b"new", validate=False)
         with WadArchive(path) as wad:
             assert wad.read("ALPHA") == b"new"
+
+
+# ---------------------------------------------------------------------------
+# WadArchive — duplicate-lump semantics across modes
+# ---------------------------------------------------------------------------
+
+
+class TestDuplicateLumpSemantics:
+    """Duplicate-lump resolution must be last-entry-wins in every mode."""
+
+    def _make_dup_wad(self, tmp_path: Path) -> str:
+        """Build a WAD containing two lumps both named DUP."""
+        path = str(tmp_path / "dup.wad")
+        writer = WadWriter(WadType.PWAD)
+        writer.add_lump("DUP", b"first")
+        writer.add_lump("DUP", b"second")
+        writer.save(path)
+        return path
+
+    def test_read_mode_last_wins(self, tmp_path: Path) -> None:
+        path = self._make_dup_wad(tmp_path)
+        with WadArchive(path, "r") as wad:
+            assert wad.read("DUP") == b"second"
+
+    def test_append_mode_last_wins(self, tmp_path: Path) -> None:
+        path = self._make_dup_wad(tmp_path)
+        with WadArchive(path, "a") as wad:
+            assert wad.read("DUP") == b"second"
+
+    def test_read_and_append_modes_agree(self, tmp_path: Path) -> None:
+        """read() must return the same bytes regardless of open mode."""
+        path = self._make_dup_wad(tmp_path)
+        with WadArchive(path, "r") as r_wad:
+            from_read = r_wad.read("DUP")
+        with WadArchive(path, "a") as a_wad:
+            from_append = a_wad.read("DUP")
+        assert from_read == from_append
+
+    def test_getinfo_and_read_agree_in_append_mode(self, tmp_path: Path) -> None:
+        """getinfo() and read() must point at the same entry in append mode."""
+        path = self._make_dup_wad(tmp_path)
+        with WadArchive(path, "a") as wad:
+            info = wad.getinfo("DUP")
+            data = wad.read("DUP")
+        assert info.size == len(data)
+        assert data == b"second"
+
+    def test_append_mode_new_dup_last_wins(self, tmp_path: Path) -> None:
+        """Writing a new DUP in append mode makes it the last-wins entry."""
+        path = self._make_dup_wad(tmp_path)
+        with WadArchive(path, "a") as wad:
+            wad.writestr("DUP", b"third", validate=False)
+        with WadArchive(path, "r") as wad:
+            assert wad.read("DUP") == b"third"

@@ -192,12 +192,13 @@ class WadArchive:
                     self._reader.fd.seek(entry.offset)
                     return self._reader.fd.read(entry.size)
             raise KeyError(name)
-        # append mode — data is in the writer
+        # append mode — data is in the writer; scan reversed so last entry wins,
+        # consistent with read mode and Doom's W_CheckNumForName semantics.
         assert self._writer is not None
-        data = self._writer.get_lump(upper)
-        if data is None:
-            raise KeyError(name)
-        return data
+        for wentry in reversed(self._writer.lumps):
+            if wentry.name == upper:
+                return wentry.data
+        raise KeyError(name)
 
     def __contains__(self, name: str) -> bool:
         """Return ``True`` if a lump named *name* exists."""

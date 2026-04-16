@@ -535,3 +535,128 @@ class TestRealWadToPk3:
                 assert map_count > 0
         finally:
             os.unlink(pk3_path)
+
+
+# ---------------------------------------------------------------------------
+# WAD/PK3 conversion edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestWadToPk3EdgeCases:
+    """Conversion edge cases: duplicates, name truncation, alias preservation."""
+
+    def _make_wad_with_duplicate(self) -> str:
+        """WAD containing two lumps with the same name in a namespace."""
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            path = f.name
+        with WadArchive(path, "w") as wad:
+            wad.writemarker("F_START")
+            wad.writestr("FLAT01", b"\xaa" * 4096, validate=False)
+            wad.writestr("FLAT01", b"\xbb" * 4096, validate=False)  # duplicate
+            wad.writemarker("F_END")
+        return path
+
+    def _make_wad_with_long_names(self) -> str:
+        """WAD where two different flat names truncate to the same 8-char lump name."""
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            path = f.name
+        with WadArchive(path, "w") as wad:
+            wad.writemarker("F_START")
+            # Both "FLOORTILE" and "FLOORTILE" already collide, but here we use
+            # lump names that are exactly 8 chars — no truncation needed in WAD.
+            wad.writestr("FLAT0001", b"\x11" * 4096, validate=False)
+            wad.writestr("FLAT0002", b"\x22" * 4096, validate=False)
+            wad.writemarker("F_END")
+            wad.writemarker("S_START")
+            wad.writestr("TROOA1", b"\x33" * 100, validate=False)
+            wad.writemarker("S_END")
+            wad.writestr("PLAYPAL", b"\x00" * (768 * 14), validate=False)
+        return path
+
+    def test_duplicate_flat_in_wad_does_not_crash(self) -> None:
+        """WAD→PK3 conversion with duplicate flat names must not crash."""
+        wad_path = self._make_wad_with_duplicate()
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            pk3_path = f.name
+        try:
+            wad_to_pk3(wad_path, pk3_path)
+            with Pk3Archive(pk3_path, "r") as pk3:
+                names = pk3.namelist()
+                flat_entries = [n for n in names if n.startswith("flats/")]
+                # Both duplicates or at least one must be present
+                assert len(flat_entries) >= 1
+        finally:
+            os.unlink(wad_path)
+            os.unlink(pk3_path)
+
+    def test_namespace_aliases_preserved_through_round_trip(self) -> None:
+        """Flats and sprites end up in flats/ and sprites/ after WAD→PK3→WAD."""
+        wad_path = self._make_wad_with_long_names()
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            pk3_path = f.name
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            wad2_path = f.name
+        try:
+            wad_to_pk3(wad_path, pk3_path)
+            with Pk3Archive(pk3_path, "r") as pk3:
+                names = pk3.namelist()
+                assert any(n.startswith("flats/") for n in names)
+                assert any(n.startswith("sprites/") for n in names)
+                assert any(n.startswith("lumps/") for n in names)
+
+            pk3_to_wad(pk3_path, wad2_path)
+            with WadArchive(wad2_path, "r") as wad:
+                restored = wad.namelist()
+                assert "F_START" in restored
+                assert "F_END" in restored
+                assert "S_START" in restored
+                assert "S_END" in restored
+                assert "FLAT0001" in restored
+                assert "FLAT0002" in restored
+                assert "TROOA1" in restored
+                assert wad.read("FLAT0001") == b"\x11" * 4096
+                assert wad.read("FLAT0002") == b"\x22" * 4096
+        finally:
+            os.unlink(wad_path)
+            os.unlink(pk3_path)
+            os.unlink(wad2_path)
+
+    def test_pk3_colliding_truncated_names_do_not_crash(self) -> None:
+        """PK3 entries whose lump_name truncates to the same 8 chars must not crash."""
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            pk3_path = f.name
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            wad_path = f.name
+        try:
+            with Pk3Archive(pk3_path, "w") as pk3:
+                # Both filenames truncate to "LONGNAME" when stripped to 8 chars
+                pk3.writestr("lumps/LONGNAME1.lmp", b"data1")
+                pk3.writestr("lumps/LONGNAME2.lmp", b"data2")
+            # Conversion must not raise
+            pk3_to_wad(pk3_path, wad_path)
+            with WadArchive(wad_path, "r") as wad:
+                names = wad.namelist()
+                assert len(names) >= 1
+        finally:
+            os.unlink(pk3_path)
+            os.unlink(wad_path)
+
+    def test_data_integrity_through_round_trip(self) -> None:
+        """Lump data must survive WAD→PK3→WAD intact."""
+        wad_path = self._make_wad_with_long_names()
+        with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
+            pk3_path = f.name
+        with tempfile.NamedTemporaryFile(suffix=".wad", delete=False) as f:
+            wad2_path = f.name
+        try:
+            wad_to_pk3(wad_path, pk3_path)
+            pk3_to_wad(pk3_path, wad2_path)
+            with WadArchive(wad2_path, "r") as wad:
+                # Data must be byte-for-byte identical
+                assert wad.read("FLAT0001") == b"\x11" * 4096
+                assert wad.read("FLAT0002") == b"\x22" * 4096
+                assert wad.read("TROOA1") == b"\x33" * 100
+        finally:
+            os.unlink(wad_path)
+            os.unlink(pk3_path)
+            os.unlink(wad2_path)

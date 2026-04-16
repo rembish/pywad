@@ -619,6 +619,11 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 
 ## Stability and coverage
 
+"Stable" and "Beta" below describe **file-format API stability and test coverage** —
+not game-engine or renderer completeness.  Engine runtime behavior (ACS/ZScript
+execution, actor state machines, renderer semantics) is intentionally out of scope
+for the entire library.
+
 | Area | Status | Notes |
 |---|---|---|
 | Classic WAD reading | Stable | All binary lumps: maps, textures, flats, sprites, sounds, music, palettes, colormaps |
@@ -665,15 +670,16 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Strife | Full | Thing type catalog (all 262 types); DIALOGUE lump parsed into `ConversationPage` / `ConversationChoice` dataclasses |
 | Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
 | ZDoom / GZDoom WAD | Partial | ZMAPINFO (maps, episodes, clusters, defaultmap), SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
-| UDMF maps | Full | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props`; `strict=True` raises `UdmfParseError` on missing namespace |
+| UDMF maps | Partial | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props`; `strict=True` raises `UdmfParseError` on missing namespace; no namespace-specific semantic validation |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; no full ZDoom resource overlay |
 | DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat/state machine |
 | DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states; `resolve_inheritance()` fills inherited properties through parent chains; `.includes` lists `#include` paths; `.replacements` maps replaced → replacing actor |
 | LANGUAGE | Full | `wad.language` → `LanguageLump`; multi-locale string lookup, `strings_for(locale)` |
 | ZScript | None | Not parsed |
 
-> **Full** = complete read/write API for the format's data.
-> Engine runtime behavior (state machines, codepointers, expression evaluation) is out of scope for all entries.
+> **Full** = complete file-format read/write API — struct parsing, typed access, and round-trip serialization.
+> **Partial** = useful but incomplete; known gaps noted above.
+> Engine runtime behavior (renderer, state machines, codepointers, expression evaluation, ACS/ZScript execution) is out of scope for every entry in this table.
 
 ### Lump-type capability matrix
 
