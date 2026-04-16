@@ -80,26 +80,24 @@ class BlockMap:
     def __init__(self, entry: LumpSource) -> None:
         hdr_size = calcsize(BLOCKMAP_HEADER_FORMAT)
         raw_all = entry.read_bytes()
+        self._raw: bytes = raw_all
         if len(raw_all) < hdr_size:
             # Empty or stub BLOCKMAP (e.g. written by WadWriter without data)
-            self._origin_x = 0
-            self._origin_y = 0
-            self._columns = 0
-            self._rows = 0
-            self._offsets = []
-            self._raw = raw_all
+            self._origin_x: int = 0
+            self._origin_y: int = 0
+            self._columns: int = 0
+            self._rows: int = 0
+            self._offsets: list[int] = []
             return
         ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, raw_all[:hdr_size])
-        self._origin_x: int = int(ox)
-        self._origin_y: int = int(oy)
-        self._columns: int = int(cols)
-        self._rows: int = int(rows)
+        self._origin_x = int(ox)
+        self._origin_y = int(oy)
+        self._columns = int(cols)
+        self._rows = int(rows)
         num_blocks = self._columns * self._rows
-        self._offsets: list[int] = [
+        self._offsets = [
             int(v) for v in unpack(f"<{num_blocks}H", raw_all[hdr_size : hdr_size + num_blocks * 2])
         ]
-        # Keep the raw tail (blocklists) for round-trip fidelity
-        self._raw: bytes = raw_all
 
     @classmethod
     def from_raw(  # pylint: disable=too-many-arguments,too-many-positional-arguments
