@@ -1084,3 +1084,65 @@ class TestResourceRefOriginIdentity:
         assert ref.origin == ""
         assert ref.origin_path is None
         assert ref.directory_index is None
+
+
+class TestIterResourcesOriginMetadata:
+    """iter_resources() must populate origin fields the same as find_all()."""
+
+    def test_wad_iter_resources_has_directory_index(self) -> None:
+        path = _make_wad([("PLAYPAL", b"x" * 10)])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = list(r.iter_resources())
+                assert refs, "Expected at least one ref"
+                ref = refs[0]
+                assert ref.directory_index is not None
+                assert ref.directory_index >= 0
+        finally:
+            os.unlink(path)
+
+    def test_wad_iter_resources_directory_index_value(self) -> None:
+        path = _make_wad([("LUMP0", b"\x00"), ("PLAYPAL", b"y" * 8), ("LUMP2", b"\x00")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                by_name = {ref.name: ref for ref in r.iter_resources()}
+                assert by_name["PLAYPAL"].directory_index == 1
+                assert by_name["LUMP0"].directory_index == 0
+                assert by_name["LUMP2"].directory_index == 2
+        finally:
+            os.unlink(path)
+
+    def test_wad_iter_resources_origin_property(self) -> None:
+        path = _make_wad([("PLAYPAL", b"z" * 10)])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                ref = next(r.iter_resources())
+                assert ref.origin == f"directory[{ref.directory_index}]"
+        finally:
+            os.unlink(path)
+
+    def test_pk3_iter_resources_has_origin_path(self) -> None:
+        path = _make_pk3({"sounds/DSPISTOL.lmp": b"\x00" * 4})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = list(r.iter_resources())
+                assert refs, "Expected at least one ref"
+                ref = refs[0]
+                assert ref.origin_path == "sounds/DSPISTOL.lmp"
+                assert ref.directory_index is None
+        finally:
+            os.unlink(path)
+
+    def test_pk3_iter_resources_origin_property(self) -> None:
+        path = _make_pk3({"sprites/POSSA1.png": b"\x89PNG"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                ref = next(r.iter_resources())
+                assert ref.origin == "sprites/POSSA1.png"
+        finally:
+            os.unlink(path)

@@ -194,3 +194,90 @@ class TestTexturesDefRawProps:
         out = serialize_textures(defs)
         defs2 = parse_textures(out)
         assert "nulltexture" in defs2[0].raw_props
+
+
+class TestTexturesPatchInlineBlock:
+    """Inline patch property blocks: Patch "P1", 0, 0 { FlipX }"""
+
+    def test_inline_flipx(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { FlipX }\n}\n'
+        defs = parse_textures(text)
+        assert len(defs) == 1
+        assert len(defs[0].patches) == 1
+        assert defs[0].patches[0].flip_x is True
+
+    def test_inline_flipy(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { FlipY }\n}\n'
+        defs = parse_textures(text)
+        assert defs[0].patches[0].flip_y is True
+
+    def test_inline_multiple_flags(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { FlipX FlipY }\n}\n'
+        defs = parse_textures(text)
+        p = defs[0].patches[0]
+        assert p.flip_x is True
+        assert p.flip_y is True
+
+    def test_inline_rotate(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { Rotate 90 }\n}\n'
+        defs = parse_textures(text)
+        assert defs[0].patches[0].rotate == 90
+
+    def test_inline_alpha(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { Alpha 0.5 }\n}\n'
+        defs = parse_textures(text)
+        assert defs[0].patches[0].alpha == 0.5
+
+    def test_inline_mixed_flags_and_rotate(self) -> None:
+        text = 'Texture "T", 64, 64\n{\n    Patch "P1", 0, 0 { FlipX Rotate 180 }\n}\n'
+        defs = parse_textures(text)
+        p = defs[0].patches[0]
+        assert p.flip_x is True
+        assert p.rotate == 180
+
+    def test_inline_does_not_consume_next_patch(self) -> None:
+        """An inline block must not swallow the next Patch line."""
+        text = (
+            'Texture "T", 64, 64\n{\n'
+            '    Patch "P1", 0, 0 { FlipX }\n'
+            '    Patch "P2", 32, 0\n'
+            "}\n"
+        )
+        defs = parse_textures(text)
+        assert len(defs[0].patches) == 2
+        assert defs[0].patches[0].name == "P1"
+        assert defs[0].patches[0].flip_x is True
+        assert defs[0].patches[1].name == "P2"
+        assert defs[0].patches[1].flip_x is False
+
+    def test_inline_does_not_consume_next_texture(self) -> None:
+        """An inline block on the last patch must not corrupt the next texture."""
+        text = (
+            'Texture "T1", 64, 64\n{\n'
+            '    Patch "P1", 0, 0 { FlipX }\n'
+            "}\n"
+            'Texture "T2", 128, 128\n{\n'
+            '    Patch "P2", 0, 0\n'
+            "}\n"
+        )
+        defs = parse_textures(text)
+        assert len(defs) == 2
+        assert defs[0].name == "T1"
+        assert defs[1].name == "T2"
+        assert len(defs[1].patches) == 1
+
+    def test_multiline_block_still_works(self) -> None:
+        """Existing multi-line block form must not regress."""
+        text = (
+            'Texture "T", 64, 64\n{\n'
+            '    Patch "P1", 0, 0\n'
+            "    {\n"
+            "        FlipX\n"
+            "        Alpha 0.75\n"
+            "    }\n"
+            "}\n"
+        )
+        defs = parse_textures(text)
+        p = defs[0].patches[0]
+        assert p.flip_x is True
+        assert p.alpha == 0.75

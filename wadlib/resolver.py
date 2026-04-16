@@ -294,7 +294,7 @@ class ResourceResolver:
         for load_order_index, src in enumerate(self._sources):
             if isinstance(src, WadFile):
                 for wad in src.all_wads:  # PWADs first (higher priority)
-                    for entry in reversed(wad.directory):
+                    for dir_index, entry in reversed(list(enumerate(wad.directory))):
                         upper = entry.name.upper()
                         if upper in seen:
                             continue
@@ -309,6 +309,7 @@ class ResourceResolver:
                             kind="wad-name",
                             namespace="",
                             load_order_index=load_order_index,
+                            directory_index=dir_index,
                         )
             else:
                 for pk3_entry in src.infolist():
@@ -327,6 +328,7 @@ class ResourceResolver:
                         kind="pk3-lump-name",
                         namespace=pk3_entry.category,
                         load_order_index=load_order_index,
+                        origin_path=pk3_entry.path,
                     )
 
     def collisions(self) -> dict[str, list[ResourceRef]]:

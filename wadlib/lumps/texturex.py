@@ -28,6 +28,7 @@ Reference: https://zdoom.org/wiki/TEXTURES
 
 from __future__ import annotations
 
+import contextlib
 import re
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -86,6 +87,76 @@ class TexturesDef:
     world_panning: bool = False
     no_decals: bool = False
     raw_props: dict[str, str] = field(default_factory=dict)
+
+
+def _apply_patch_prop(patch: TexturesPatch, pline: str) -> None:
+    """Apply a single patch property statement to *patch* (multi-line body form)."""
+    pl = pline.lower()
+    known = False
+    if "flipx" in pl:
+        patch.flip_x = True
+        known = True
+    if "flipy" in pl:
+        patch.flip_y = True
+        known = True
+    rm = re.match(r"rotate\s+(-?\d+)", pline, re.IGNORECASE)
+    if rm:
+        patch.rotate = int(rm.group(1))
+        known = True
+    am = re.match(r"alpha\s+([\d.]+)", pline, re.IGNORECASE)
+    if am:
+        patch.alpha = float(am.group(1))
+        known = True
+    sm = re.match(r"style\s+(\w+)", pline, re.IGNORECASE)
+    if sm:
+        patch.style = sm.group(1)
+        known = True
+    tm = re.match(r"translation\s+(.*)", pline, re.IGNORECASE)
+    if tm:
+        patch.translation = tm.group(1).strip()
+        known = True
+    bm = re.match(r"blend\s+(.*)", pline, re.IGNORECASE)
+    if bm:
+        patch.blend = bm.group(1).strip()
+        known = True
+    if not known:
+        km = re.match(r"(\w+)", pline)
+        if km:
+            patch.raw_props[km.group(1).lower()] = pline
+
+
+def _apply_patch_props_inline(patch: TexturesPatch, content: str) -> None:
+    """Parse space-separated inline patch properties (e.g. ``FlipX Rotate 90``)."""
+    tokens = content.split()
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i].lower()
+        if tok == "flipx":
+            patch.flip_x = True
+            i += 1
+        elif tok == "flipy":
+            patch.flip_y = True
+            i += 1
+        elif tok == "rotate" and i + 1 < len(tokens):
+            with contextlib.suppress(ValueError):
+                patch.rotate = int(tokens[i + 1])
+            i += 2
+        elif tok == "alpha" and i + 1 < len(tokens):
+            with contextlib.suppress(ValueError):
+                patch.alpha = float(tokens[i + 1])
+            i += 2
+        elif tok == "style" and i + 1 < len(tokens):
+            patch.style = tokens[i + 1]
+            i += 2
+        elif tok == "translation" and i + 1 < len(tokens):
+            patch.translation = tokens[i + 1]
+            i += 2
+        elif tok == "blend" and i + 1 < len(tokens):
+            patch.blend = tokens[i + 1]
+            i += 2
+        else:
+            patch.raw_props[tokens[i].lower()] = tokens[i]
+            i += 1
 
 
 def parse_textures(text: str) -> list[TexturesDef]:
@@ -182,49 +253,34 @@ def parse_textures(text: str) -> list[TexturesDef]:
             pm = _PATCH_RE.match(bline)
             if pm:
                 patch = TexturesPatch(name=pm.group(1), x=int(pm.group(2)), y=int(pm.group(3)))
-                # Check for patch block { ... }
                 rest = bline[pm.end() :].strip()
-                if "{" in rest or (i < len(lines) and _BRACE_OPEN.match(lines[i].strip())):
-                    if "{" not in rest:
-                        i += 1  # skip the opening brace line
-                    # Parse patch properties
+                if rest.startswith("{"):
+                    # Block opens on the same line as the Patch statement.
+                    after_brace = rest[1:]
+                    close_pos = after_brace.find("}")
+                    if close_pos != -1:
+                        # Complete inline block: "Patch ..., x, y { FlipX Rotate 90 }"
+                        _apply_patch_props_inline(patch, after_brace[:close_pos].strip())
+                    else:
+                        # Open inline: "Patch ..., x, y { FlipX"  (closes on a later line)
+                        if after_brace.strip():
+                            _apply_patch_props_inline(patch, after_brace.strip())
+                        while i < len(lines):
+                            pline = lines[i].strip()
+                            i += 1
+                            if _BRACE_CLOSE.match(pline):
+                                break
+                            if pline and not pline.startswith("//"):
+                                _apply_patch_prop(patch, pline)
+                elif i < len(lines) and _BRACE_OPEN.match(lines[i].strip()):
+                    i += 1  # skip the opening brace line
                     while i < len(lines):
                         pline = lines[i].strip()
                         i += 1
                         if _BRACE_CLOSE.match(pline):
                             break
-                        pl = pline.lower()
-                        known = False
-                        if "flipx" in pl:
-                            patch.flip_x = True
-                            known = True
-                        if "flipy" in pl:
-                            patch.flip_y = True
-                            known = True
-                        rm = re.match(r"rotate\s+(-?\d+)", pline, re.IGNORECASE)
-                        if rm:
-                            patch.rotate = int(rm.group(1))
-                            known = True
-                        am = re.match(r"alpha\s+([\d.]+)", pline, re.IGNORECASE)
-                        if am:
-                            patch.alpha = float(am.group(1))
-                            known = True
-                        sm = re.match(r"style\s+(\w+)", pline, re.IGNORECASE)
-                        if sm:
-                            patch.style = sm.group(1)
-                            known = True
-                        tm = re.match(r"translation\s+(.*)", pline, re.IGNORECASE)
-                        if tm:
-                            patch.translation = tm.group(1).strip()
-                            known = True
-                        bm = re.match(r"blend\s+(.*)", pline, re.IGNORECASE)
-                        if bm:
-                            patch.blend = bm.group(1).strip()
-                            known = True
-                        if not known:
-                            km = re.match(r"(\w+)", pline)
-                            if km:
-                                patch.raw_props[km.group(1).lower()] = pline
+                        if pline and not pline.startswith("//"):
+                            _apply_patch_prop(patch, pline)
                 tex.patches.append(patch)
             else:
                 km = re.match(r"(\w+)", bline)

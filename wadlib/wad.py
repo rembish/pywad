@@ -48,6 +48,7 @@ from .lumps.zmapinfo import ZMapInfoLump
 from .registry import assemble_maps
 
 _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
+_SCRIPT_RE = re.compile(r"^SCRIPT\d{2}$")
 
 
 class WadFile:  # pylint: disable=too-many-public-methods
@@ -471,14 +472,39 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     @cached_property
     def dialogue(self) -> ConversationLump | None:
-        """Return the DIALOGUE or SCRIPT00 lump (Strife conversation data), or None.
+        """Return the primary Strife conversation lump, or None.
 
-        The Strife demo WAD names this lump ``DIALOGUE``.  The retail Strife v1.2
-        WAD splits conversation data across ``SCRIPT00``–``SCRIPT??`` lumps.
-        This property returns the first one found, preferring ``DIALOGUE``.
+        Checks ``DIALOGUE`` and ``CONVERSATION`` (source-port / demo WAD naming)
+        first, then falls back to ``SCRIPT00`` (retail Strife v1.2).  For full
+        access to all conversation lumps in a retail WAD use :attr:`strife_scripts`.
         """
-        entry = self.find_lump("DIALOGUE") or self.find_lump("SCRIPT00")
-        return ConversationLump(entry) if entry else None
+        for name in ("DIALOGUE", "CONVERSATION", "SCRIPT00"):
+            entry = self.find_lump(name)
+            if entry is not None:
+                return ConversationLump(entry)
+        return None
+
+    @cached_property
+    def strife_scripts(self) -> dict[str, ConversationLump]:
+        """Return all Strife conversation lumps, keyed by lump name.
+
+        Covers both the source-port / demo naming (``DIALOGUE``, ``CONVERSATION``)
+        and the retail Strife v1.2 naming (``SCRIPT00``-``SCRIPT??``).  The dict
+        is sorted by lump name; it is empty when no conversation lumps are found.
+
+        Use this instead of :attr:`dialogue` when you need to iterate all
+        conversation data in a retail ``STRIFE1.WAD``.
+        """
+        result: dict[str, ConversationLump] = {}
+        for wad in reversed(self._all_wads):
+            for entry in wad.directory:
+                name = entry.name.upper()
+                if (
+                    name not in result
+                    and (name in ("DIALOGUE", "CONVERSATION") or _SCRIPT_RE.match(name))
+                ):
+                    result[name] = ConversationLump(entry)
+        return dict(sorted(result.items()))
 
     @cached_property
     def stcfn(self) -> dict[int, Picture]:

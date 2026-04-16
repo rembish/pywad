@@ -326,6 +326,33 @@ class TestStrifeIwad:
         reconstructed = conversation_to_bytes(dlg.pages)
         assert reconstructed == original
 
+    def test_strife_scripts_multiple_lumps(self, strife1_wad: WadFile) -> None:
+        # Retail Strife v1.2 has many SCRIPTxx lumps — must enumerate them all
+        scripts = strife1_wad.strife_scripts
+        assert len(scripts) > 1, f"Expected multiple SCRIPT?? lumps, got {list(scripts)}"
+
+    def test_strife_scripts_keys_are_script_names(self, strife1_wad: WadFile) -> None:
+        scripts = strife1_wad.strife_scripts
+        for key in scripts:
+            assert key.startswith("SCRIPT"), f"Unexpected key: {key}"
+
+    def test_strife_scripts_are_conversation_lumps(self, strife1_wad: WadFile) -> None:
+        scripts = strife1_wad.strife_scripts
+        for key, lump in scripts.items():
+            assert isinstance(lump, ConversationLump), f"{key} is not a ConversationLump"
+
+    def test_strife_scripts_all_have_pages(self, strife1_wad: WadFile) -> None:
+        scripts = strife1_wad.strife_scripts
+        for key, lump in scripts.items():
+            assert len(lump.pages) > 0, f"{key} has no pages"
+
+    def test_strife_scripts_script00_matches_dialogue(self, strife1_wad: WadFile) -> None:
+        scripts = strife1_wad.strife_scripts
+        assert "SCRIPT00" in scripts
+        assert strife1_wad.dialogue is not None
+        # Both must point at the same raw bytes
+        assert scripts["SCRIPT00"].raw() == strife1_wad.dialogue.raw()
+
     def test_playpal(self, strife1_wad: WadFile) -> None:
         assert strife1_wad.playpal is not None
 
