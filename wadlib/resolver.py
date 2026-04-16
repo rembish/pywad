@@ -17,12 +17,22 @@ Usage::
     with WadFile("DOOM2.WAD") as base, WadFile("MOD.WAD") as mod:
         resolver = ResourceResolver.doom_load_order(base, mod)
         data = resolver.read("PLAYPAL")       # mod wins if it has PLAYPAL
+
+    # Iterate all unique resources (highest-priority wins per name):
+    for ref in resolver.iter_resources():
+        print(ref.name, ref.kind, ref.namespace, ref.size)
+
+    # Inspect shadowed / colliding resources:
+    hidden = resolver.shadowed("PLAYPAL")    # refs behind the winner
+    clashes = resolver.collisions()          # dict[name, list[ResourceRef]]
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Literal
 
 from .pk3 import Pk3Archive
 from .source import LumpSource, MemoryLumpSource
@@ -31,20 +41,46 @@ from .wad import WadFile
 
 @dataclass(frozen=True)
 class ResourceRef:
-    """A resource hit returned by :meth:`ResourceResolver.find_all`.
+    """A resource hit returned by :meth:`ResourceResolver.find_all` and friends.
 
     Attributes:
-        name:    Canonical lump name (uppercase, at most 8 characters).
-        archive: The ``WadFile`` or ``Pk3Archive`` that contains this resource.
-        source:  A ``LumpSource`` whose :meth:`~LumpSource.read_bytes` returns
-                 the raw bytes for the resource.
+        name:             Canonical lump name (uppercase, at most 8 characters).
+        archive:          The ``WadFile`` or ``Pk3Archive`` that contains this
+                          resource.
+        source:           A ``LumpSource`` whose :meth:`~LumpSource.read_bytes`
+                          returns the raw bytes for the resource.
+        size:             Byte size of this resource (same as ``source.size``).
+        kind:             How the resource was located:
+
+                          ``"wad-name"``
+                              Found by matching an 8-character WAD directory
+                              entry name.
+
+                          ``"pk3-lump-name"``
+                              Found by matching a PK3 filename (without
+                              extension, uppercased, truncated to 8 chars)
+                              against the requested name.  This lookup is
+                              *lossy* when multiple files in the archive map
+                              to the same truncated name.
+
+        namespace:        For PK3 resources this is the top-level directory
+                          category (``"flats"``, ``"sprites"``, ``"sounds"``,
+                          etc.).  For WAD resources this is always ``""``
+                          (WAD directory entries carry no namespace metadata).
+        load_order_index: Zero-based position of :attr:`archive` in the
+                          resolver's source list.  Lower index = higher
+                          priority.
     """
 
     name: str
     archive: WadFile | Pk3Archive
     source: LumpSource
+    size: int
+    kind: Literal["wad-name", "pk3-lump-name"]
+    namespace: str
+    load_order_index: int
 
-    def read_bytes(self) -> bytes | None:
+    def read_bytes(self) -> bytes:
         """Return the raw bytes for this resource."""
         return self.source.read_bytes()
 
@@ -89,33 +125,53 @@ class ResourceResolver:
         return cls(*reversed((base, *patches)))
 
     # ------------------------------------------------------------------
-    # Core API
+    # Internal helpers
     # ------------------------------------------------------------------
 
-    def _iter_source(self, name_upper: str) -> Iterator[tuple[WadFile | Pk3Archive, LumpSource]]:
-        """Yield ``(archive, LumpSource)`` pairs for every hit across all sources.
+    def _iter_source(self, name_upper: str) -> Iterator[ResourceRef]:
+        """Yield a :class:`ResourceRef` for every hit across all sources.
 
-        For WAD sources every duplicate entry (same lump name appearing more than
-        once in the directory) is yielded individually, highest priority first,
-        via :meth:`WadFile.find_lumps`.  For pk3 sources every colliding entry
-        (multiple files that map to the same 8-char lump name) is yielded via
-        :meth:`Pk3Archive.find_resources`.
+        For WAD sources every duplicate entry (same lump name appearing more
+        than once in the directory) is yielded individually, highest priority
+        first, via :meth:`WadFile.find_lumps`.  For pk3 sources every
+        colliding entry (multiple files that map to the same 8-char lump name)
+        is yielded via :meth:`Pk3Archive.find_resources`.
         """
-        for src in self._sources:
+        for load_order_index, src in enumerate(self._sources):
             if isinstance(src, WadFile):
                 for entry in src.find_lumps(name_upper):
-                    yield src, entry
+                    yield ResourceRef(
+                        name=name_upper,
+                        archive=src,
+                        source=entry,
+                        size=entry.size,
+                        kind="wad-name",
+                        namespace="",
+                        load_order_index=load_order_index,
+                    )
             else:
                 for pk3_entry in src.find_resources(name_upper):
                     lump_src: LumpSource = MemoryLumpSource(
                         pk3_entry.lump_name, src.read(pk3_entry.path)
                     )
-                    yield src, lump_src
+                    yield ResourceRef(
+                        name=name_upper,
+                        archive=src,
+                        source=lump_src,
+                        size=pk3_entry.size,
+                        kind="pk3-lump-name",
+                        namespace=pk3_entry.category,
+                        load_order_index=load_order_index,
+                    )
+
+    # ------------------------------------------------------------------
+    # Core lookup API
+    # ------------------------------------------------------------------
 
     def find_source(self, name: str) -> LumpSource | None:
         """Return a ``LumpSource`` for the first matching resource, or ``None``."""
-        for _archive, lump_src in self._iter_source(name.upper()):
-            return lump_src
+        for ref in self._iter_source(name.upper()):
+            return ref.source
         return None
 
     def find_all(self, name: str) -> list[ResourceRef]:
@@ -126,18 +182,129 @@ class ResourceResolver:
 
             refs = resolver.find_all("PLAYPAL")
             for ref in refs:
-                print(ref.archive, ref.read_bytes()[:4])
+                print(ref.archive, ref.kind, ref.read_bytes()[:4])
         """
-        name_upper = name.upper()
-        return [
-            ResourceRef(name=name_upper, archive=archive, source=lump_src)
-            for archive, lump_src in self._iter_source(name_upper)
-        ]
+        return list(self._iter_source(name.upper()))
 
     def read(self, name: str) -> bytes | None:
         """Return raw bytes for the first matching resource, or ``None``."""
         source = self.find_source(name)
         return source.read_bytes() if source is not None else None
+
+    def shadowed(self, name: str) -> list[ResourceRef]:
+        """Return resources with this name that are hidden by a higher-priority hit.
+
+        The first element of :meth:`find_all` wins; everything after it is
+        *shadowed*.  An empty list means no shadowing (zero or one match)::
+
+            hidden = resolver.shadowed("PLAYPAL")
+            if hidden:
+                print(f"PLAYPAL is overridden in {hidden[0].archive}")
+        """
+        return self.find_all(name)[1:]
+
+    # ------------------------------------------------------------------
+    # Iteration and collision inspection
+    # ------------------------------------------------------------------
+
+    def iter_resources(self, category: str | None = None) -> Iterator[ResourceRef]:
+        """Iterate all unique resources across every source, highest priority first.
+
+        For each resource name, only the highest-priority match is yielded;
+        shadowed duplicates are skipped.  Sources are visited in priority order,
+        so the first occurrence of a name wins.
+
+        Args:
+            category: Optional PK3 category filter (e.g. ``"flats"``,
+                      ``"sprites"``, ``"sounds"``).  When given, only resources
+                      whose :attr:`~ResourceRef.namespace` equals *category* are
+                      yielded.  Pass ``None`` (default) to iterate everything.
+
+                      .. note::
+
+                          WAD directory entries carry no namespace metadata —
+                          their :attr:`~ResourceRef.namespace` is always ``""``.
+                          Filtering by a non-empty *category* therefore returns
+                          only PK3 resources.
+
+        Yields:
+            :class:`ResourceRef` — one per unique resource name.
+        """
+        seen: set[str] = set()
+        for load_order_index, src in enumerate(self._sources):
+            if isinstance(src, WadFile):
+                for wad in src._all_wads:  # PWADs first (higher priority)
+                    for entry in reversed(wad.directory):
+                        upper = entry.name.upper()
+                        if upper in seen:
+                            continue
+                        if category is not None and category != "":
+                            continue  # WAD entries have no category
+                        seen.add(upper)
+                        yield ResourceRef(
+                            name=upper,
+                            archive=src,
+                            source=entry,
+                            size=entry.size,
+                            kind="wad-name",
+                            namespace="",
+                            load_order_index=load_order_index,
+                        )
+            else:
+                for pk3_entry in src.infolist():
+                    upper = pk3_entry.lump_name
+                    if upper in seen:
+                        continue
+                    if category is not None and category != pk3_entry.category:
+                        continue
+                    seen.add(upper)
+                    lump_src: LumpSource = MemoryLumpSource(upper, src.read(pk3_entry.path))
+                    yield ResourceRef(
+                        name=upper,
+                        archive=src,
+                        source=lump_src,
+                        size=pk3_entry.size,
+                        kind="pk3-lump-name",
+                        namespace=pk3_entry.category,
+                        load_order_index=load_order_index,
+                    )
+
+    def collisions(self) -> dict[str, list[ResourceRef]]:
+        """Return all resource names that have more than one match.
+
+        A *collision* occurs when:
+
+        - The same lump name appears more than once across different sources
+          (cross-source shadowing), or
+        - The same lump name appears more than once within a single WAD's
+          directory (intra-WAD duplicates), or
+        - Multiple PK3 files map to the same 8-char lump name after truncation.
+
+        Returns:
+            A ``dict`` mapping each colliding name to the full
+            :meth:`find_all` result for that name (highest-priority first).
+            Names with exactly one match are not included.
+
+        Example::
+
+            clashes = resolver.collisions()
+            for name, refs in clashes.items():
+                winner, *losers = refs
+                print(f"{name}: {winner.archive} wins; {len(losers)} shadowed")
+        """
+        # Count name occurrences cheaply (no byte reads).
+        name_counts: dict[str, int] = defaultdict(int)
+        for src in self._sources:
+            if isinstance(src, WadFile):
+                for wad in src._all_wads:
+                    for entry in wad.directory:
+                        name_counts[entry.name.upper()] += 1
+            else:
+                for pk3_entry in src.infolist():
+                    name_counts[pk3_entry.lump_name] += 1
+
+        # Only fetch refs (which reads bytes) for actually-colliding names.
+        return {name: self.find_all(name) for name, count in name_counts.items() if count > 1}
 
     # ------------------------------------------------------------------
     # Convenience

@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-16
+
+### Added
+
+- **`ResourceRef` extended metadata** — four new fields on every ref returned by
+  `find_all`, `shadowed`, `iter_resources`, and `collisions`:
+  - `size: int` — byte size of the resource (mirrors `source.size` for convenience).
+  - `kind: Literal["wad-name", "pk3-lump-name"]` — how the resource was located;
+    `"pk3-lump-name"` is explicitly marked as lossy when multiple PK3 files share
+    a truncated 8-char name.
+  - `namespace: str` — PK3 top-level category (`"flats"`, `"sprites"`, …) or `""`
+    for WAD entries (which carry no namespace metadata in their directory).
+  - `load_order_index: int` — zero-based position of the archive in the resolver's
+    source list; lower index = higher priority.
+- **`ResourceResolver.shadowed(name)`** — returns `find_all(name)[1:]`: every
+  resource with that name that is hidden behind the highest-priority match.
+- **`ResourceResolver.iter_resources(category=None)`** — iterates all unique
+  resources across every source, highest-priority winner per name.  An optional
+  `category` string filters by PK3 namespace; WAD entries (namespace `""`) are
+  excluded when a non-empty category is requested.
+- **`ResourceResolver.collisions()`** — returns a `dict[str, list[ResourceRef]]`
+  for every name that has more than one match (cross-source shadowing, intra-WAD
+  duplicates, or PK3 lump-name truncation collisions).  Name counting is done
+  without reading bytes; `find_all` is called only for actually-colliding names.
+
+### Changed
+
+- `ResourceRef.read_bytes()` return type corrected from `bytes | None` to `bytes`
+  (the underlying `LumpSource.read_bytes()` never returns `None`).
+- `ResourceResolver._iter_source` now yields `ResourceRef` objects directly
+  instead of `(archive, LumpSource)` tuples, carrying the full metadata set.
+
 ## [0.2.9] - 2026-04-15
 
 ### Added

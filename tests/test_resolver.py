@@ -350,25 +350,73 @@ class TestFindAll:
 # ---------------------------------------------------------------------------
 
 
+def _make_ref(archive: Pk3Archive, data: bytes = b"x", name: str = "DATA") -> ResourceRef:
+    """Build a ResourceRef with all required fields for unit testing."""
+    src = MemoryLumpSource(name, data)
+    return ResourceRef(
+        name=name,
+        archive=archive,
+        source=src,
+        size=len(data),
+        kind="pk3-lump-name",
+        namespace="lumps",
+        load_order_index=0,
+    )
+
+
 class TestResourceRef:
     def test_frozen(self) -> None:
-        src = MemoryLumpSource("DATA", b"x")
         path = _make_pk3({"lumps/DATA.lmp": b"x"})
         try:
             with Pk3Archive(path) as pk3:
-                ref = ResourceRef(name="DATA", archive=pk3, source=src)
+                ref = _make_ref(pk3)
                 with pytest.raises((AttributeError, TypeError)):
                     ref.name = "OTHER"  # type: ignore[misc]
         finally:
             os.unlink(path)
 
     def test_read_bytes_delegates_to_source(self) -> None:
-        src = MemoryLumpSource("DATA", b"payload")
         path = _make_pk3({"lumps/DATA.lmp": b"x"})
         try:
             with Pk3Archive(path) as pk3:
-                ref = ResourceRef(name="DATA", archive=pk3, source=src)
+                ref = _make_ref(pk3, data=b"payload")
                 assert ref.read_bytes() == b"payload"
+        finally:
+            os.unlink(path)
+
+    def test_size_field(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = _make_ref(pk3, data=b"hello")
+                assert ref.size == 5
+        finally:
+            os.unlink(path)
+
+    def test_kind_field(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = _make_ref(pk3)
+                assert ref.kind == "pk3-lump-name"
+        finally:
+            os.unlink(path)
+
+    def test_namespace_field(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = _make_ref(pk3)
+                assert ref.namespace == "lumps"
+        finally:
+            os.unlink(path)
+
+    def test_load_order_index_field(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                ref = _make_ref(pk3)
+                assert ref.load_order_index == 0
         finally:
             os.unlink(path)
 
@@ -533,3 +581,327 @@ class TestResourceResolverWithRealWad:
                 assert r.read("MYMOD") == payload
         finally:
             os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# ResourceRef metadata fields on real find_all results
+# ---------------------------------------------------------------------------
+
+
+class TestResourceRefMetadata:
+    """Verify size, kind, namespace, load_order_index on resolver-produced refs."""
+
+    def test_wad_ref_kind_is_wad_name(self) -> None:
+        path = _make_wad([("DATA", b"x")])
+        try:
+            with WadFile(path) as wad:
+                refs = ResourceResolver(wad).find_all("DATA")
+                assert refs[0].kind == "wad-name"
+        finally:
+            os.unlink(path)
+
+    def test_wad_ref_namespace_is_empty(self) -> None:
+        path = _make_wad([("DATA", b"x")])
+        try:
+            with WadFile(path) as wad:
+                refs = ResourceResolver(wad).find_all("DATA")
+                assert refs[0].namespace == ""
+        finally:
+            os.unlink(path)
+
+    def test_wad_ref_size_matches_data(self) -> None:
+        path = _make_wad([("DATA", b"hello")])
+        try:
+            with WadFile(path) as wad:
+                refs = ResourceResolver(wad).find_all("DATA")
+                assert refs[0].size == 5
+        finally:
+            os.unlink(path)
+
+    def test_wad_ref_load_order_index(self) -> None:
+        path_a = _make_wad([("A", b"x")])
+        path_b = _make_wad([("B", b"y")])
+        try:
+            with WadFile(path_a) as wa, WadFile(path_b) as wb:
+                r = ResourceResolver(wa, wb)
+                assert r.find_all("A")[0].load_order_index == 0
+                assert r.find_all("B")[0].load_order_index == 1
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_pk3_ref_kind_is_pk3_lump_name(self) -> None:
+        path = _make_pk3({"lumps/DATA.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                refs = ResourceResolver(pk3).find_all("DATA")
+                assert refs[0].kind == "pk3-lump-name"
+        finally:
+            os.unlink(path)
+
+    def test_pk3_ref_namespace_is_category(self) -> None:
+        path = _make_pk3({"flats/FLOOR0.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                refs = ResourceResolver(pk3).find_all("FLOOR0")
+                assert refs[0].namespace == "flats"
+        finally:
+            os.unlink(path)
+
+    def test_pk3_ref_size_matches_data(self) -> None:
+        path = _make_pk3({"lumps/CHUNK.lmp": b"\xff" * 12})
+        try:
+            with Pk3Archive(path) as pk3:
+                refs = ResourceResolver(pk3).find_all("CHUNK")
+                assert refs[0].size == 12
+        finally:
+            os.unlink(path)
+
+    def test_pk3_ref_load_order_index_second_source(self) -> None:
+        path_a = _make_pk3({"lumps/A.lmp": b"x"})
+        path_b = _make_pk3({"lumps/B.lmp": b"y"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                r = ResourceResolver(a, b)
+                assert r.find_all("A")[0].load_order_index == 0
+                assert r.find_all("B")[0].load_order_index == 1
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+
+# ---------------------------------------------------------------------------
+# shadowed()
+# ---------------------------------------------------------------------------
+
+
+class TestShadowed:
+    """shadowed(name) returns refs hidden behind the highest-priority match."""
+
+    def test_no_collision_returns_empty_list(self) -> None:
+        path = _make_pk3({"lumps/ONLY.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                assert r.shadowed("ONLY") == []
+        finally:
+            os.unlink(path)
+
+    def test_missing_returns_empty_list(self) -> None:
+        r = ResourceResolver()
+        assert r.shadowed("NOPE") == []
+
+    def test_cross_source_shadowed(self) -> None:
+        path_a = _make_pk3({"lumps/DATA.lmp": b"winner"})
+        path_b = _make_pk3({"lumps/DATA.lmp": b"loser"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                r = ResourceResolver(a, b)
+                hidden = r.shadowed("DATA")
+                assert len(hidden) == 1
+                assert hidden[0].read_bytes() == b"loser"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_wad_intra_duplicate_shadowed(self) -> None:
+        path = _make_wad([("X", b"first"), ("X", b"second")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                hidden = r.shadowed("X")
+                assert len(hidden) == 1
+                assert hidden[0].read_bytes() == b"first"
+        finally:
+            os.unlink(path)
+
+    def test_shadowed_is_find_all_minus_first(self) -> None:
+        path_a = _make_pk3({"lumps/D.lmp": b"a"})
+        path_b = _make_pk3({"lumps/D.lmp": b"b"})
+        path_c = _make_pk3({"lumps/D.lmp": b"c"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b, Pk3Archive(path_c) as c:
+                r = ResourceResolver(a, b, c)
+                all_refs = r.find_all("D")
+                hidden = r.shadowed("D")
+                # shadowed must agree with find_all[1:] in length and content
+                assert len(hidden) == len(all_refs) - 1
+                for shadow, expected in zip(hidden, all_refs[1:], strict=True):
+                    assert shadow.read_bytes() == expected.read_bytes()
+                    assert shadow.load_order_index == expected.load_order_index
+        finally:
+            for p in (path_a, path_b, path_c):
+                os.unlink(p)
+
+
+# ---------------------------------------------------------------------------
+# iter_resources()
+# ---------------------------------------------------------------------------
+
+
+class TestIterResources:
+    """iter_resources yields one ResourceRef per unique name, highest-priority wins."""
+
+    def test_empty_resolver_yields_nothing(self) -> None:
+        assert list(ResourceResolver().iter_resources()) == []
+
+    def test_single_pk3_resource_yielded(self) -> None:
+        path = _make_pk3({"lumps/SOLO.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                refs = list(ResourceResolver(pk3).iter_resources())
+            assert any(r.name == "SOLO" for r in refs)
+        finally:
+            os.unlink(path)
+
+    def test_cross_source_dedup_yields_winner_only(self) -> None:
+        path_a = _make_pk3({"lumps/DATA.lmp": b"winner"})
+        path_b = _make_pk3({"lumps/DATA.lmp": b"loser"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                r = ResourceResolver(a, b)
+                data_refs = [ref for ref in r.iter_resources() if ref.name == "DATA"]
+                assert len(data_refs) == 1
+                assert data_refs[0].read_bytes() == b"winner"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_wad_intra_duplicate_yields_winner_only(self) -> None:
+        path = _make_wad([("X", b"first"), ("X", b"second")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                x_refs = [ref for ref in r.iter_resources() if ref.name == "X"]
+                assert len(x_refs) == 1
+                assert x_refs[0].read_bytes() == b"second"
+        finally:
+            os.unlink(path)
+
+    def test_category_filter_includes_matching_namespace(self) -> None:
+        path = _make_pk3({"flats/FLOOR0.lmp": b"f", "lumps/OTHER.lmp": b"o"})
+        try:
+            with Pk3Archive(path) as pk3:
+                refs = list(ResourceResolver(pk3).iter_resources(category="flats"))
+                names = {r.name for r in refs}
+                assert "FLOOR0" in names
+                assert "OTHER" not in names
+        finally:
+            os.unlink(path)
+
+    def test_category_filter_excludes_wad_entries(self) -> None:
+        """WAD entries have namespace="" so non-empty category filter skips them."""
+        path = _make_wad([("DATA", b"x")])
+        try:
+            with WadFile(path) as wad:
+                refs = list(ResourceResolver(wad).iter_resources(category="flats"))
+                assert refs == []
+        finally:
+            os.unlink(path)
+
+    def test_none_category_includes_all(self) -> None:
+        path_wad = _make_wad([("WDATA", b"w")])
+        path_pk3 = _make_pk3({"lumps/PDATA.lmp": b"p"})
+        try:
+            with WadFile(path_wad) as wad, Pk3Archive(path_pk3) as pk3:
+                refs = list(ResourceResolver(wad, pk3).iter_resources(category=None))
+                names = {r.name for r in refs}
+                assert "WDATA" in names
+                assert "PDATA" in names
+        finally:
+            os.unlink(path_wad)
+            os.unlink(path_pk3)
+
+    def test_each_name_appears_exactly_once(self) -> None:
+        path_a = _make_pk3({"lumps/A.lmp": b"x", "lumps/B.lmp": b"y"})
+        path_b = _make_pk3({"lumps/A.lmp": b"z", "lumps/C.lmp": b"w"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                refs = list(ResourceResolver(a, b).iter_resources())
+                names = [r.name for r in refs]
+                assert len(names) == len(set(names))  # no duplicates
+                assert set(names) >= {"A", "B", "C"}
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+
+# ---------------------------------------------------------------------------
+# collisions()
+# ---------------------------------------------------------------------------
+
+
+class TestCollisions:
+    """collisions() returns all names with more than one match."""
+
+    def test_no_collision_returns_empty_dict(self) -> None:
+        path = _make_pk3({"lumps/UNIQUE.lmp": b"x"})
+        try:
+            with Pk3Archive(path) as pk3:
+                assert ResourceResolver(pk3).collisions() == {}
+        finally:
+            os.unlink(path)
+
+    def test_empty_resolver_returns_empty_dict(self) -> None:
+        assert ResourceResolver().collisions() == {}
+
+    def test_cross_source_collision_detected(self) -> None:
+        path_a = _make_pk3({"lumps/DATA.lmp": b"a"})
+        path_b = _make_pk3({"lumps/DATA.lmp": b"b"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                clashes = ResourceResolver(a, b).collisions()
+                assert "DATA" in clashes
+                assert len(clashes["DATA"]) == 2
+                assert clashes["DATA"][0].read_bytes() == b"a"
+                assert clashes["DATA"][1].read_bytes() == b"b"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_wad_intra_duplicate_detected(self) -> None:
+        path = _make_wad([("DUP", b"first"), ("DUP", b"second")])
+        try:
+            with WadFile(path) as wad:
+                clashes = ResourceResolver(wad).collisions()
+                assert "DUP" in clashes
+                assert len(clashes["DUP"]) == 2
+        finally:
+            os.unlink(path)
+
+    def test_pk3_lump_name_collision_detected(self) -> None:
+        # LONGNAME1 and LONGNAME2 both truncate to LONGNAME (8 chars)
+        path = _make_pk3({"lumps/LONGNAME1.lmp": b"v1", "lumps/LONGNAME2.lmp": b"v2"})
+        try:
+            with Pk3Archive(path) as pk3:
+                clashes = ResourceResolver(pk3).collisions()
+                assert "LONGNAME" in clashes
+                assert len(clashes["LONGNAME"]) == 2
+        finally:
+            os.unlink(path)
+
+    def test_non_colliding_names_not_in_result(self) -> None:
+        path_a = _make_pk3({"lumps/SHARED.lmp": b"a", "lumps/ONLYA.lmp": b"x"})
+        path_b = _make_pk3({"lumps/SHARED.lmp": b"b", "lumps/ONLYB.lmp": b"y"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                clashes = ResourceResolver(a, b).collisions()
+                assert "SHARED" in clashes
+                assert "ONLYA" not in clashes
+                assert "ONLYB" not in clashes
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)
+
+    def test_collisions_refs_are_highest_priority_first(self) -> None:
+        path_a = _make_pk3({"lumps/X.lmp": b"winner"})
+        path_b = _make_pk3({"lumps/X.lmp": b"loser"})
+        try:
+            with Pk3Archive(path_a) as a, Pk3Archive(path_b) as b:
+                clashes = ResourceResolver(a, b).collisions()
+                refs = clashes["X"]
+                assert refs[0].read_bytes() == b"winner"
+                assert refs[1].read_bytes() == b"loser"
+        finally:
+            os.unlink(path_a)
+            os.unlink(path_b)

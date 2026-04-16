@@ -147,6 +147,63 @@ Modelled after `zipfile.ZipFile` with modes `"r"`, `"w"`, and `"a"`.
 Write operations validate lump names and data formats by default.
 Pass `validate=False` to bypass for non-standard lumps.
 
+### `ResourceResolver` (unified cross-archive lookup)
+
+Mix WAD and PK3 sources in priority order; the first source that has a name
+wins.
+
+```python
+from wadlib.resolver import ResourceResolver
+
+with WadFile("DOOM2.WAD") as wad, Pk3Archive("mod.pk3") as pk3:
+    # WAD wins over pk3 when both have the same name
+    r = ResourceResolver(wad, pk3)
+    data = r.read("PLAYPAL")           # bytes | None
+    src  = r.find_source("D_E1M1")    # LumpSource | None
+    "PLAYPAL" in r                     # True
+
+    # All matches for a name, highest-priority first
+    refs = r.find_all("PLAYPAL")       # list[ResourceRef]
+    ref  = refs[0]
+    ref.name              # "PLAYPAL"
+    ref.kind              # "wad-name" | "pk3-lump-name"
+    ref.namespace         # "" (WAD) or "flats" / "sprites" / … (PK3)
+    ref.size              # int — byte size
+    ref.load_order_index  # 0-based position in source list
+    ref.read_bytes()      # bytes
+
+    # Shadowing and collisions
+    hidden   = r.shadowed("PLAYPAL")   # refs behind the winner
+    clashes  = r.collisions()          # dict[name, list[ResourceRef]]
+
+    # Iterate all unique resources (winner per name)
+    for ref in r.iter_resources():
+        print(ref.name, ref.size)
+
+    # Filter by PK3 namespace
+    for ref in r.iter_resources(category="flats"):
+        print(ref.name)                # only PK3 flat entries
+
+# Doom load order: last patch wins (mirrors -iwad/-file semantics)
+r = ResourceResolver.doom_load_order(base_wad, patch1, patch2)
+```
+
+| Method / field | Description |
+|---|---|
+| `ResourceResolver(*sources)` | Priority order; first source wins |
+| `ResourceResolver.doom_load_order(base, *patches)` | Last patch wins |
+| `read(name)` | Raw bytes of first match, or `None` |
+| `find_source(name)` | `LumpSource` for first match, or `None` |
+| `find_all(name)` | All `ResourceRef` objects, highest-priority first |
+| `shadowed(name)` | Refs hidden behind the first match |
+| `collisions()` | All names with more than one match |
+| `iter_resources(category=None)` | One ref per unique name; optional PK3 category filter |
+| `name in resolver` | Membership test |
+| `ResourceRef.kind` | `"wad-name"` or `"pk3-lump-name"` |
+| `ResourceRef.namespace` | PK3 category string, or `""` for WAD entries |
+| `ResourceRef.size` | Byte size |
+| `ResourceRef.load_order_index` | Source position (0 = highest priority) |
+
 ### `WadWriter` (low-level writer)
 
 | Method | Description |
