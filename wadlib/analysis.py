@@ -230,7 +230,7 @@ def _check_map_refs(
                         ),
                     )
                 )
-            if sidedef_count > 0 and line.right_sidedef >= sidedef_count:
+            if 0 < sidedef_count <= line.right_sidedef:
                 items.append(
                     DiagnosticItem(
                         code="BAD_SIDEDEF_REF",
@@ -241,7 +241,7 @@ def _check_map_refs(
                         ),
                     )
                 )
-            if sidedef_count > 0 and line.left_sidedef != -1 and line.left_sidedef >= sidedef_count:
+            if line.left_sidedef != -1 and 0 < sidedef_count <= line.left_sidedef:
                 items.append(
                     DiagnosticItem(
                         code="BAD_SIDEDEF_REF",

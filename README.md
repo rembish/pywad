@@ -116,9 +116,9 @@ with WadFile("DOOM2.WAD") as wad:
 | `wad.sndinfo` | `SndInfo` — ZDoom/Heretic sound name mappings |
 | `wad.sndseq` | `SndSeqLump` — Hexen sound sequence scripts |
 | `wad.mapinfo` | `MapInfoLump` — Hexen MAPINFO (numeric map IDs, titles) |
-| `wad.zmapinfo` | `ZMapInfoLump` — ZDoom ZMAPINFO (string map names, music, sky) |
+| `wad.zmapinfo` | `ZMapInfoLump` — ZDoom ZMAPINFO (maps, episodes, clusters, defaultmap) |
 | `wad.animdefs` | `AnimDefsLump` — Hexen/ZDoom flat/texture animation sequences |
-| `wad.decorate` | `DecorateLump` — ZDoom actor definitions (name, doomednum, flags, properties) |
+| `wad.decorate` | `DecorateLump` — ZDoom actor definitions (name, doomednum, flags, properties, includes, replacements) |
 | `wad.dehacked` | `DehackedLump` — embedded DeHackEd patch (PAR times, custom thing types) |
 
 All properties are cached and PWAD-aware.
@@ -349,6 +349,68 @@ with WadFile.open("DOOM2.WAD", "SIGIL_II.WAD") as wad:
     r.save("e6m1.png")
 ```
 
+### ZMAPINFO — ZDoom map metadata
+
+```python
+zi = wad.zmapinfo   # ZMapInfoLump
+
+# Map entries
+for entry in zi.maps:
+    print(entry.map_name, entry.title, entry.sky1, entry.music)
+    print(entry.props)          # unknown keys captured here
+
+entry = zi.get_map("MAP01")     # ZMapInfoEntry | None
+
+# Episodes
+for ep in zi.episodes:
+    print(ep.map, ep.name or ep.name_lookup, ep.pic_name, ep.key)
+
+# Clusters
+for cl in zi.clusters:
+    print(cl.cluster_num, cl.exittext, cl.music)
+
+# defaultmap baseline (or None)
+dm = zi.defaultmap              # ZMapInfoEntry | None
+```
+
+### UDMF — Universal Doom Map Format
+
+```python
+from wadlib.lumps.udmf import parse_udmf, UdmfParseError
+
+# Permissive (default) — missing namespace is silently ignored
+udmf_map = parse_udmf(textmap_bytes.decode())
+
+# Strict — raises UdmfParseError if namespace declaration is absent
+try:
+    udmf_map = parse_udmf(text, strict=True)
+except UdmfParseError as e:
+    print(e)    # "no namespace declaration found in TEXTMAP"
+```
+
+### DECORATE — actor definitions
+
+```python
+d = wad.decorate                # DecorateLump
+
+# All actors
+for actor in d.actors:
+    print(actor.name, actor.doomednum, actor.parent)
+
+# Inherited properties/flags resolved
+from wadlib import resolve_inheritance
+resolved = resolve_inheritance(d.actors)
+
+# #include paths (comment-stripped, in order)
+print(d.includes)               # ["actors/monsters.dec", ...]
+
+# Replacement map: replaced actor → replacing actor
+print(d.replacements)           # {"ZombieMan": "MyZombie", ...}
+
+# Editor numbers
+print(d.editor_numbers)         # {9001: <DecorateActor ...>}
+```
+
 ### Structured diagnostics
 
 `analyze()` runs a suite of read-side checks across any combination of WAD and
@@ -575,11 +637,11 @@ fusermount -u /mnt/doom2     # unmount (saves changes)
 | Hexen | Full | Hexen map/thing format, SNDSEQ, MAPINFO, ANIMDEFS, compiled ACS BEHAVIOR |
 | Strife | Full | Thing type catalog (all 262 types); DIALOGUE lump parsed into `ConversationPage` / `ConversationChoice` dataclasses |
 | Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
-| ZDoom / GZDoom WAD | Partial | ZMAPINFO, SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
-| UDMF maps | Full | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props` |
+| ZDoom / GZDoom WAD | Partial | ZMAPINFO (maps, episodes, clusters, defaultmap), SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
+| UDMF maps | Full | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props`; `strict=True` raises `UdmfParseError` on missing namespace |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; no full ZDoom resource overlay |
 | DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat/state machine |
-| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states; `resolve_inheritance()` fills inherited properties through parent chains |
+| DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states; `resolve_inheritance()` fills inherited properties through parent chains; `.includes` lists `#include` paths; `.replacements` maps replaced → replacing actor |
 | LANGUAGE | Full | `wad.language` → `LanguageLump`; multi-locale string lookup, `strings_for(locale)` |
 | ZScript | None | Not parsed |
 

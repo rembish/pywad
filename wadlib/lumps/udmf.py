@@ -162,8 +162,21 @@ class UdmfMap:
     sectors: list[UdmfSector] = field(default_factory=list)
 
 
-def parse_udmf(text: str) -> UdmfMap:
-    """Parse a UDMF TEXTMAP string into a UdmfMap."""
+class UdmfParseError(ValueError):
+    """Raised by :func:`parse_udmf` when ``strict=True`` and the text is malformed."""
+
+
+def parse_udmf(text: str, *, strict: bool = False) -> UdmfMap:
+    """Parse a UDMF TEXTMAP string into a UdmfMap.
+
+    Parameters
+    ----------
+    text:
+        Raw TEXTMAP lump content.
+    strict:
+        When *True*, raise :class:`UdmfParseError` if no ``namespace``
+        declaration is found in non-empty input.
+    """
     # Strip comments
     text = _COMMENT_RE.sub("", text)
 
@@ -173,6 +186,8 @@ def parse_udmf(text: str) -> UdmfMap:
     ns_match = re.search(r'namespace\s*=\s*"([^"]+)"\s*;', text)
     if ns_match:
         result.namespace = ns_match.group(1)
+    elif strict and text.strip():
+        raise UdmfParseError("no namespace declaration found in TEXTMAP")
 
     # Parse blocks
     pos = 0

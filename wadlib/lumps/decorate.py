@@ -46,7 +46,7 @@ _ACTOR_RE = re.compile(
 _PROPERTY_RE = re.compile(r"^\s+(\w+(?:\.\w+)?)(?:\s+(.*))?$", re.IGNORECASE)
 _FLAG_RE = re.compile(r"(?:^|\s)([+-])(\w+(?:\.\w+)?)", re.IGNORECASE)
 _STATE_LABEL_RE = re.compile(r"^\s+(\w+):\s*$")
-_INCLUDE_RE = re.compile(r'^\s*#include\s+"([^"]+)"', re.IGNORECASE)
+_INCLUDE_RE = re.compile(r'^\s*#include\s+"([^"]+)"', re.IGNORECASE | re.MULTILINE)
 
 
 @dataclass
@@ -256,3 +256,16 @@ class DecorateLump(BaseLump[Any]):
     def editor_numbers(self) -> dict[int, DecorateActor]:
         """Return actors keyed by DoomEdNum (only those with one assigned)."""
         return {a.doomednum: a for a in self.actors if a.doomednum is not None}
+
+    @cached_property
+    def includes(self) -> list[str]:
+        """Return all ``#include`` file paths in declaration order."""
+        text = self.raw().decode("utf-8", errors="replace")
+        text = re.sub(r"//[^\n]*", "", text)
+        text = re.sub(r"/\*[\s\S]*?\*/", "", text)
+        return [m.group(1) for m in _INCLUDE_RE.finditer(text)]
+
+    @cached_property
+    def replacements(self) -> dict[str, str]:
+        """Return a mapping of replaced actor name → replacing actor name."""
+        return {a.replaces: a.name for a in self.actors if a.replaces}

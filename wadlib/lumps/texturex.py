@@ -63,6 +63,9 @@ class TexturesPatch:
     rotate: int = 0
     alpha: float = 1.0
     style: str = ""
+    translation: str = ""
+    blend: str = ""
+    raw_props: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -190,19 +193,37 @@ def parse_textures(text: str) -> list[TexturesDef]:
                         if _BRACE_CLOSE.match(pline):
                             break
                         pl = pline.lower()
+                        known = False
                         if "flipx" in pl:
                             patch.flip_x = True
+                            known = True
                         if "flipy" in pl:
                             patch.flip_y = True
+                            known = True
                         rm = re.match(r"rotate\s+(-?\d+)", pline, re.IGNORECASE)
                         if rm:
                             patch.rotate = int(rm.group(1))
+                            known = True
                         am = re.match(r"alpha\s+([\d.]+)", pline, re.IGNORECASE)
                         if am:
                             patch.alpha = float(am.group(1))
+                            known = True
                         sm = re.match(r"style\s+(\w+)", pline, re.IGNORECASE)
                         if sm:
                             patch.style = sm.group(1)
+                            known = True
+                        tm = re.match(r"translation\s+(.*)", pline, re.IGNORECASE)
+                        if tm:
+                            patch.translation = tm.group(1).strip()
+                            known = True
+                        bm = re.match(r"blend\s+(.*)", pline, re.IGNORECASE)
+                        if bm:
+                            patch.blend = bm.group(1).strip()
+                            known = True
+                        if not known:
+                            km = re.match(r"(\w+)", pline)
+                            if km:
+                                patch.raw_props[km.group(1).lower()] = pline
                 tex.patches.append(patch)
 
         result.append(tex)
@@ -237,7 +258,16 @@ def serialize_textures(defs: list[TexturesDef]) -> str:
             parts.append(f'    Namespace "{tex.namespace}"')
 
         for p in tex.patches:
-            has_props = p.flip_x or p.flip_y or p.rotate != 0 or p.alpha != 1.0 or p.style
+            has_props = (
+                p.flip_x
+                or p.flip_y
+                or p.rotate != 0
+                or p.alpha != 1.0
+                or p.style
+                or p.translation
+                or p.blend
+                or p.raw_props
+            )
             if has_props:
                 parts.append(f'    Patch "{p.name}", {p.x}, {p.y}')
                 parts.append("    {")
@@ -251,6 +281,12 @@ def serialize_textures(defs: list[TexturesDef]) -> str:
                     parts.append(f"        Alpha {p.alpha}")
                 if p.style:
                     parts.append(f"        Style {p.style}")
+                if p.translation:
+                    parts.append(f"        Translation {p.translation}")
+                if p.blend:
+                    parts.append(f"        Blend {p.blend}")
+                for raw_val in p.raw_props.values():
+                    parts.append(f"        {raw_val}")
                 parts.append("    }")
             else:
                 parts.append(f'    Patch "{p.name}", {p.x}, {p.y}')

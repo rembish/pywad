@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-04-16
+
+### Added
+
+- **ZMAPINFO enrichment** — `ZMapInfoLump` now parses episode, cluster, and
+  defaultmap blocks in a single pass:
+  - **`ZMapInfoEpisode`** dataclass — `map`, `name`, `name_lookup`, `pic_name`,
+    `key`, `no_skill_menu`.
+  - **`ZMapInfoCluster`** dataclass — `cluster_num`, `exittext`, `entertext`,
+    `exittextislump`, `entertextislump`, `music`, `flat`.
+  - **`ZMapInfoLump.episodes`** / **`.clusters`** / **`.defaultmap`** properties.
+  - **`ZMapInfoEntry.props`** — `dict[str, str]` catch-all for unrecognised map
+    block keys; known keys remain typed fields.
+  - defaultmap baseline: per-map blocks inherit defaultmap key-value pairs; map-
+    specific values override defaults via dict merge.
+  - `ZMapInfoEntry`, `ZMapInfoEpisode`, `ZMapInfoCluster` exported from the top-
+    level `wadlib` namespace.
+- **UDMF robustness** — `parse_udmf()` gains a `strict` keyword parameter:
+  - When `strict=True` and the input is non-empty but has no `namespace`
+    declaration, raises **`UdmfParseError`** (a `ValueError` subclass).
+  - `strict=False` (default) preserves the previous permissive behaviour.
+  - `UdmfParseError` exported from the top-level `wadlib` namespace.
+- **TEXTURES patch enrichment** — `TexturesPatch` gains three new fields:
+  - `translation: str` — `Translation` directive value (e.g. a palette remap
+    range like `"0:255=128:255"`).
+  - `blend: str` — `Blend` directive value (e.g. a colour + alpha expression).
+  - `raw_props: dict[str, str]` — catch-all for unrecognised patch block
+    directives; keyed by lowercased first word, value is the raw line.
+  - Serialiser updated: `Translation` and `Blend` lines emitted when set;
+    `raw_props` values emitted verbatim; `has_props` check covers new fields.
+- **DECORATE lump improvements** — `DecorateLump` gains two new cached properties:
+  - **`includes`** — `list[str]` of `#include` file paths in declaration order,
+    with line and block comments stripped before matching.
+  - **`replacements`** — `dict[str, str]` mapping replaced actor name →
+    replacing actor name, derived from `actor.replaces` on each parsed actor.
+  - `_INCLUDE_RE` regex now uses `re.MULTILINE` so `^` anchors correctly on
+    every line of multi-line input.
+
 ## [0.3.2] - 2026-04-16
 
 ### Added

@@ -70,20 +70,21 @@ Useful checks:
 The CLI can layer on this as `wadcli check --strict` or richer JSON output, but
 the core report should live in the library first.
 
-### Modern source-port parser maturity
+### Modern source-port parser maturity ✓ done (v0.3.3)
 After the resolver and diagnostics foundation is in place, improve modern text
 format support incrementally. The goal should be "accurate metadata extraction"
 before attempting anything like a source-port runtime.
 
-Good next targets:
-- UDMF: stricter tokenization, escaped strings, better malformed-input errors,
-  namespace-specific validation, and semantic checks.
-- TEXTURES: more complete ZDoom texture definitions, patch transforms, scaling,
-  offsets, and graceful handling of unsupported clauses.
-- ZMAPINFO / MAPINFO: richer map metadata, episodes, clusters, skies, music,
-  next-map links, and compatibility flags.
-- DECORATE: better include handling, replacement relationships, inheritance-aware
-  metadata where possible, and clearer unsupported-expression reporting.
+Completed in v0.3.3:
+- ZMAPINFO: episode/cluster/defaultmap blocks, `props` catch-all for unknown map
+  keys, defaultmap baseline inheritance.
+- UDMF: `UdmfParseError` exception, `strict` mode for missing namespace.
+- TEXTURES: `TexturesPatch.translation`, `.blend`, `.raw_props`; serialiser updated.
+- DECORATE: `_INCLUDE_RE` multiline fix; `DecorateLump.includes` and `.replacements`.
+
+Remaining / future:
+- UDMF: namespace-specific validation, semantic checks.
+- TEXTURES: graceful handling of unsupported clauses beyond raw_props.
 - ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
   compositing APIs.
 

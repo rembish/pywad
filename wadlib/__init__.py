@@ -23,6 +23,8 @@ from .lumps.strife_conversation import (
     ConversationPage,
     parse_conversation,
 )
+from .lumps.udmf import UdmfParseError
+from .lumps.zmapinfo import ZMapInfoCluster, ZMapInfoEntry, ZMapInfoEpisode
 from .registry import LUMP_REGISTRY, DecoderRegistry
 from .resolver import ResourceRef, ResourceResolver
 from .source import LumpSource, MemoryLumpSource
@@ -55,11 +57,15 @@ __all__ = [
     "ResourceRef",
     "ResourceResolver",
     "TruncatedWadError",
+    "UdmfParseError",
     "ValidationReport",
     "WadArchive",
     "WadFile",
     "WadFormatError",
     "WadWriter",
+    "ZMapInfoCluster",
+    "ZMapInfoEntry",
+    "ZMapInfoEpisode",
     "analyze",
     "decode_generalized",
     "parse_conversation",
