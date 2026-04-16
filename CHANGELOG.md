@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-04-16
+
+### Added
+
+- **`wadlib.analysis` module** — structured read-side diagnostics API:
+  - **`analyze(source) -> ValidationReport`** — single entry point accepting a
+    `WadFile`, `Pk3Archive`, or `ResourceResolver`.  Non-resolver inputs are
+    wrapped internally so all checks use the same code path.
+  - **`ValidationReport`** — dataclass with `.items` (all findings),
+    `.errors` / `.warnings` (filtered views), `.is_clean` (no errors),
+    `.complevel` (`CompLevel` or `None`), `.unsupported_features` (list of
+    feature strings), and `.to_dict()` for JSON serialisation.
+  - **`DiagnosticItem`** — frozen dataclass with `code`, `severity`, `context`,
+    `message`, and `to_dict()`.
+  - Checks performed by `analyze()`:
+    - **Map reference integrity** — linedef vertex indices, linedef sidedef
+      indices, and sidedef sector indices validated against their lump sizes.
+      UDMF maps are skipped (text-based geometry).
+    - **Missing textures / flats** — sidedef texture names checked against
+      `TEXTURE1`/`TEXTURE2`; sector flat names checked against WAD flat
+      namespaces.  Sky sentinel names (`F_SKY1`, `SKY1`, …) and the `-`
+      no-texture value are always valid.  Only active when texture/flat data is
+      present in the sources.
+    - **PNAMES integrity** — every `patch_index` in `TEXTURE1`/`TEXTURE2`
+      validated to lie within the PNAMES list bounds.
+    - **Resource collisions** — resource names appearing more than once across
+      sources reported as warnings (uses `ResourceResolver.collisions()`).
+    - **Compatibility level** — `detect_features()` from `wadlib.compat` is
+      called on every WAD source; the maximum level detected becomes
+      `ValidationReport.complevel`; detected feature strings populate
+      `ValidationReport.unsupported_features`.  PK3-only resolvers are reported
+      as `CompLevel.ZDOOM`.
+- `DiagnosticItem` and `ValidationReport` and `analyze` exported from the
+  top-level `wadlib` package.
+
 ## [0.3.1] - 2026-04-16
 
 ### Added

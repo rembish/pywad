@@ -1,3 +1,4 @@
+from .analysis import DiagnosticItem, ValidationReport, analyze
 from .archive import LumpInfo, WadArchive
 from .exceptions import (
     BadHeaderWadException,
@@ -41,6 +42,7 @@ __all__ = [
     "DecoderRegistry",
     "DecorateActor",
     "DecorateLump",
+    "DiagnosticItem",
     "GeneralizedCategory",
     "GeneralizedLinedef",
     "GeneralizedSpeed",
@@ -53,10 +55,12 @@ __all__ = [
     "ResourceRef",
     "ResourceResolver",
     "TruncatedWadError",
+    "ValidationReport",
     "WadArchive",
     "WadFile",
     "WadFormatError",
     "WadWriter",
+    "analyze",
     "decode_generalized",
     "parse_conversation",
     "resolve_inheritance",

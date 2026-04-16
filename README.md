@@ -349,7 +349,47 @@ with WadFile.open("DOOM2.WAD", "SIGIL_II.WAD") as wad:
     r.save("e6m1.png")
 ```
 
-### Validation
+### Structured diagnostics
+
+`analyze()` runs a suite of read-side checks across any combination of WAD and
+PK3 sources and returns a JSON-serializable `ValidationReport`.
+
+```python
+from wadlib import analyze, WadFile
+from wadlib.resolver import ResourceResolver
+
+# Single WAD
+with WadFile("doom2.wad") as wad:
+    report = analyze(wad)
+    print(report.complevel)           # CompLevel.VANILLA
+    print(report.is_clean)            # True  (no errors)
+    for item in report.warnings:
+        print(item)                   # <WARNING [MISSING_TEXTURE] MAP01: ...>
+
+# Full load order (PWAD overrides base)
+with WadFile("doom2.wad") as base, WadFile("mod.wad") as mod:
+    resolver = ResourceResolver.doom_load_order(base, mod)
+    report = analyze(resolver)
+    print(report.to_dict())           # JSON-safe dict
+
+# Checks included:
+# - Map reference integrity (vertex/sidedef/sector indices)
+# - Missing textures and flats
+# - PNAMES patch index bounds
+# - Resource collisions across sources
+# - Compatibility level detection
+```
+
+| Attribute | Type | Description |
+|---|---|---|
+| `report.errors` | `list[DiagnosticItem]` | Severity ERROR items |
+| `report.warnings` | `list[DiagnosticItem]` | Severity WARNING items |
+| `report.is_clean` | `bool` | No errors (warnings allowed) |
+| `report.complevel` | `CompLevel \| None` | Minimum required compat level |
+| `report.unsupported_features` | `list[str]` | Features that push up the compat level |
+| `report.to_dict()` | `dict` | JSON-serializable summary |
+
+### Writer-side validation
 
 ```python
 from wadlib.validate import validate_lump, validate_name, validate_wad

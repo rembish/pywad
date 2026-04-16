@@ -45,7 +45,7 @@ The output should preserve origin metadata so callers can tell whether a map
 came from the base WAD, a PWAD, an embedded WAD inside a PK3, or decomposed PK3
 map files.
 
-### Validation and diagnostics layer
+### Validation and diagnostics layer ✓ done (v0.3.2)
 After resource resolution is reliable, add a structured analysis API that goes
 beyond the current writer-side validation and CLI checks.
 
