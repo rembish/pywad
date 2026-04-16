@@ -993,3 +993,94 @@ class TestPk3CategoryAliases:
                 assert "DSPISTOL" in names
         finally:
             os.unlink(path)
+
+
+# ---------------------------------------------------------------------------
+# ResourceRef origin identity fields (Finding #3)
+# ---------------------------------------------------------------------------
+
+
+class TestResourceRefOriginIdentity:
+    """ResourceRef must carry directory_index for WAD entries and origin_path for PK3."""
+
+    def test_wad_entry_has_directory_index(self) -> None:
+        """WAD refs must have directory_index set to a non-negative integer."""
+        path = _make_wad([("PLAYPAL", b"x" * 10)])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("PLAYPAL")
+                assert refs, "Expected at least one ref"
+                ref = refs[0]
+                assert ref.directory_index is not None
+                assert ref.directory_index >= 0
+                assert ref.origin_path is None
+        finally:
+            os.unlink(path)
+
+    def test_wad_entry_directory_index_value(self) -> None:
+        """directory_index must match the lump's position in the WAD directory."""
+        # Second lump → directory_index should be 1
+        path = _make_wad([("LUMP0", b"\x00"), ("PLAYPAL", b"y" * 8), ("LUMP2", b"\x00")])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                refs = r.find_all("PLAYPAL")
+                assert refs[0].directory_index == 1
+        finally:
+            os.unlink(path)
+
+    def test_pk3_entry_has_origin_path(self) -> None:
+        """PK3 refs must have origin_path set to the full archive path."""
+        path = _make_pk3({"sprites/POSSA1.png": b"\x89PNG"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                refs = r.find_all("POSSA1")
+                assert refs, "Expected at least one ref"
+                ref = refs[0]
+                assert ref.origin_path == "sprites/POSSA1.png"
+                assert ref.directory_index is None
+        finally:
+            os.unlink(path)
+
+    def test_origin_property_wad(self) -> None:
+        """origin property returns 'directory[N]' for WAD entries."""
+        path = _make_wad([("PLAYPAL", b"z" * 10)])
+        try:
+            with WadFile(path) as wad:
+                r = ResourceResolver(wad)
+                ref = r.find_all("PLAYPAL")[0]
+                assert ref.origin == f"directory[{ref.directory_index}]"
+        finally:
+            os.unlink(path)
+
+    def test_origin_property_pk3(self) -> None:
+        """origin property returns the archive path for PK3 entries."""
+        path = _make_pk3({"sounds/DSPISTOL.lmp": b"\x00" * 4})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                ref = r.find_all("DSPISTOL")[0]
+                assert ref.origin == "sounds/DSPISTOL.lmp"
+        finally:
+            os.unlink(path)
+
+    def test_origin_property_empty_when_no_fields(self) -> None:
+        """ResourceRef.origin returns '' when both identity fields are None."""
+        from wadlib.source import MemoryLumpSource
+
+        # Construct a ResourceRef manually with both optional fields absent.
+        src: LumpSource = MemoryLumpSource("TEST", b"")
+        ref = ResourceRef(
+            name="TEST",
+            archive=WadFile.__new__(WadFile),  # placeholder — not used
+            source=src,
+            size=0,
+            kind="wad-name",
+            namespace="",
+            load_order_index=0,
+        )
+        assert ref.origin == ""
+        assert ref.origin_path is None
+        assert ref.directory_index is None

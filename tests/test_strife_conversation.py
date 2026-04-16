@@ -7,6 +7,7 @@ fixtures; no STRIFE1.WAD is required.
 
 from __future__ import annotations
 
+import os
 import struct
 import tempfile
 
@@ -21,8 +22,10 @@ from wadlib.lumps.strife_conversation import (
     ConversationChoice,
     ConversationLump,
     ConversationPage,
+    conversation_to_bytes,
     parse_conversation,
 )
+from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
 # Helpers — build synthetic CONVERSATION binary data
@@ -367,3 +370,104 @@ def test_corrupt_size_half_page() -> None:
     data = _pack_page()[:758]  # half of _PAGE_SIZE — wrong multiple
     with pytest.raises(CorruptLumpError):
         parse_conversation(data)
+
+
+# ---------------------------------------------------------------------------
+# Serialization — to_bytes() and conversation_to_bytes() (Finding #4)
+# ---------------------------------------------------------------------------
+
+
+def test_choice_to_bytes_size() -> None:
+    """ConversationChoice.to_bytes() must produce exactly 228 bytes."""
+    pages = parse_conversation(_pack_page())
+    choice = pages[0].choices[0]
+    assert len(choice.to_bytes()) == _CHOICE_SIZE
+
+
+def test_page_to_bytes_size() -> None:
+    """ConversationPage.to_bytes() must produce exactly 1 516 bytes."""
+    pages = parse_conversation(_pack_page())
+    assert len(pages[0].to_bytes()) == _PAGE_SIZE
+
+
+def test_page_to_bytes_round_trip_speaker_id() -> None:
+    """parse → to_bytes → re-parse must preserve speaker_id."""
+    original = parse_conversation(_pack_page(speaker_id=99))[0]
+    restored = parse_conversation(original.to_bytes())[0]
+    assert restored.speaker_id == 99
+
+
+def test_page_to_bytes_round_trip_strings() -> None:
+    """parse → to_bytes → re-parse must preserve text string fields."""
+    raw = _pack_page(
+        name=b"Guard",
+        voice=b"VGUARD1",
+        back_pic=b"BCKGRD1",
+        text=b"Halt! Who goes there?",
+    )
+    original = parse_conversation(raw)[0]
+    restored = parse_conversation(original.to_bytes())[0]
+    assert restored.name == original.name
+    assert restored.voice == original.voice
+    assert restored.back_pic == original.back_pic
+    assert restored.text == original.text
+
+
+def test_choice_to_bytes_round_trip() -> None:
+    """parse → to_bytes → re-parse must preserve all choice fields."""
+    choice_raw = _pack_choice(
+        give_item=5,
+        need_items=(1, 2, 3),
+        need_amounts=(10, 20, 30),
+        text=b"Yes",
+        text_ok=b"Here you go!",
+        next_page=2,
+        objective=1,
+        text_no=b"You need more.",
+    )
+    raw = _pack_page(choices=[choice_raw])
+    pages = parse_conversation(raw)
+    original = pages[0].choices[0]
+    # Serialize the whole page back to bytes, re-parse, and inspect the choice.
+    restored = parse_conversation(pages[0].to_bytes())[0].choices[0]
+    assert restored.give_item == original.give_item
+    assert restored.need_items == original.need_items
+    assert restored.need_amounts == original.need_amounts
+    assert restored.text == original.text
+    assert restored.text_ok == original.text_ok
+    assert restored.next == original.next
+    assert restored.objective == original.objective
+    assert restored.text_no == original.text_no
+
+
+def test_conversation_to_bytes_length() -> None:
+    """conversation_to_bytes() returns len(pages) * _PAGE_SIZE bytes."""
+    raw = _pack_page(speaker_id=1) + _pack_page(speaker_id=2) + _pack_page(speaker_id=3)
+    pages = parse_conversation(raw)
+    result = conversation_to_bytes(pages)
+    assert len(result) == 3 * _PAGE_SIZE
+
+
+def test_conversation_to_bytes_round_trip() -> None:
+    """conversation_to_bytes is the inverse of parse_conversation."""
+    raw = _pack_page(speaker_id=10) + _pack_page(speaker_id=20)
+    pages = parse_conversation(raw)
+    restored = parse_conversation(conversation_to_bytes(pages))
+    assert [p.speaker_id for p in restored] == [10, 20]
+
+
+def test_conversation_lump_to_bytes() -> None:
+    """ConversationLump.to_bytes() serializes the lump pages back to bytes."""
+    raw_lump = _pack_page(speaker_id=7) + _pack_page(speaker_id=13)
+    path = _make_wad_with_lump(b"DIALOGUE", raw_lump)
+    try:
+        with WadFile(path) as wad:
+            entry = wad.directory[0]
+            lump = ConversationLump(entry)
+            result = lump.to_bytes()
+        assert len(result) == 2 * _PAGE_SIZE
+        restored = parse_conversation(result)
+        assert restored[0].speaker_id == 7
+        assert restored[1].speaker_id == 13
+    finally:
+        os.unlink(path)

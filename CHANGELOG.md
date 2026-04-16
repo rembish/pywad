@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-04-16
+
+### Added
+
+- **`ResourceRef.origin_path`** (`str | None`) — full path inside the PK3
+  archive for PK3-sourced resources; `None` for WAD entries.
+- **`ResourceRef.directory_index`** (`int | None`) — zero-based position of the
+  entry in its WAD's directory for WAD-sourced resources; `None` for PK3
+  entries.
+- **`ResourceRef.origin`** property — human-readable origin identifier for
+  diagnostics: `"sprites/FOO.png"` for PK3 entries, `"directory[N]"` for WAD
+  entries, `""` if neither field is populated.  `_iter_source` populates both
+  new fields for every ref it yields.
+- **`ConversationChoice.to_bytes()`** — serializes a single 228-byte choice
+  record back to its binary representation.
+- **`ConversationPage.to_bytes()`** — serializes a full 1 516-byte dialogue
+  page (header + 5 choices) back to binary.
+- **`conversation_to_bytes(pages)`** module-level function — inverse of
+  `parse_conversation`; returns raw CONVERSATION lump bytes for a list of pages.
+- **`ConversationLump.to_bytes()`** — serializes the parsed pages back to raw
+  lump bytes, completing the read/write API for the Strife DIALOGUE format.
+- **`MAP_ASSEMBLY_FAILED`** diagnostic — `analyze()` now emits a
+  `WARNING/MAP_ASSEMBLY_FAILED` item if `resolver.maps()` raises instead of
+  silently continuing with an empty map dict.
+- **`UDMF_TEXTURE_CHECK_SKIPPED`** diagnostic — after map assembly, `analyze()`
+  emits a single `WARNING/UDMF_TEXTURE_CHECK_SKIPPED` item listing all UDMF map
+  names found in the resolver (texture/flat validation is port-specific and
+  intentionally skipped for UDMF maps).
+- **`TEXTURE_PARSE_FAILED`** diagnostic — `_check_pnames` now emits a
+  `WARNING/TEXTURE_PARSE_FAILED` item when `tl.textures` raises instead of
+  silently skipping the lump.
+- **`COLLISION_CHECK_FAILED`** diagnostic — `_check_collisions` now emits a
+  `WARNING/COLLISION_CHECK_FAILED` item if `resolver.collisions()` raises
+  instead of silently returning an empty dict.
+- **PK3 texture/patch name collection** — `_collect_texture_names` now also
+  includes names from PK3 `textures/` and `patches/` category directories, and
+  makes a best-effort attempt to parse ZDoom `TEXTURES` text lumps in WADs
+  (failures are suppressed so the report stays conservative rather than clean).
+- **23 new tests** across `test_resolver.py`, `test_strife_conversation.py`,
+  and `test_phase3_analysis.py` covering all new fields and diagnostics above.
+
+### Fixed
+
+- **`_wad_texture_names` resilience** — parse errors in `TEXTURE1`/`TEXTURE2`
+  are now suppressed with `contextlib.suppress` (so `_collect_texture_names`
+  cannot crash `analyze()`); `_check_pnames` still surfaces the failure as a
+  `TEXTURE_PARSE_FAILED` diagnostic.
+
 ## [0.3.5] - 2026-04-16
 
 ### Added

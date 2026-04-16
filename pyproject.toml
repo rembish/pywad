@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wadlib"
-version = "0.3.5"
+version = "0.3.6"
 description = "Python library to read, write, and analyse id Software WAD files"
 readme = "README.md"
 authors = [{ name = "Alex Rembish", email = "alex@rembish.org" }]

@@ -175,55 +175,19 @@ Recommended fix:
 
 Priority: **medium-high**.
 
-### 3. `ResourceRef` Still Lacks Canonical Origin Identity
+### 3. `ResourceRef` Still Lacks Canonical Origin Identity ✓ done (v0.3.6)
 
-`ResourceRef` is much better now, but it still does not identify the exact
-source entry.
+`ResourceRef` now carries `origin_path: str | None` (full PK3 archive path)
+and `directory_index: int | None` (WAD directory position), plus an `origin`
+property that formats these as a human-readable string for diagnostics.
+`_iter_source` populates both fields for every ref it yields.
 
-For WAD entries, callers may need the directory index or at least the original
-`DirectoryEntry` owner identity. For PK3 entries, callers need the full path
-inside the archive. Today a PK3 collision can produce several refs with the same
-`name`, same `archive`, same `namespace`, and same truncated `source.name`, with
-no direct path field telling the user which ZIP file each ref represents.
+### 4. Strife Is Close, But The "Full" Claim Is Slightly Ahead Of The API ✓ done (v0.3.5–v0.3.6)
 
-Recommended fix:
-
-1. Add `path: str | None` for PK3 entries.
-2. Add `directory_index: int | None` or equivalent for WAD entries.
-3. Consider an `origin` string suitable for diagnostics and JSON output.
-
-Priority: **medium**. This matters for diagnostics, debugging, and stable public
-API ergonomics.
-
-### 4. Strife Is Close, But The "Full" Claim Is Slightly Ahead Of The API
-
-The Strife DIALOGUE parser is a real improvement, but support is not yet fully
-integrated.
-
-Current gaps:
-
-- The module docstring says `wad.get_lump("DIALOGUE")` returns a
-  `ConversationLump`, but it actually returns `BaseLump`.
-- There is no `wad.dialogue` convenience property.
-- There is no serializer / `to_bytes()` path for `ConversationPage` /
-  `ConversationChoice`.
-- The tests are synthetic; there is no real `STRIFE1.WAD` / `VOICES.WAD`
-  fixture coverage in this pass.
-
-This matters because README defines "Full" as complete read/write API for a
-format's data. Under that definition, DIALOGUE is currently read-only.
-
-Recommended fix:
-
-1. Add `WadFile.dialogue -> ConversationLump | None`, or make generic typed
-   lump lookup use `LUMP_REGISTRY`.
-2. Fix the misleading docstring in `strife_conversation.py`.
-3. Add `conversation_to_bytes()` or dataclass `to_bytes()` methods if Strife is
-   going to remain marked Full.
-4. Add at least one real-IWAD smoke test when Strife fixtures are available.
-
-Priority: **medium-high** if the project wants to claim classic Doom-engine
-completeness.
+`wad.dialogue` property added in v0.3.5.  Serialization completed in v0.3.6:
+`ConversationChoice.to_bytes()`, `ConversationPage.to_bytes()`,
+`conversation_to_bytes()`, and `ConversationLump.to_bytes()`.  DIALOGUE is
+now a complete read/write format.  Real-IWAD coverage remains synthetic only.
 
 ### 5. BLOCKMAP Parsing Still Has A Truncation Edge
 
@@ -245,30 +209,15 @@ Recommended fix:
 
 Priority: **medium**. It is small and concrete.
 
-### 6. `analyze()` Is Useful But Still Beta
+### 6. `analyze()` Is Useful But Still Beta ✓ partially done (v0.3.6)
 
-The diagnostics layer is valuable, but it should not yet be presented as a
-complete validator for modern content.
-
-Current limitations:
-
-- It skips UDMF texture/reference validation entirely.
-- Texture collection is mostly WAD binary TEXTUREx oriented and does not fully
-  account for PK3 texture directories or ZDoom TEXTURES definitions.
-- It catches broad exceptions from map assembly and PNAMES parsing and silently
-  continues, which can turn parser failures into clean-looking reports.
-- It reports resource collisions through the current global-name collision model,
-  including the map-local false positives described above.
-
-Recommended fix:
-
-1. Keep `analyze()` marked Beta.
-2. Add explicit diagnostics when a map or texture namespace cannot be analyzed.
-3. Expand texture/flat collection through `ResourceResolver`, PK3 namespaces,
-   and ZDoom TEXTURES definitions.
-4. Add UDMF semantic checks incrementally.
-
-Priority: **medium**.
+Bare exception swallows replaced with explicit diagnostics:
+`MAP_ASSEMBLY_FAILED`, `TEXTURE_PARSE_FAILED`, `COLLISION_CHECK_FAILED`.
+`UDMF_TEXTURE_CHECK_SKIPPED` emitted once per report listing all UDMF maps.
+Texture collection expanded: PK3 `textures/`/`patches/` directories and
+ZDoom `TEXTURES` text lump (best-effort).  `_wad_texture_names` now resilient
+to parse errors.  UDMF semantic checks and full ZDoom texture resolution
+remain out of scope.
 
 ### 7. TODO.md Is Now Stale
 
@@ -311,19 +260,17 @@ Priority: **low-medium**.
 
 High / medium-high priority:
 
-1. Fix collision semantics for map-local lumps in `ResourceResolver.collisions()`
-   and `analyze()`.
-2. Canonicalize PK3 category aliases in resolver namespaces and category filters.
-3. Finish Strife DIALOGUE integration: `wad.dialogue`, doc correction, and
-   serializer if "Full" means read/write.
-4. Add PK3 path and WAD directory identity to `ResourceRef`.
+1. ✓ Fix collision semantics for map-local lumps (v0.3.5).
+2. ✓ Canonicalize PK3 category aliases in resolver namespaces (v0.3.5).
+3. ✓ Finish Strife DIALOGUE integration: `wad.dialogue`, serializer (v0.3.5–v0.3.6).
+4. ✓ Add PK3 path and WAD directory identity to `ResourceRef` (v0.3.6).
 
 Medium priority:
 
-1. Harden BLOCKMAP offset-table parsing and fuzz it.
-2. Expand `analyze()` for PK3/ZDoom/UDMF texture and reference semantics.
-3. Add explicit diagnostics for skipped or failed analysis stages.
-4. Add real-IWAD smoke coverage for Strife if fixtures are available.
+1. ✓ Harden BLOCKMAP offset-table parsing (v0.3.5).
+2. ✓ Expand `analyze()` texture collection and add explicit failure diagnostics (v0.3.6).
+3. Add real-IWAD smoke coverage for Strife if fixtures are available.
+4. UDMF semantic checks incrementally.
 
 Low / maintenance priority:
 

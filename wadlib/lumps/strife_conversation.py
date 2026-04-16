@@ -89,6 +89,12 @@ def _decode(buf: bytes) -> str:
     return buf[:end].decode("latin-1") if end != -1 else buf.decode("latin-1")
 
 
+def _encode(s: str, size: int) -> bytes:
+    """Encode *s* to a null-padded fixed-width latin-1 byte field of *size* bytes."""
+    encoded = s.encode("latin-1")[:size]
+    return encoded.ljust(size, b"\x00")
+
+
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
@@ -122,6 +128,20 @@ class ConversationChoice:
     next: int
     objective: int
     text_no: str
+
+    def to_bytes(self) -> bytes:
+        """Serialize this choice back to its 228-byte binary representation."""
+        return struct.pack(
+            _CHOICE_FMT,
+            self.give_item,
+            *self.need_items,
+            *self.need_amounts,
+            _encode(self.text, 32),
+            _encode(self.text_ok, 80),
+            self.next,
+            self.objective,
+            _encode(self.text_no, 80),
+        )
 
 
 @dataclass(frozen=True)
@@ -162,6 +182,21 @@ class ConversationPage:
         ConversationChoice,
         ConversationChoice,
     ]
+
+    def to_bytes(self) -> bytes:
+        """Serialize this page back to its 1 516-byte binary representation."""
+        header = struct.pack(
+            _PAGE_HEADER_FMT,
+            self.speaker_id,
+            self.drop_item,
+            *self.check_items,
+            self.jump_to,
+            _encode(self.name, 16),
+            _encode(self.voice, 8),
+            _encode(self.back_pic, 8),
+            _encode(self.text, 320),
+        )
+        return header + b"".join(c.to_bytes() for c in self.choices)
 
     @property
     def active_choices(self) -> list[ConversationChoice]:
@@ -263,6 +298,22 @@ def parse_conversation(data: bytes) -> list[ConversationPage]:
     return [_parse_page(data, i * _PAGE_SIZE) for i in range(count)]
 
 
+def conversation_to_bytes(pages: list[ConversationPage]) -> bytes:
+    """Serialize a list of dialogue pages to raw CONVERSATION lump bytes.
+
+    This is the inverse of :func:`parse_conversation`.  The returned bytes can
+    be written directly to a ``DIALOGUE`` lump in a WAD file.
+
+    Args:
+        pages: A list of :class:`ConversationPage` objects.
+
+    Returns:
+        Raw bytes suitable for a CONVERSATION lump (``len(pages) * 1516``
+        bytes).
+    """
+    return b"".join(p.to_bytes() for p in pages)
+
+
 class ConversationLump(BaseLump[Any]):
     """A CONVERSATION lump containing Strife NPC dialogue pages."""
 
@@ -270,6 +321,10 @@ class ConversationLump(BaseLump[Any]):
     def pages(self) -> list[ConversationPage]:
         """All dialogue pages parsed from this lump."""
         return parse_conversation(self.raw())
+
+    def to_bytes(self) -> bytes:
+        """Serialize the parsed pages back to raw CONVERSATION lump bytes."""
+        return conversation_to_bytes(self.pages)
 
     def __len__(self) -> int:
         return len(self.pages)

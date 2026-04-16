@@ -17,8 +17,9 @@ import os
 import struct
 import tempfile
 import zipfile
+from unittest.mock import patch
 
-from wadlib.analysis import DiagnosticItem, ValidationReport, analyze
+from wadlib.analysis import DiagnosticItem, ValidationReport, _collect_texture_names, analyze
 from wadlib.compat import CompLevel
 from wadlib.pk3 import Pk3Archive
 from wadlib.resolver import ResourceResolver
@@ -681,3 +682,130 @@ class TestToDictRoundTrip:
         assert d["error_count"] == len(report.errors)
         assert d["warning_count"] == len(report.warnings)
         assert len(d["items"]) == len(report.items)
+
+
+# ---------------------------------------------------------------------------
+# Finding #6 — analyze() gap diagnostics
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeGapDiagnostics:
+    """Tests for new explicit diagnostics when analysis stages fail or are skipped."""
+
+    def test_map_assembly_failed_diagnostic(self) -> None:
+        """analyze() must emit MAP_ASSEMBLY_FAILED if resolver.maps() raises."""
+        path = _wad_file([])
+        try:
+            with WadFile(path) as wad:
+                resolver = ResourceResolver(wad)
+                with patch.object(resolver, "maps", side_effect=RuntimeError("boom")):
+                    report = analyze(resolver)
+            codes = {it.code for it in report.items}
+            assert "MAP_ASSEMBLY_FAILED" in codes
+        finally:
+            os.unlink(path)
+
+    def test_map_assembly_failed_does_not_crash(self) -> None:
+        """analyze() must return a report (not raise) when map assembly fails."""
+        path = _wad_file([])
+        try:
+            with WadFile(path) as wad:
+                resolver = ResourceResolver(wad)
+                with patch.object(resolver, "maps", side_effect=RuntimeError("oops")):
+                    report = analyze(resolver)
+            assert isinstance(report, ValidationReport)
+        finally:
+            os.unlink(path)
+
+    def test_udmf_texture_check_skipped_emitted_once(self) -> None:
+        """UDMF_TEXTURE_CHECK_SKIPPED must be emitted exactly once per report."""
+        textmap = b'namespace = "zdoom";\nvertex { x = 0.0; y = 0.0; }\n'
+        lumps = [
+            ("MAP01", b""),
+            ("TEXTMAP", textmap),
+            ("ENDMAP", b""),
+            ("MAP02", b""),
+            ("TEXTMAP", textmap),
+            ("ENDMAP", b""),
+        ]
+        path = _wad_file(lumps)
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            udmf_items = [it for it in report.items if it.code == "UDMF_TEXTURE_CHECK_SKIPPED"]
+            assert len(udmf_items) == 1
+        finally:
+            os.unlink(path)
+
+    def test_udmf_texture_check_skipped_context_contains_map_names(self) -> None:
+        """UDMF_TEXTURE_CHECK_SKIPPED context must list the UDMF map name(s)."""
+        textmap = b'namespace = "zdoom";\nvertex { x = 0.0; y = 0.0; }\n'
+        lumps = [("MAP01", b""), ("TEXTMAP", textmap), ("ENDMAP", b"")]
+        path = _wad_file(lumps)
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            item = next(it for it in report.items if it.code == "UDMF_TEXTURE_CHECK_SKIPPED")
+            assert "MAP01" in item.context
+        finally:
+            os.unlink(path)
+
+    def test_no_udmf_skipped_warning_for_vanilla_map(self) -> None:
+        """A WAD with only vanilla binary maps must NOT produce UDMF_TEXTURE_CHECK_SKIPPED."""
+        path = _wad_file([("MAP01", b""), ("THINGS", b""), ("LINEDEFS", b"")])
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            codes = {it.code for it in report.items}
+            assert "UDMF_TEXTURE_CHECK_SKIPPED" not in codes
+        finally:
+            os.unlink(path)
+
+    def test_pk3_textures_category_included_in_collection(self) -> None:
+        """PK3 entries under textures/ must appear in the texture name set."""
+        path = _pk3_file({"textures/MYTEX.png": b"\x89PNG"})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                names = _collect_texture_names(r)
+            assert "MYTEX" in names
+        finally:
+            os.unlink(path)
+
+    def test_pk3_patches_category_included_in_collection(self) -> None:
+        """PK3 entries under patches/ must appear in the texture name set."""
+        path = _pk3_file({"patches/PATCH1.lmp": b"\x00" * 4})
+        try:
+            with Pk3Archive(path) as pk3:
+                r = ResourceResolver(pk3)
+                names = _collect_texture_names(r)
+            assert "PATCH1" in names
+        finally:
+            os.unlink(path)
+
+    def test_texture_parse_failed_diagnostic(self) -> None:
+        """A corrupt TEXTURE1 must produce TEXTURE_PARSE_FAILED, not a crash."""
+        # Valid PNAMES (1 patch), corrupt TEXTURE1 (count=1 but no offsets).
+        pnames_data = struct.pack("<I", 1) + b"PATCH0\x00\x00"
+        texture1_data = struct.pack("<I", 1)  # count=1 but offset table is missing
+        path = _wad_file([("PNAMES", pnames_data), ("TEXTURE1", texture1_data)])
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            codes = {it.code for it in report.items}
+            assert "TEXTURE_PARSE_FAILED" in codes
+        finally:
+            os.unlink(path)
+
+    def test_collision_check_failed_diagnostic(self) -> None:
+        """analyze() must emit COLLISION_CHECK_FAILED if resolver.collisions() raises."""
+        path = _wad_file([])
+        try:
+            with WadFile(path) as wad:
+                resolver = ResourceResolver(wad)
+                with patch.object(resolver, "collisions", side_effect=RuntimeError("bad")):
+                    report = analyze(resolver)
+            codes = {it.code for it in report.items}
+            assert "COLLISION_CHECK_FAILED" in codes
+        finally:
+            os.unlink(path)

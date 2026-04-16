@@ -147,7 +147,10 @@ def _wad_texture_names(wad: WadFile) -> frozenset[str]:
     names: set[str] = set()
     for tl in (wad.texture1, wad.texture2):
         if tl:
-            names.update(t.name.upper() for t in tl.textures)
+            # Suppress parse errors here; _check_pnames emits TEXTURE_PARSE_FAILED
+            # for the same failure so callers don't lose diagnostics.
+            with contextlib.suppress(Exception):
+                names.update(t.name.upper() for t in tl.textures)
     names |= _SKY_TEXTURES
     return frozenset(names)
 
@@ -157,11 +160,29 @@ def _wad_flat_names(wad: WadFile) -> frozenset[str]:
 
 
 def _collect_texture_names(resolver: ResourceResolver) -> frozenset[str]:
-    """Union all texture names from every WAD source in the resolver."""
+    """Union all texture names from every source in the resolver.
+
+    Covers TEXTUREx WAD lumps, ZDoom TEXTURES text lumps (best-effort),
+    and PK3 ``textures/`` / ``patches/`` directory entries.
+    """
     names: set[str] = set(_SKY_TEXTURES)
     for src in resolver._sources:  # pylint: disable=protected-access
         if isinstance(src, WadFile):
             names.update(_wad_texture_names(src))
+            # ZDoom TEXTURES lump (text-based): best-effort.  Parse failures
+            # cause extra MISSING_TEXTURE warnings rather than false-clean reports.
+            entry = src.find_lump("TEXTURES")
+            if entry is not None:
+                with contextlib.suppress(Exception):
+                    from .lumps.texturex import TexturesLump
+
+                    lump = TexturesLump(entry)
+                    names.update(d.name.upper() for d in lump.definitions)
+        else:
+            # PK3: textures live under textures/ and patches/ category directories.
+            for ref in src.infolist():
+                if ref.category in ("textures", "patches"):
+                    names.add(ref.lump_name)
     return frozenset(names)
 
 
@@ -341,7 +362,15 @@ def _check_pnames(resolver: ResourceResolver) -> list[DiagnosticItem]:
                 continue
             try:
                 textures = tl.textures
-            except Exception:  # pylint: disable=broad-exception-caught
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                items.append(
+                    DiagnosticItem(
+                        code="TEXTURE_PARSE_FAILED",
+                        severity=Severity.WARNING,
+                        context=tl_name,
+                        message=f"Failed to parse {tl_name}: {exc}",
+                    )
+                )
                 continue
             for tex in textures:
                 for patch in tex.patches:
@@ -371,7 +400,15 @@ def _check_collisions(resolver: ResourceResolver) -> list[DiagnosticItem]:
     items: list[DiagnosticItem] = []
     try:
         clashes = resolver.collisions()
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        items.append(
+            DiagnosticItem(
+                code="COLLISION_CHECK_FAILED",
+                severity=Severity.WARNING,
+                context="collisions",
+                message=f"Collision check failed: {exc}",
+            )
+        )
         return items
     for name, refs in clashes.items():
         winner = refs[0]
@@ -476,8 +513,31 @@ def analyze(source: WadFile | Pk3Archive | ResourceResolver) -> ValidationReport
     # Assembled maps across all sources
     try:
         maps = resolver.maps()
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        report.items.append(
+            DiagnosticItem(
+                code="MAP_ASSEMBLY_FAILED",
+                severity=Severity.WARNING,
+                context="maps",
+                message=f"Map assembly failed: {exc}",
+            )
+        )
         maps = {}
+
+    # Emit a single note for UDMF maps whose texture/flat validation is skipped.
+    udmf_map_names = [n for n, m in maps.items() if m.udmf is not None]
+    if udmf_map_names:
+        ctx = ", ".join(udmf_map_names[:5])
+        if len(udmf_map_names) > 5:
+            ctx += f" \u2026 ({len(udmf_map_names)} total)"
+        report.items.append(
+            DiagnosticItem(
+                code="UDMF_TEXTURE_CHECK_SKIPPED",
+                severity=Severity.WARNING,
+                context=ctx,
+                message="UDMF maps: texture and flat validation skipped (port-specific resolution)",
+            )
+        )
 
     # Per-map checks
     for map_entry in maps.values():

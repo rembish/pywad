@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from .pk3 import Pk3Archive
@@ -44,11 +44,25 @@ if TYPE_CHECKING:
 # Lump names that are map-local sub-lumps, scoped under a map marker (e.g.
 # MAP01, E1M1).  These names appear once per map in multi-map WADs and must
 # NOT be treated as global resource collisions by collisions().
-_MAP_SUB_LUMPS: frozenset[str] = frozenset({
-    "THINGS", "VERTEXES", "LINEDEFS", "SIDEDEFS", "SECTORS",
-    "SEGS", "SSECTORS", "NODES", "REJECT", "BLOCKMAP",
-    "ZNODES", "BEHAVIOR", "TEXTMAP", "SCRIPTS", "ENDMAP",
-})
+_MAP_SUB_LUMPS: frozenset[str] = frozenset(
+    {
+        "THINGS",
+        "VERTEXES",
+        "LINEDEFS",
+        "SIDEDEFS",
+        "SECTORS",
+        "SEGS",
+        "SSECTORS",
+        "NODES",
+        "REJECT",
+        "BLOCKMAP",
+        "ZNODES",
+        "BEHAVIOR",
+        "TEXTMAP",
+        "SCRIPTS",
+        "ENDMAP",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -91,10 +105,29 @@ class ResourceRef:
     kind: Literal["wad-name", "pk3-lump-name"]
     namespace: str
     load_order_index: int
+    origin_path: str | None = field(default=None)
+    """Full path inside the PK3 archive, or ``None`` for WAD entries."""
+    directory_index: int | None = field(default=None)
+    """Zero-based index of this entry in its WAD's directory, or ``None`` for PK3 entries."""
 
     def read_bytes(self) -> bytes:
         """Return the raw bytes for this resource."""
         return self.source.read_bytes()
+
+    @property
+    def origin(self) -> str:
+        """Human-readable origin identifier suitable for diagnostics.
+
+        For PK3 resources this is the full path inside the archive
+        (e.g. ``"sprites/POSSA1.png"``).  For WAD resources this is
+        the directory index formatted as ``"directory[N]"``.  Returns
+        ``""`` when neither field is populated.
+        """
+        if self.origin_path is not None:
+            return self.origin_path
+        if self.directory_index is not None:
+            return f"directory[{self.directory_index}]"
+        return ""
 
 
 class ResourceResolver:
@@ -152,6 +185,17 @@ class ResourceResolver:
         for load_order_index, src in enumerate(self._sources):
             if isinstance(src, WadFile):
                 for entry in src.find_lumps(name_upper):
+                    # Locate the directory index by identity comparison (DirectoryEntry
+                    # has no __eq__, so == would fall back to identity anyway, but being
+                    # explicit avoids subtle bugs if that ever changes).
+                    dir_index: int | None = None
+                    for wad in src.all_wads:
+                        for idx, d in enumerate(wad.directory):
+                            if d is entry:
+                                dir_index = idx
+                                break
+                        if dir_index is not None:
+                            break
                     yield ResourceRef(
                         name=name_upper,
                         archive=src,
@@ -160,6 +204,8 @@ class ResourceResolver:
                         kind="wad-name",
                         namespace="",
                         load_order_index=load_order_index,
+                        origin_path=None,
+                        directory_index=dir_index,
                     )
             else:
                 for pk3_entry in src.find_resources(name_upper):
@@ -174,6 +220,8 @@ class ResourceResolver:
                         kind="pk3-lump-name",
                         namespace=pk3_entry.category,
                         load_order_index=load_order_index,
+                        origin_path=pk3_entry.path,
+                        directory_index=None,
                     )
 
     # ------------------------------------------------------------------
