@@ -634,12 +634,12 @@ for the entire library.
 | CLI (`wadcli`) | Stable | Export, diff, check, list, render, complevel |
 | FUSE mount (`wadmount`) | Beta | Virtual WAD filesystem; OS/libfuse dependent; no CI mount integration tests |
 | PK3 / ZIP support | Beta | Read, write, WAD↔PK3 conversion; PK3-embedded WAD maps; namespace mapping |
-| UDMF maps | Beta | Full parse/serialize; `strict` mode; unknown props preserved; no namespace validation |
+| UDMF maps | Beta | Full parse/serialize; `strict` mode; unknown props preserved; namespace-specific validation started (required fields, cross-refs, namespace-specific field warnings) |
 | ZMAPINFO | Beta | Maps, episodes, clusters, defaultmap; `props` catch-all; round-trip serialiser |
 | DECORATE | Beta | Actors, flags, states, inheritance; `#include` paths; `replaces` mapping; no ZScript |
 | LANGUAGE / SNDINFO / SNDSEQ | Beta | Parsed for metadata; no engine-runtime semantics |
 | Compatibility analysis | Beta | `detect_complevel`, `check_downgrade`, `convert_complevel`; structured `analyze()` report |
-| ANIMDEFS / TEXTURES (ZDoom) | Beta | Parsed for metadata; animation sequencing not implemented |
+| ANIMDEFS / TEXTURES (ZDoom) | Beta | Parsed for metadata; `AnimDef.resolve_frames()` maps numeric pic indices to lump names given an ordered name list |
 | Full ZScript | Not supported | Out of scope; would require a source-port runtime |
 | ACS bytecode execution | Not supported | ACS `BEHAVIOR` lump is read as bytes only; no interpreter |
 
@@ -670,7 +670,7 @@ for the entire library.
 | Strife | Full | Thing type catalog (all 262 types); DIALOGUE lump parsed into `ConversationPage` / `ConversationChoice` dataclasses |
 | Boom / MBF / MBF21 | Full | `line.generalized` decodes all 7 action categories; `sector.special_name`; MBF21 linedef flags |
 | ZDoom / GZDoom WAD | Partial | ZMAPINFO (maps, episodes, clusters, defaultmap), SNDINFO, ANIMDEFS, LANGUAGE, DECORATE actors; no ZScript |
-| UDMF maps | Partial | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props`; `strict=True` raises `UdmfParseError` on missing namespace; no namespace-specific semantic validation |
+| UDMF maps | Partial | All blocks and properties parsed; hex integer literals and escaped strings handled; unknown fields preserved in `props`; `strict=True` raises `UdmfParseError` on missing namespace; namespace-specific validation: required fields (type/sector/textures), cross-reference integrity, z-height and arg0-arg4 namespace checks |
 | PK3 (ZIP-based resource pack) | Partial | Read, write, WAD↔PK3 conversion; no full ZDoom resource overlay |
 | DeHackEd | Partial | Things, frames, weapons, ammo, sounds, text replacements, PAR times, DEHEXTRA/MBF21 custom IDs; no cheat/state machine |
 | DECORATE | Full | `wad.decorate` → `DecorateLump`; actors, doomednum, flags, properties, states; `resolve_inheritance()` fills inherited properties through parent chains; `.includes` lists `#include` paths; `.replacements` maps replaced → replacing actor |

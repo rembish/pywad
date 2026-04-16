@@ -29,10 +29,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/arembish/wadlib"
-Repository = "https://github.com/arembish/wadlib"
-"Bug Tracker" = "https://github.com/arembish/wadlib/issues"
-Changelog = "https://github.com/arembish/wadlib/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/rembish/wadlib"
+Repository = "https://github.com/rembish/wadlib"
+"Bug Tracker" = "https://github.com/rembish/wadlib/issues"
+Changelog = "https://github.com/rembish/wadlib/blob/master/CHANGELOG.md"
 
 [project.scripts]
 wadcli = "wadlib.cli:main"

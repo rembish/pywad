@@ -87,9 +87,14 @@ Completed in v0.3.7:
   `DehackedPatch.cheats`.
 
 Remaining / future:
-- UDMF: namespace-specific semantic checks (per-namespace field allowlists).
-- ANIMDEFS: connect parsed animation definitions to texture/flat lookup and
-  compositing APIs.
+- UDMF: namespace-specific semantic checks — started in v0.4.0 (required
+  fields, cross-reference integrity, namespace-specific field warnings for
+  z-height vertices and arg0-arg4 things). Full per-namespace field allowlists
+  and deeper semantic validation remain future work.
+- ANIMDEFS: `AnimDef.resolve_frames(ordered_names)` added in v0.4.0 — maps
+  numeric pic indices to lump names given a caller-supplied ordered name list.
+  Compositor integration (frame index → active texture at a given game tick)
+  remains future work.
 
 Full ZScript execution or full DECORATE behavior simulation should stay out of
 scope unless the project deliberately becomes a source-port analysis engine.
@@ -270,6 +275,8 @@ No freely redistributable Strife IWAD exists as of 2026-04:
 - `STRIFE0.WAD` (demo) has ambiguous redistribution status.
 
 ### Packaging and publishing
-- Publish to PyPI once API is stable
+- `pyproject.toml` ready for PyPI upload (v0.4.0 — name, version, description,
+  readme, license, keywords, classifiers, dependencies, scripts, URLs all set).
+  Publish once a public repository is confirmed.
 - GitHub Actions CI (lint + test on push) ✓ done (v0.0.49)
-- Proper versioned docs (Sphinx or MkDocs)
+- Proper versioned docs (Sphinx or MkDocs) — future work

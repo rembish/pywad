@@ -403,9 +403,9 @@ class TestFuzzParseTextures:
         flag_str = " ".join(flags)
         text = (
             f'Texture "{name}", 64, 64\n'
-            f'{{\n'
+            f"{{\n"
             f'    Patch "{patch_name}", {x}, {y} {{ {flag_str} }}\n'
-            f'}}\n'
+            f"}}\n"
         )
         _assert_no_crash(lambda: parse_textures(text))
 
@@ -413,9 +413,7 @@ class TestFuzzParseTextures:
         defs=st.lists(
             st.fixed_dictionaries(
                 {
-                    "name": st.text(
-                        alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8
-                    ),
+                    "name": st.text(alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=1, max_size=8),
                     "width": st.integers(min_value=1, max_value=256),
                     "height": st.integers(min_value=1, max_value=256),
                     "num_patches": st.integers(min_value=0, max_value=4),
