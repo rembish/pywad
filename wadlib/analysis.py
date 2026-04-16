@@ -383,7 +383,7 @@ def _check_collisions(resolver: ResourceResolver) -> list[DiagnosticItem]:
                 context=name,
                 message=(
                     f"'{name}' found {len(refs)} time(s); "
-                    f"winner: {getattr(winner.archive, '_filename', repr(winner.archive))}, "
+                    f"winner: {winner.archive!r}, "
                     f"{len(losers)} shadowed"
                 ),
             )

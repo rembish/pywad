@@ -738,6 +738,28 @@ name = get_name(thing.type, game)    # "Imp", "Fire Gargoyle", etc.
 
 ---
 
+## Examples
+
+The `examples/` directory contains runnable scripts for the most common
+developer workflows:
+
+| File | Description |
+|---|---|
+| `01_inspect_wad.py` | Map list, asset counts, source-port lumps detected |
+| `02_extract_assets.py` | Export sprites, flats, and wall textures as PNG |
+| `03_build_pwad.py` | Build a minimal PWAD from scratch and round-trip validate |
+| `04_pwad_stack.py` | Load a base IWAD + PWADs via `ResourceResolver`, collision report |
+| `05_audio_conversion.py` | Extract DMX sounds → WAV, MUS music → MIDI; import back |
+| `06_texture_audit.py` | Find unused textures/flats, per-map breakdown, optional JSON |
+| `07_diagnostics.py` | Structured `analyze()` report; compatibility downgrade check |
+| `08_zdoom_mod_info.py` | ZMAPINFO, DECORATE actors/replacements/includes, LANGUAGE strings |
+| `09_wad_diff.py` | What a PWAD changes vs. the base — added, removed, changed lumps |
+| `10_render_maps.py` | Render overhead map views as PNG with floor textures |
+
+Each script accepts `--help` for options.
+
+---
+
 ## Requirements
 
 - Python 3.12+

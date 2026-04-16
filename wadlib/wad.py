@@ -89,6 +89,10 @@ class WadFile:  # pylint: disable=too-many-public-methods
         self.wad_type = WadType[magic]
         self._pwads: list[WadFile] = []
 
+    def __repr__(self) -> str:
+        name = getattr(self.fd, "name", "<embedded>")
+        return f"WadFile({name!r})"
+
     @classmethod
     def from_bytes(cls, data: bytes, *, name: str = "<embedded>") -> "WadFile":
         """Parse a WAD from an in-memory *data* buffer.

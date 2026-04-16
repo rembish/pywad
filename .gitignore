@@ -44,5 +44,9 @@ wads/*
 *.png
 *.ansi
 
+# Example output artifacts
+examples/output/
+examples/hello_doom.wad
+
 # Review notes
 REVIEW.md

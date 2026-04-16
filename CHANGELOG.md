@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-04-16
+
+### Added
+
+- **10 runnable example scripts** in `examples/` covering the full API surface:
+  `01_inspect_wad`, `02_extract_assets`, `03_build_pwad`, `04_pwad_stack`,
+  `05_audio_conversion`, `06_texture_audit`, `07_diagnostics`,
+  `08_zdoom_mod_info`, `09_wad_diff`, `10_render_maps`. All default to WADs
+  in the repo `wads/` directory and are directly executable (`#!/usr/bin/env python3`).
+- **`WadFile.__repr__`** — `WadFile('path/to/file.wad')` representation, used in
+  diagnostic messages and interactive sessions.
+- **`Pk3Archive.__repr__`** — consistent `Pk3Archive('path/to/mod.pk3')` form.
+
+### Fixed
+
+- **`BlockMap` empty-lump crash** — parsing an empty or stub BLOCKMAP (as written
+  by `WadWriter.add_map()` when no blockmap data is provided) no longer raises
+  `struct.error`; the struct is zero-initialised instead.
+- **`_check_collisions` repr** — diagnostic collision warnings now show
+  `WadFile('...')` instead of the raw object address.
+- **`07_diagnostics` output** — "No errors found." is now only printed when there
+  are genuinely neither errors nor warnings.
+- **`TextureCompositor.compose()`** — example `02_extract_assets` was calling the
+  non-existent `render_rgba()` method; corrected to `compose()`.
+- **`Thing.direction` field name** — example `03_build_pwad` used the wrong
+  keyword `angle=`; corrected to `direction=`.
+- **`ResourceRef.archive.fd.name`** — example `04_pwad_stack` used the
+  non-existent `archive.path` attribute; corrected to `archive.fd.name`.
+- **`TextureList.textures` list iteration** — example `02_extract_assets` called
+  `.keys()` on a list; corrected to `[t.name for t in tex1.textures]`.
+
 ## [0.3.3] - 2026-04-16
 
 ### Added

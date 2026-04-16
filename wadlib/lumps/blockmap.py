@@ -80,6 +80,15 @@ class BlockMap:
     def __init__(self, entry: LumpSource) -> None:
         hdr_size = calcsize(BLOCKMAP_HEADER_FORMAT)
         raw_all = entry.read_bytes()
+        if len(raw_all) < hdr_size:
+            # Empty or stub BLOCKMAP (e.g. written by WadWriter without data)
+            self._origin_x = 0
+            self._origin_y = 0
+            self._columns = 0
+            self._rows = 0
+            self._offsets = []
+            self._raw = raw_all
+            return
         ox, oy, cols, rows = unpack(BLOCKMAP_HEADER_FORMAT, raw_all[:hdr_size])
         self._origin_x: int = int(ox)
         self._origin_y: int = int(oy)
