@@ -574,17 +574,30 @@ class TestWadToPk3EdgeCases:
         return path
 
     def test_duplicate_flat_in_wad_does_not_crash(self) -> None:
-        """WAD→PK3 conversion with duplicate flat names must not crash."""
+        """WAD→PK3 conversion with duplicate flat names applies last-wins semantics.
+
+        The output PK3 must contain exactly one entry for the duplicate name
+        and no UserWarning from zipfile about duplicate entries.
+        """
+        import warnings
+
         wad_path = self._make_wad_with_duplicate()
         with tempfile.NamedTemporaryFile(suffix=".pk3", delete=False) as f:
             pk3_path = f.name
         try:
-            wad_to_pk3(wad_path, pk3_path)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")  # any warning becomes an error
+                wad_to_pk3(wad_path, pk3_path)
+
             with Pk3Archive(pk3_path, "r") as pk3:
                 names = pk3.namelist()
                 flat_entries = [n for n in names if n.startswith("flats/")]
-                # Both duplicates or at least one must be present
-                assert len(flat_entries) >= 1
+                # Exactly one entry — last-wins deduplication
+                assert len(flat_entries) == 1
+                assert flat_entries[0] == "flats/FLAT01.lmp"
+                # Data must be from the last (second) duplicate — \xbb bytes
+                data = pk3.read("flats/FLAT01.lmp")
+                assert data == b"\xbb" * 4096
         finally:
             os.unlink(wad_path)
             os.unlink(pk3_path)

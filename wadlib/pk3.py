@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING, Literal
 from PIL import Image as _PIL
 
 from .constants import DOOM1_MAP_NAME_REGEX, DOOM2_MAP_NAME_REGEX
+from .directory import DirectoryEntry
 from .enums import MapData, WadType
 from .exceptions import BadHeaderWadException, InvalidDirectoryError, TruncatedWadError
 from .wad import WadFile
@@ -464,10 +465,17 @@ def wad_to_pk3(wad_path: str, pk3_path: str) -> None:
     - Everything else -> ``lumps/``
 
     Lump data is stored as raw ``.lmp`` files (no format conversion).
+
+    When a WAD contains duplicate lump names within the same namespace,
+    last-wins semantics are applied (consistent with Doom's own behaviour),
+    so the output PK3 never contains duplicate ZIP entries.
     """
     map_data_names = set(MapData.names())
 
     with WadFile(wad_path) as wad, Pk3Archive(pk3_path, "w") as pk3:
+        # --- Pass 1: compute the zip path for every content entry ----------
+        # planned[i] = (DirectoryEntry, zip_path_string)
+        planned: list[tuple[DirectoryEntry, str]] = []
         current_ns: str | None = None
         in_map: str | None = None
 
@@ -490,27 +498,32 @@ def wad_to_pk3(wad_path: str, pk3_path: str) -> None:
                 in_map = name
                 continue
             if in_map and name in map_data_names:
-                # Map sub-lump
                 if entry.size > 0:
-                    wad.fd.seek(entry.offset)
-                    data = wad.fd.read(entry.size)
-                    pk3.writestr(f"maps/{in_map}/{name}.lmp", data)
+                    planned.append((entry, f"maps/{in_map}/{name}.lmp"))
                 continue
             if in_map and name not in map_data_names:
                 in_map = None  # exited map block
 
-            # Read lump data
-            if entry.size > 0:
-                wad.fd.seek(entry.offset)
-                data = wad.fd.read(entry.size)
-            else:
+            if entry.size == 0:
                 continue  # skip empty markers
 
-            # Place in correct directory
             if current_ns:
-                pk3.writestr(f"{current_ns}/{name}.lmp", data)
+                planned.append((entry, f"{current_ns}/{name}.lmp"))
             else:
-                pk3.writestr(f"lumps/{name}.lmp", data)
+                planned.append((entry, f"lumps/{name}.lmp"))
+
+        # --- Pass 2: last-wins deduplication, then write -------------------
+        # For each zip path, record the index of the last entry that maps to it.
+        last_index: dict[str, int] = {}
+        for i, (_, zip_path) in enumerate(planned):
+            last_index[zip_path] = i
+
+        for i, (entry, zip_path) in enumerate(planned):
+            if last_index[zip_path] != i:
+                continue  # a later entry supersedes this one — skip
+            wad.fd.seek(entry.offset)
+            data = wad.fd.read(entry.size)
+            pk3.writestr(zip_path, data)
 
 
 def pk3_to_wad(pk3_path: str, wad_path: str) -> None:
