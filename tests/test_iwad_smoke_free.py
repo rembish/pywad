@@ -11,6 +11,8 @@ Coverage targets:
 
 from __future__ import annotations
 
+import pytest
+
 from wadlib.analysis import Severity, ValidationReport, analyze
 from wadlib.wad import WadFile
 
@@ -105,10 +107,12 @@ class TestFreedoom1:
     def test_has_music(self, freedoom1_wad: WadFile) -> None:
         assert len(freedoom1_wad.music) > 0
 
+    @pytest.mark.slow
     def test_analyze_no_crash(self, freedoom1_wad: WadFile) -> None:
         report = analyze(freedoom1_wad)
         assert isinstance(report, ValidationReport)
 
+    @pytest.mark.slow
     def test_analyze_no_fatal_errors(self, freedoom1_wad: WadFile) -> None:
         report = analyze(freedoom1_wad)
         fatal = [i for i in report.items if i.severity == Severity.ERROR]
@@ -186,10 +190,12 @@ class TestFreedoom2:
     def test_has_music(self, freedoom2_wad: WadFile) -> None:
         assert len(freedoom2_wad.music) > 0
 
+    @pytest.mark.slow
     def test_analyze_no_crash(self, freedoom2_wad: WadFile) -> None:
         report = analyze(freedoom2_wad)
         assert isinstance(report, ValidationReport)
 
+    @pytest.mark.slow
     def test_analyze_no_fatal_errors(self, freedoom2_wad: WadFile) -> None:
         report = analyze(freedoom2_wad)
         fatal = [i for i in report.items if i.severity == Severity.ERROR]
@@ -268,6 +274,7 @@ class TestBlasphemer:
         assert isinstance(t, Thing)
         assert not isinstance(t, HexenThing)
 
+    @pytest.mark.slow
     def test_analyze_no_crash(self, blasphemer_wad: WadFile) -> None:
         report = analyze(blasphemer_wad)
         assert isinstance(report, ValidationReport)
