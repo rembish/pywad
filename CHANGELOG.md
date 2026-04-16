@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-16
+
+### Added
+
+- **UDMF namespace-specific semantic validation** — `parse_udmf()` now checks
+  three categories of structural issues and appends diagnostics to
+  `UdmfMap.warnings`:
+  - *Required fields*: `thing` must declare `type`; `sidedef` must declare
+    `sector`; `sector` must declare `texturefloor` and `textureceiling`.
+  - *Cross-reference integrity*: linedef `v1`/`v2` must be valid vertex
+    indices; `sidefront`/`sideback` (when set) must be valid sidedef indices;
+    sidedef `sector` must be a valid sector index.
+  - *Namespace-specific fields*: vertex z-height fields (`zfloor`/`zceiling`)
+    are warned in non-ZDoom namespaces; thing `arg0`-`arg4` fields are warned
+    in non-Hexen-style namespaces (`doom`/`heretic`/`strife`).
+  - Two new module constants: `_HEXEN_STYLE_NS` and `_ZHEIGHT_NS` — sentinel
+    sets used by the validation logic.
+- **`AnimDef.resolve_frames(ordered_names)`** — maps Hexen-style ANIMDEFS
+  numeric `pic N` indices to actual lump/texture names given the caller-supplied
+  ordered name list (flat namespace order or `TEXTURE1`/`TEXTURE2` order).
+  Returns `None` if the base name is absent or any frame index is out of bounds.
+  Case-insensitive base lookup.
+- **`BaseLump.byte_size`** property — always returns the raw byte count
+  independent of domain semantics.  `len()` remains domain-specific (row count
+  for binary lumps, page count for `ConversationLump`, etc.).
+- **`DecoderRegistry`** accepts `LumpSource`** — `register()`, `decode()`, and
+  `_SIMPLE_LUMPS` are now typed to `LumpSource` rather than `DirectoryEntry`,
+  so PK3-backed `MemoryLumpSource` objects work transparently.
+
+### Fixed
+
+- **`WadArchive.read()` duplicate-lump semantics** — append (`"a"`) mode now
+  applies last-wins semantics consistent with read (`"r"`) mode and Doom's
+  `W_CheckNumForName`.  Previously the append path called
+  `WadWriter.get_lump(occurrence=0)` which returned the *first* matching entry.
+- **`wad_to_pk3()` duplicate ZIP entries** — when a WAD contains duplicate lump
+  names within the same namespace (e.g. two `FLAT01` entries between
+  `F_START`/`F_END`), the output PK3 previously contained two entries at the
+  same path, causing a `UserWarning` from Python's `zipfile` module.  A
+  two-pass algorithm now applies last-wins deduplication before writing so each
+  zip path appears exactly once.
+
+### Tests
+
+- 30 new UDMF tests: `TestUdmfRequiredFields`, `TestUdmfCrossReferences`,
+  `TestUdmfNamespaceFields`.
+- 10 new `AnimDef.resolve_frames` tests: `TestResolveFrames`.
+- 5 regression tests for `WadArchive` duplicate-lump semantics:
+  `TestDuplicateLumpSemantics`.
+- 4 WAD-to-PK3 conversion edge-case tests: `TestWadToPk3EdgeCases`.
+- 7 TEXTURES parser fuzz tests via Hypothesis: `TestFuzzParseTextures`,
+  `TestFuzzSerializeTextures`.
+- 47 CLI command coverage tests: `test_cli_low_coverage.py`.
+- Deep Heretic/Hexen/Strife feature tests and commercial IWAD smoke suite
+  (gated behind `pytest -m slow`).
+- Total non-slow suite: **1 574 tests** (up from 1 542 in 0.3.7).
+
+### Documentation
+
+- README stability table: clarified that "Stable"/"Beta" describe
+  file-format API stability, not engine-runtime completeness; UDMF updated to
+  "Partial" with a note that namespace-specific semantic validation is now
+  started; legend updated with "Partial" definition.
+
 ## [0.3.7] - 2026-04-16
 
 ### Added
