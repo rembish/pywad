@@ -442,15 +442,15 @@ class TestUdmfCrossReferences:
 
 
 class TestUdmfNamespaceFields:
-    """Namespace-specific field checks (zfloor/zceiling, arg0-arg4)."""
+    """Namespace-specific field allowlist checks."""
 
     def test_doom_vertex_zfloor_warns(self) -> None:
         m = parse_udmf('namespace = "doom";\nvertex { x = 0.0; y = 0.0; zfloor = 0.0; }')
-        assert any("zfloor" in w and "ZDoom extension" in w for w in m.warnings)
+        assert any("zfloor" in w and "unknown" in w for w in m.warnings)
 
     def test_doom_vertex_zceiling_warns(self) -> None:
         m = parse_udmf('namespace = "doom";\nvertex { x = 0.0; y = 0.0; zceiling = 128.0; }')
-        assert any("zceiling" in w and "ZDoom extension" in w for w in m.warnings)
+        assert any("zceiling" in w and "unknown" in w for w in m.warnings)
 
     def test_zdoom_vertex_zfloor_no_warning(self) -> None:
         """zdoom namespace supports z-height vertex fields — no warning."""
@@ -459,25 +459,60 @@ class TestUdmfNamespaceFields:
 
     def test_heretic_vertex_zceiling_warns(self) -> None:
         m = parse_udmf('namespace = "heretic";\nvertex { x = 0.0; y = 0.0; zceiling = 64.0; }')
-        assert any("zceiling" in w for w in m.warnings)
+        assert any("zceiling" in w and "unknown" in w for w in m.warnings)
 
     def test_doom_thing_args_warn(self) -> None:
         m = parse_udmf(
             'namespace = "doom";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = 5; arg1 = 10; }'
         )
-        assert any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+        assert any("arg0" in w and "unknown" in w for w in m.warnings)
 
     def test_hexen_thing_args_no_warning(self) -> None:
         """hexen namespace uses arg0-arg4 on things — no warning."""
         m = parse_udmf(
             'namespace = "hexen";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = 5; arg1 = 10; }'
         )
-        assert not any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+        assert not any("arg0" in w and "unknown" in w for w in m.warnings)
 
     def test_zdoom_thing_args_no_warning(self) -> None:
         m = parse_udmf('namespace = "zdoom";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = 42; }')
-        assert not any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+        assert not any("arg0" in w and "unknown" in w for w in m.warnings)
 
     def test_strife_thing_args_warn(self) -> None:
         m = parse_udmf('namespace = "strife";\nthing { x = 0.0; y = 0.0; type = 1; arg0 = 1; }')
-        assert any("arg0" in w and "Hexen/ZDoom" in w for w in m.warnings)
+        assert any("arg0" in w and "unknown" in w for w in m.warnings)
+
+    def test_strife_thing_conversation_no_warning(self) -> None:
+        """conversation is a valid strife thing field."""
+        m = parse_udmf(
+            'namespace = "strife";\nthing { x = 0.0; y = 0.0; type = 1; conversation = 5; }'
+        )
+        assert not any("conversation" in w for w in m.warnings)
+
+    def test_doom_sector_unknown_field_warns(self) -> None:
+        m = parse_udmf(
+            'namespace = "doom";\nsector { texturefloor = "F"; textureceiling = "C"; myprop = 1; }'
+        )
+        assert any("myprop" in w and "unknown" in w for w in m.warnings)
+
+    def test_zdoom_sector_lightcolor_no_warning(self) -> None:
+        """lightcolor is a valid ZDoom sector field."""
+        m = parse_udmf(
+            'namespace = "zdoom";\n'
+            'sector { texturefloor = "F"; textureceiling = "C"; lightcolor = 16777215; }'
+        )
+        assert not any("lightcolor" in w for w in m.warnings)
+
+    def test_zdoom_sidedef_scalex_top_no_warning(self) -> None:
+        """scalex_top is a valid ZDoom sidedef field."""
+        m = parse_udmf('namespace = "zdoom";\nsidedef { sector = 0; scalex_top = 2.0; }')
+        assert not any("scalex_top" in w for w in m.warnings)
+
+    def test_doom_sidedef_unknown_field_warns(self) -> None:
+        m = parse_udmf('namespace = "doom";\nsidedef { sector = 0; myfield = 1; }')
+        assert any("myfield" in w and "unknown" in w for w in m.warnings)
+
+    def test_unknown_namespace_skips_allowlist(self) -> None:
+        """Custom namespace — allowlist check is skipped, no false positives."""
+        m = parse_udmf('namespace = "myport";\nthing { x = 0.0; y = 0.0; type = 1; myfield = 99; }')
+        assert not any("myfield" in w and "unknown" in w for w in m.warnings)

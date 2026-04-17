@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-04-17
+
+### Added
+
+- **UDMF per-namespace field allowlists** — `parse_udmf()` now warns on any
+  field in the `props` catch-all dict that is not defined in the UDMF spec for
+  the map's namespace.  Allowlists cover `doom`, `heretic`, `hexen`, `strife`,
+  and the ZDoom family (`zdoom`, `gzdoom`, `eternity`, `vavoom`).  Unknown
+  namespaces skip the check to avoid false positives.  Replaces the two
+  ad-hoc z-height and thing-arg checks with a single unified path.
+
 ## [0.4.1] - 2026-04-16
 
 No code changes from 0.4.0 — re-release to supersede a previously incorrect

@@ -50,12 +50,251 @@ _KNOWN_NAMESPACES: frozenset[str] = frozenset(
     {"doom", "heretic", "hexen", "strife", "zdoom", "gzdoom", "eternity", "vavoom"}
 )
 
-# Namespaces that use Hexen-style action specials on things and linedefs
-# (arg0-arg4 fields are valid there but not in classic Doom/Heretic/Strife).
-_HEXEN_STYLE_NS: frozenset[str] = frozenset({"hexen", "zdoom", "gzdoom", "eternity", "vavoom"})
+# ---------------------------------------------------------------------------
+# Per-namespace field allowlists for the props catch-all dict.
+# Fields already promoted to struct attributes (x, y, angle, type, id, etc.)
+# are never in props, so they are not listed here.
+# ---------------------------------------------------------------------------
 
-# Namespaces where vertex z-height fields (zfloor/zceiling) make sense.
-_ZHEIGHT_NS: frozenset[str] = frozenset({"zdoom", "gzdoom", "eternity", "vavoom"})
+_BASE_THING_PROPS: frozenset[str] = frozenset(
+    {
+        "skill1",
+        "skill2",
+        "skill3",
+        "skill4",
+        "skill5",
+        "ambush",
+        "single",
+        "dm",
+        "coop",
+        "comment",
+    }
+)
+_BASE_VERTEX_PROPS: frozenset[str] = frozenset({"comment"})
+_BASE_LINEDEF_PROPS: frozenset[str] = frozenset(
+    {
+        "blocking",
+        "blockmonsters",
+        "twosided",
+        "dontpegtop",
+        "dontpegbottom",
+        "secret",
+        "blocksound",
+        "dontdraw",
+        "mapped",
+        "arg0",
+        "arg1",
+        "arg2",
+        "arg3",
+        "arg4",
+        "comment",
+    }
+)
+_BASE_SIDEDEF_PROPS: frozenset[str] = frozenset({"comment"})
+_BASE_SECTOR_PROPS: frozenset[str] = frozenset({"comment"})
+
+# Hexen adds action specials on things and higher difficulty tiers.
+_HEXEN_THING_PROPS: frozenset[str] = _BASE_THING_PROPS | frozenset(
+    {
+        "special",
+        "arg0",
+        "arg1",
+        "arg2",
+        "arg3",
+        "arg4",
+        "skill6",
+        "skill7",
+        "skill8",
+        "dormant",
+        "class1",
+        "class2",
+        "class3",
+        "standing",
+    }
+)
+
+# Strife adds conversation references and allied-NPC flags.
+_STRIFE_THING_PROPS: frozenset[str] = _BASE_THING_PROPS | frozenset(
+    {
+        "conversation",
+        "strifeally",
+        "standing",
+        "translucent",
+        "invisible",
+    }
+)
+
+# ZDoom / GZDoom — broad extension set covering the published ZDoom UDMF spec.
+# Not exhaustive (the port is still evolving), but covers all documented fields.
+_ZDOOM_THING_PROPS: frozenset[str] = (
+    _HEXEN_THING_PROPS
+    | _STRIFE_THING_PROPS
+    | frozenset({"friendlyname", "gravity", "countsecret", "renderstyle", "alpha", "fillcolor"})
+)
+_ZDOOM_VERTEX_PROPS: frozenset[str] = _BASE_VERTEX_PROPS | frozenset({"zfloor", "zceiling"})
+_ZDOOM_LINEDEF_PROPS: frozenset[str] = _BASE_LINEDEF_PROPS | frozenset(
+    {
+        "alpha",
+        "renderstyle",
+        "anycross",
+        "monsteractivate",
+        "blockplayers",
+        "blockeverything",
+        "firstsideonly",
+        "zoneboundary",
+        "clipmidtex",
+        "wrapmidtex",
+        "midtex3d",
+        "checkswitchrange",
+        "blockprojectiles",
+        "blockuse",
+        "blocksight",
+        "blockhitscan",
+        "impact",
+        "playeruse",
+        "missilecross",
+        "playercross",
+        "monstercross",
+        "repeatspecial",
+        "passuse",
+    }
+)
+_ZDOOM_SIDEDEF_PROPS: frozenset[str] = _BASE_SIDEDEF_PROPS | frozenset(
+    {
+        "scalex_top",
+        "scaley_top",
+        "scalex_mid",
+        "scaley_mid",
+        "scalex_bot",
+        "scaley_bot",
+        "offsetx_top",
+        "offsety_top",
+        "offsetx_mid",
+        "offsety_mid",
+        "offsetx_bot",
+        "offsety_bot",
+        "light",
+        "lightabsolute",
+        "lightfog",
+        "nofakecontrast",
+        "smooth_lighting",
+        "clipmidtex",
+        "wrapmidtex",
+        "nodecals",
+    }
+)
+_ZDOOM_SECTOR_PROPS: frozenset[str] = _BASE_SECTOR_PROPS | frozenset(
+    {
+        "xpanningfloor",
+        "ypanningfloor",
+        "xpanningceiling",
+        "ypanningceiling",
+        "xscalefloor",
+        "yscalefloor",
+        "xscaleceiling",
+        "yscaleceiling",
+        "rotationfloor",
+        "rotationceiling",
+        "lightfloor",
+        "lightceiling",
+        "lightfloorabsolute",
+        "lightceilingabsolute",
+        "alphafloor",
+        "alphaceiling",
+        "renderstylefloor",
+        "renderstyleceiling",
+        "desaturation",
+        "silent",
+        "nofallingdamage",
+        "dropactors",
+        "norespawn",
+        "leakiness",
+        "damageamount",
+        "damagehazard",
+        "damagetype",
+        "damageterraineffect",
+        "damageinterval",
+        "floorterrain",
+        "ceilingterrain",
+        "lightcolor",
+        "fadecolor",
+        "fogdensity",
+        "floorlightlevel",
+        "ceilinglightlevel",
+        "floorlightabsolute",
+        "ceilinglightabsolute",
+        "gravity",
+        "floor_reflect",
+        "ceiling_reflect",
+        "hidden",
+        "waterzone",
+        "moreids",
+        "colormap",
+    }
+)
+
+# (thing, vertex, linedef, sidedef, sector) allowlists per namespace.
+_NS_ALLOWLISTS: dict[
+    str,
+    tuple[frozenset[str], frozenset[str], frozenset[str], frozenset[str], frozenset[str]],
+] = {
+    "doom": (
+        _BASE_THING_PROPS,
+        _BASE_VERTEX_PROPS,
+        _BASE_LINEDEF_PROPS,
+        _BASE_SIDEDEF_PROPS,
+        _BASE_SECTOR_PROPS,
+    ),
+    "heretic": (
+        _BASE_THING_PROPS,
+        _BASE_VERTEX_PROPS,
+        _BASE_LINEDEF_PROPS,
+        _BASE_SIDEDEF_PROPS,
+        _BASE_SECTOR_PROPS,
+    ),
+    "hexen": (
+        _HEXEN_THING_PROPS,
+        _BASE_VERTEX_PROPS,
+        _BASE_LINEDEF_PROPS,
+        _BASE_SIDEDEF_PROPS,
+        _BASE_SECTOR_PROPS,
+    ),
+    "strife": (
+        _STRIFE_THING_PROPS,
+        _BASE_VERTEX_PROPS,
+        _BASE_LINEDEF_PROPS,
+        _BASE_SIDEDEF_PROPS,
+        _BASE_SECTOR_PROPS,
+    ),
+    "zdoom": (
+        _ZDOOM_THING_PROPS,
+        _ZDOOM_VERTEX_PROPS,
+        _ZDOOM_LINEDEF_PROPS,
+        _ZDOOM_SIDEDEF_PROPS,
+        _ZDOOM_SECTOR_PROPS,
+    ),
+    "gzdoom": (
+        _ZDOOM_THING_PROPS,
+        _ZDOOM_VERTEX_PROPS,
+        _ZDOOM_LINEDEF_PROPS,
+        _ZDOOM_SIDEDEF_PROPS,
+        _ZDOOM_SECTOR_PROPS,
+    ),
+    "eternity": (
+        _ZDOOM_THING_PROPS,
+        _ZDOOM_VERTEX_PROPS,
+        _ZDOOM_LINEDEF_PROPS,
+        _ZDOOM_SIDEDEF_PROPS,
+        _ZDOOM_SECTOR_PROPS,
+    ),
+    "vavoom": (
+        _ZDOOM_THING_PROPS,
+        _ZDOOM_VERTEX_PROPS,
+        _ZDOOM_LINEDEF_PROPS,
+        _ZDOOM_SIDEDEF_PROPS,
+        _ZDOOM_SECTOR_PROPS,
+    ),
+}
 
 
 @dataclass
@@ -179,15 +418,14 @@ def _validate_by_namespace(result: UdmfMap) -> list[str]:
 
     Checks performed:
 
-    * **Required fields** — things must declare ``type``; sidedefs must
-      declare ``sector``; sectors must declare ``texturefloor`` and
-      ``textureceiling``.
-    * **Cross-reference integrity** — linedef vertex indices must be in range;
-      linedef sidedef indices must be in range; sidedef sector indices must be
-      in range.  These are geometry-breaking errors in every namespace.
-    * **Namespace-specific field use** — vertex z-height fields (``zfloor``,
-      ``zceiling``) are only meaningful in ZDoom-family namespaces.  Thing
-      ``arg0``-``arg4`` fields are only meaningful in Hexen-style namespaces.
+    * **Cross-reference integrity** — linedef vertex/sidedef indices must be in
+      range; sidedef sector indices must be in range.
+    * **Per-namespace field allowlists** — any field in the ``props`` catch-all
+      dict that is not defined in the UDMF spec for the map's namespace produces
+      an ``"unknown field(s)"`` warning.  Allowlists are defined for
+      ``doom``, ``heretic``, ``hexen``, ``strife``, and the ZDoom family
+      (``zdoom``, ``gzdoom``, ``eternity``, ``vavoom``).  Unknown namespaces
+      skip this check.
     """
     warnings: list[str] = []
     ns = result.namespace.lower()
@@ -216,22 +454,39 @@ def _validate_by_namespace(result: UdmfMap) -> list[str]:
                 f"sidedef {i}: sector={sd.sector} out of range (map has {n_sectors} sectors)"
             )
 
-    # --- Namespace-specific field checks ---
-    if ns not in _ZHEIGHT_NS:
-        for i, v in enumerate(result.vertices):
-            if "zfloor" in v.props or "zceiling" in v.props:
-                warnings.append(
-                    f"vertex {i}: z-height fields (zfloor/zceiling) are a ZDoom extension "
-                    f"and are not meaningful in '{ns}' namespace"
-                )
-
-    if ns not in _HEXEN_STYLE_NS:
-        _arg_fields = {"arg0", "arg1", "arg2", "arg3", "arg4"}
+    # --- Per-namespace field allowlists ---
+    ns_entry = _NS_ALLOWLISTS.get(ns)
+    if ns_entry is not None:
+        thing_allow, vertex_allow, linedef_allow, sidedef_allow, sector_allow = ns_entry
         for i, t in enumerate(result.things):
-            if _arg_fields & t.props.keys():
+            unknown = sorted(set(t.props) - thing_allow)
+            if unknown:
                 warnings.append(
-                    f"thing {i}: arg0-arg4 are Hexen/ZDoom action special fields "
-                    f"and are not meaningful in '{ns}' namespace"
+                    f"thing {i}: unknown field(s) for '{ns}' namespace: {', '.join(unknown)}"
+                )
+        for i, v in enumerate(result.vertices):
+            unknown = sorted(set(v.props) - vertex_allow)
+            if unknown:
+                warnings.append(
+                    f"vertex {i}: unknown field(s) for '{ns}' namespace: {', '.join(unknown)}"
+                )
+        for i, ld in enumerate(result.linedefs):
+            unknown = sorted(set(ld.props) - linedef_allow)
+            if unknown:
+                warnings.append(
+                    f"linedef {i}: unknown field(s) for '{ns}' namespace: {', '.join(unknown)}"
+                )
+        for i, sd in enumerate(result.sidedefs):
+            unknown = sorted(set(sd.props) - sidedef_allow)
+            if unknown:
+                warnings.append(
+                    f"sidedef {i}: unknown field(s) for '{ns}' namespace: {', '.join(unknown)}"
+                )
+        for i, sec in enumerate(result.sectors):
+            unknown = sorted(set(sec.props) - sector_allow)
+            if unknown:
+                warnings.append(
+                    f"sector {i}: unknown field(s) for '{ns}' namespace: {', '.join(unknown)}"
                 )
 
     return warnings
