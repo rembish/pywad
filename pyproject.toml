@@ -49,6 +49,8 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "pylint>=3.2",
+    "build>=1.0",
+    "twine>=5.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -105,6 +105,12 @@ The README now includes a "Stability and coverage" table documenting the split:
 - beta: UDMF, PK3, ZMAPINFO, DECORATE, LANGUAGE, compatibility analysis, FUSE
 - not supported: ZScript, ACS execution, source-port runtime semantics
 
+### Synthetic fast-gate fixtures for CLI slow paths
+Several CLI commands (`export_obj`, IWAD smoke tests) are currently covered only
+by real-IWAD tests gated behind `pytest -m slow`.  If public CI needs those
+branches exercised without proprietary data, small synthetic WAD fixtures could
+stand in as fast-running gates.  Low priority until the CI bottleneck is felt.
+
 ---
 
 ## Format support

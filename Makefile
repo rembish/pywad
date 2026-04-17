@@ -2,7 +2,7 @@ PYTHON  := python3
 VENV    := .venv
 BIN     := $(VENV)/bin
 
-.PHONY: install install-docs format lint typecheck pylint test check docs docs-serve clean distclean help
+.PHONY: install install-docs format lint typecheck pylint test check docs docs-serve build upload clean distclean help
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
@@ -39,6 +39,13 @@ docs: ## Build documentation site (output: site/)
 
 docs-serve: ## Serve documentation locally at http://127.0.0.1:8000
 	$(BIN)/mkdocs serve
+
+build: ## Build sdist and wheel into dist/ (clears stale artifacts first)
+	rm -rf dist/
+	$(BIN)/python -m build --sdist --wheel
+
+upload: ## Upload dist/ to PyPI with twine
+	$(BIN)/twine upload dist/wadlib-*
 
 clean: ## Remove caches and build artifacts
 	rm -rf .mypy_cache .ruff_cache .pytest_cache htmlcov .coverage
