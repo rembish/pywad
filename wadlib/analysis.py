@@ -295,11 +295,11 @@ def _check_map_textures(
     textures: frozenset[str],
     flats: frozenset[str],
 ) -> list[DiagnosticItem]:
-    """Check sidedefs for missing textures and sectors for missing flats."""
+    """Check sidedefs for missing textures and sectors for missing flats (classic binary maps)."""
     items: list[DiagnosticItem] = []
     name = map_entry.name
 
-    # UDMF: skip (texture names are in the TEXTMAP, resolution is port-specific)
+    # UDMF: handled by _check_udmf_textures
     if map_entry.udmf is not None:
         return items
     # No texture data to check against — skip silently
@@ -330,6 +330,87 @@ def _check_map_textures(
                 ("ceiling_texture", sec.ceiling_texture.upper()),
             ):
                 if val != _NO_TEXTURE and val not in flats:
+                    items.append(
+                        DiagnosticItem(
+                            code="MISSING_FLAT",
+                            severity=Severity.WARNING,
+                            context=name,
+                            message=f"sector {i} {field_name}: '{val}'",
+                        )
+                    )
+
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers — UDMF-specific checks
+# ---------------------------------------------------------------------------
+
+
+def _check_udmf_refs(map_entry: BaseMapEntry) -> list[DiagnosticItem]:
+    """Surface UdmfMap.warnings (cross-refs, allowlist) as DiagnosticItems."""
+    if map_entry.udmf is None:
+        return []
+    items: list[DiagnosticItem] = []
+    try:
+        udmf = map_entry.udmf.parsed
+    except Exception:  # pylint: disable=broad-exception-caught
+        return items
+    for warning in udmf.warnings:
+        items.append(
+            DiagnosticItem(
+                code="UDMF_WARNING",
+                severity=Severity.WARNING,
+                context=map_entry.name,
+                message=warning,
+            )
+        )
+    return items
+
+
+def _check_udmf_textures(
+    map_entry: BaseMapEntry,
+    textures: frozenset[str],
+    flats: frozenset[str],
+) -> list[DiagnosticItem]:
+    """Check TEXTMAP sidedef texture and sector flat references for a UDMF map."""
+    if map_entry.udmf is None:
+        return []
+    if not textures - _SKY_TEXTURES and not flats - _SKY_TEXTURES:
+        return []
+    items: list[DiagnosticItem] = []
+    name = map_entry.name
+    try:
+        udmf = map_entry.udmf.parsed
+    except Exception:  # pylint: disable=broad-exception-caught
+        return items
+
+    if textures - _SKY_TEXTURES:
+        for i, sd in enumerate(udmf.sidedefs):
+            for field_name, val in (
+                ("texturetop", sd.texturetop),
+                ("texturebottom", sd.texturebottom),
+                ("texturemiddle", sd.texturemiddle),
+            ):
+                upper = val.upper()
+                if upper != _NO_TEXTURE and upper not in textures:
+                    items.append(
+                        DiagnosticItem(
+                            code="MISSING_TEXTURE",
+                            severity=Severity.WARNING,
+                            context=name,
+                            message=f"sidedef {i} {field_name}: '{val}'",
+                        )
+                    )
+
+    if flats - _SKY_TEXTURES:
+        for i, sec in enumerate(udmf.sectors):
+            for field_name, val in (
+                ("texturefloor", sec.texturefloor),
+                ("textureceiling", sec.textureceiling),
+            ):
+                upper = val.upper()
+                if upper != _NO_TEXTURE and upper not in flats:
                     items.append(
                         DiagnosticItem(
                             code="MISSING_FLAT",
@@ -474,9 +555,12 @@ def analyze(source: WadFile | Pk3Archive | ResourceResolver) -> ValidationReport
 
     - **Map reference integrity**: linedef vertex indices, sidedef indices, and
       sidedef-to-sector references are validated against their respective lump
-      sizes.  UDMF maps are skipped (their geometry is text-based).
+      sizes.  UDMF maps use the cross-reference warnings from ``parse_udmf()``.
+    - **UDMF structural warnings**: ``UdmfMap.warnings`` (cross-references,
+      per-namespace field allowlist) are surfaced as ``UDMF_WARNING`` items.
     - **Missing textures / flats**: sidedef texture names and sector flat names
-      are checked against the texture and flat names known to each WAD source.
+      are checked against the texture and flat names known to each WAD source
+      for both classic binary maps and UDMF TEXTMAP sidedefs/sectors.
       Only runs when texture/flat data is present.
     - **PNAMES integrity**: every ``patch_index`` in TEXTURE1/TEXTURE2 is
       validated to lie within the bounds of the PNAMES patch list.
@@ -524,25 +608,12 @@ def analyze(source: WadFile | Pk3Archive | ResourceResolver) -> ValidationReport
         )
         maps = {}
 
-    # Emit a single note for UDMF maps whose texture/flat validation is skipped.
-    udmf_map_names = [n for n, m in maps.items() if m.udmf is not None]
-    if udmf_map_names:
-        ctx = ", ".join(udmf_map_names[:5])
-        if len(udmf_map_names) > 5:
-            ctx += f" \u2026 ({len(udmf_map_names)} total)"
-        report.items.append(
-            DiagnosticItem(
-                code="UDMF_TEXTURE_CHECK_SKIPPED",
-                severity=Severity.WARNING,
-                context=ctx,
-                message="UDMF maps: texture and flat validation skipped (port-specific resolution)",
-            )
-        )
-
     # Per-map checks
     for map_entry in maps.values():
         report.items.extend(_check_map_refs(map_entry))
         report.items.extend(_check_map_textures(map_entry, textures, flats))
+        report.items.extend(_check_udmf_refs(map_entry))
+        report.items.extend(_check_udmf_textures(map_entry, textures, flats))
 
     # PNAMES integrity
     report.items.extend(_check_pnames(resolver))

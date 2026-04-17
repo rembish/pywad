@@ -717,14 +717,37 @@ class TestAnalyzeGapDiagnostics:
         finally:
             os.unlink(path)
 
-    def test_udmf_texture_check_skipped_emitted_once(self) -> None:
-        """UDMF_TEXTURE_CHECK_SKIPPED must be emitted exactly once per report."""
-        textmap = b'namespace = "zdoom";\nvertex { x = 0.0; y = 0.0; }\n'
+    def test_udmf_crossref_warning_surfaced(self) -> None:
+        """UDMF maps with cross-reference problems produce UDMF_WARNING items."""
+        # linedef references v1=99 but only 1 vertex exists
+        textmap = (
+            b'namespace = "doom";\n'
+            b"vertex { x = 0.0; y = 0.0; }\n"
+            b"linedef { v1 = 99; v2 = 0; sidefront = 0; }\n"
+        )
+        lumps = [("MAP01", b""), ("TEXTMAP", textmap), ("ENDMAP", b"")]
+        path = _wad_file(lumps)
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            udmf_warns = [it for it in report.items if it.code == "UDMF_WARNING"]
+            assert any("v1=99" in it.message for it in udmf_warns)
+        finally:
+            os.unlink(path)
+
+    def test_udmf_missing_texture_warns(self) -> None:
+        """UDMF sidedef referencing an undefined texture produces MISSING_TEXTURE."""
+        textmap = (
+            b'namespace = "zdoom";\n'
+            b'sector { texturefloor = "FLAT"; textureceiling = "FLAT"; }\n'
+            b'sidedef { sector = 0; texturemiddle = "NOTHERE"; }\n'
+        )
+        pnames = _pnames_lump(["WALL00_1"])
+        texture1 = _texture1_lump([("MYWALL", [0])])
         lumps = [
+            ("PNAMES", pnames),
+            ("TEXTURE1", texture1),
             ("MAP01", b""),
-            ("TEXTMAP", textmap),
-            ("ENDMAP", b""),
-            ("MAP02", b""),
             ("TEXTMAP", textmap),
             ("ENDMAP", b""),
         ]
@@ -732,32 +755,60 @@ class TestAnalyzeGapDiagnostics:
         try:
             with WadFile(path) as wad:
                 report = analyze(wad)
-            udmf_items = [it for it in report.items if it.code == "UDMF_TEXTURE_CHECK_SKIPPED"]
-            assert len(udmf_items) == 1
+            codes = [it.code for it in report.items]
+            assert "MISSING_TEXTURE" in codes
         finally:
             os.unlink(path)
 
-    def test_udmf_texture_check_skipped_context_contains_map_names(self) -> None:
-        """UDMF_TEXTURE_CHECK_SKIPPED context must list the UDMF map name(s)."""
-        textmap = b'namespace = "zdoom";\nvertex { x = 0.0; y = 0.0; }\n'
+    def test_udmf_valid_texture_no_missing_warning(self) -> None:
+        """UDMF sidedef using a defined texture produces no MISSING_TEXTURE warning."""
+        textmap = (
+            b'namespace = "zdoom";\n'
+            b'sector { texturefloor = "FLAT"; textureceiling = "FLAT"; }\n'
+            b'sidedef { sector = 0; texturemiddle = "MYWALL"; }\n'
+        )
+        pnames = _pnames_lump(["WALL00_1"])
+        texture1 = _texture1_lump([("MYWALL", [0])])
+        lumps = [
+            ("PNAMES", pnames),
+            ("TEXTURE1", texture1),
+            ("MAP01", b""),
+            ("TEXTMAP", textmap),
+            ("ENDMAP", b""),
+        ]
+        path = _wad_file(lumps)
+        try:
+            with WadFile(path) as wad:
+                report = analyze(wad)
+            tex_warns = [it for it in report.items if it.code == "MISSING_TEXTURE"]
+            assert tex_warns == []
+        finally:
+            os.unlink(path)
+
+    def test_udmf_no_texture_data_no_false_positives(self) -> None:
+        """UDMF map with no TEXTURE1 in the WAD skips texture checks (no false alarms)."""
+        textmap = (
+            b'namespace = "zdoom";\n'
+            b'sidedef { sector = 0; texturemiddle = "ANYTHING"; }\n'
+        )
         lumps = [("MAP01", b""), ("TEXTMAP", textmap), ("ENDMAP", b"")]
         path = _wad_file(lumps)
         try:
             with WadFile(path) as wad:
                 report = analyze(wad)
-            item = next(it for it in report.items if it.code == "UDMF_TEXTURE_CHECK_SKIPPED")
-            assert "MAP01" in item.context
+            tex_warns = [it for it in report.items if it.code == "MISSING_TEXTURE"]
+            assert tex_warns == []
         finally:
             os.unlink(path)
 
-    def test_no_udmf_skipped_warning_for_vanilla_map(self) -> None:
-        """A WAD with only vanilla binary maps must NOT produce UDMF_TEXTURE_CHECK_SKIPPED."""
+    def test_no_udmf_warnings_for_classic_map(self) -> None:
+        """A classic binary map must not produce UDMF_WARNING items."""
         path = _wad_file([("MAP01", b""), ("THINGS", b""), ("LINEDEFS", b"")])
         try:
             with WadFile(path) as wad:
                 report = analyze(wad)
             codes = {it.code for it in report.items}
-            assert "UDMF_TEXTURE_CHECK_SKIPPED" not in codes
+            assert "UDMF_WARNING" not in codes
         finally:
             os.unlink(path)
 

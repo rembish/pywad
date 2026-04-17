@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-04-17
+
+### Added
+
+- **`analyze()` UDMF checks** — UDMF maps are now fully validated rather than
+  silently skipped:
+  - ``UdmfMap.warnings`` (cross-reference integrity, per-namespace field
+    allowlist) are surfaced as ``UDMF_WARNING`` diagnostic items.
+  - TEXTMAP sidedef ``texturetop``/``texturebottom``/``texturemiddle``
+    references and sector ``texturefloor``/``textureceiling`` references are
+    checked against available texture/flat names, producing ``MISSING_TEXTURE``
+    and ``MISSING_FLAT`` items (same codes as classic-map checks).  The guard
+    against empty texture data is respected — no false alarms when no IWAD is
+    loaded.
+  - Removed the ``UDMF_TEXTURE_CHECK_SKIPPED`` warning (no longer needed).
+
 ## [0.4.2] - 2026-04-17
 
 ### Added
