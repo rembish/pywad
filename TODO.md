@@ -275,8 +275,10 @@ No freely redistributable Strife IWAD exists as of 2026-04:
 - `STRIFE0.WAD` (demo) has ambiguous redistribution status.
 
 ### Packaging and publishing
-- `pyproject.toml` ready for PyPI upload (v0.4.0 — name, version, description,
-  readme, license, keywords, classifiers, dependencies, scripts, URLs all set).
-  Publish once a public repository is confirmed.
+- `pyproject.toml` published as v0.4.1 (name, version, description, readme,
+  license, keywords, classifiers, dependencies, scripts, URLs all set). v0.4.1
+  intentionally supersedes the incorrect v0.4.0 PyPI package.
 - GitHub Actions CI (lint + test on push) ✓ done (v0.0.49)
-- Proper versioned docs (Sphinx or MkDocs) — future work
+- Proper docs site (MkDocs Material + GitHub Pages) ✓ done (v0.4.1) — auto-deploys
+  on every push to master; `make docs` / `make docs-serve` for local preview.
+  Multi-version docs (hosting v0.4.x alongside future v0.5.x, etc.) remain future work.

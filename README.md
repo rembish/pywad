@@ -273,7 +273,7 @@ All map data types support `to_bytes()` for serialization back to WAD format.
 
 ### Format conversion
 
-Every format the library can read, it can also write:
+The main binary/media formats have explicit decode and encode helpers:
 
 | Format | Decode (WAD -> standard) | Encode (standard -> WAD) |
 |---|---|---|

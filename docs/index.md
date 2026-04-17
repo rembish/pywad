@@ -88,7 +88,7 @@ wadcli --wad DOOM2.WAD list maps
 wadcli --wad DOOM2.WAD list lumps
 wadcli --wad DOOM2.WAD export flat FLOOR0_1 floor.png
 wadcli --wad DOOM2.WAD export sound DSPISTOL pistol.wav
-wadcli --wad DOOM2.WAD render MAP01 map01.png
+wadcli --wad DOOM2.WAD export map MAP01 map01.png
 wadcli --wad DOOM2.WAD check
 ```
 
