@@ -52,18 +52,22 @@ class Picture(BaseLump[Any]):
 
     @property
     def pic_width(self) -> int:
+        """Width of the picture in pixels."""
         return self._header[0]
 
     @property
     def pic_height(self) -> int:
+        """Height of the picture in pixels."""
         return self._header[1]
 
     @property
     def left_offset(self) -> int:
+        """Horizontal hotspot offset (signed, relative to image origin)."""
         return self._header[2]
 
     @property
     def top_offset(self) -> int:
+        """Vertical hotspot offset (signed, relative to image origin)."""
         return self._header[3]
 
     def decode(self, palette: Palette) -> Image.Image:

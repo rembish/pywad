@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 
 class Severity(Enum):
+    """Severity level for a validation issue."""
+
     ERROR = "error"
     WARNING = "warning"
 

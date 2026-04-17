@@ -365,4 +365,5 @@ class TexturesLump(BaseLump[Any]):
 
     @cached_property
     def definitions(self) -> list[TexturesDef]:
+        """Parse and return all texture definitions from this lump."""
         return parse_textures(self.raw().decode("utf-8", errors="replace"))

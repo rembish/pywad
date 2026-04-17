@@ -53,10 +53,12 @@ class DemoHeader:
 
     @property
     def num_players(self) -> int:
+        """Number of active players in this demo (count of ``True`` entries in :attr:`players`)."""
         return sum(self.players)
 
     @property
     def skill_name(self) -> str:
+        """Human-readable skill level name (e.g. ``"Hurt Me Plenty"`` for skill 2)."""
         names = [
             "I'm Too Young To Die",
             "Hey, Not Too Rough",
@@ -80,10 +82,12 @@ class DemoTic:
 
     @property
     def fire(self) -> bool:
+        """``True`` if the fire button (bit 0 of :attr:`buttons`) was held this tic."""
         return bool(self.buttons & 0x01)
 
     @property
     def use(self) -> bool:
+        """``True`` if the use/activate button (bit 1 of :attr:`buttons`) was held this tic."""
         return bool(self.buttons & 0x02)
 
     @property
@@ -109,6 +113,7 @@ class Demo:
 
     @property
     def duration_tics(self) -> int:
+        """Total length of the demo in tics (35 tics = 1 second)."""
         return len(self.tics)
 
     @property

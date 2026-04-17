@@ -426,6 +426,7 @@ class ResourceResolver:
         return self.find_source(name) is not None
 
     def __len__(self) -> int:
+        """Return the number of sources in this resolver."""
         return len(self._sources)
 
     def __repr__(self) -> str:

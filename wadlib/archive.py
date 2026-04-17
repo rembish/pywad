@@ -85,14 +85,17 @@ class WadArchive:
 
     @property
     def mode(self) -> str:
+        """The mode this archive was opened in (``"r"``, ``"w"``, or ``"a"``)."""
         return self._mode
 
     @property
     def filename(self) -> str:
+        """The path of the underlying WAD file."""
         return self._filename
 
     @property
     def wad_type(self) -> WadType:
+        """The WAD type (``WadType.IWAD`` or ``WadType.PWAD``) of the underlying archive."""
         if self._reader is not None:
             return self._reader.wad_type
         assert self._writer is not None

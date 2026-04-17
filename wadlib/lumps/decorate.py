@@ -64,30 +64,36 @@ class DecorateActor:
 
     @property
     def health(self) -> int | None:
+        """Starting health from the ``Health`` property, or ``None`` if unset or non-numeric."""
         v = self.properties.get("health")
         return int(v) if v and v.isdigit() else None
 
     @property
     def speed(self) -> int | None:
+        """Movement speed from the ``Speed`` property, or ``None`` if unset or non-numeric."""
         v = self.properties.get("speed")
         return int(v) if v and v.isdigit() else None
 
     @property
     def radius(self) -> int | None:
+        """Collision radius from the ``Radius`` property, or ``None`` if unset or non-numeric."""
         v = self.properties.get("radius")
         return int(v) if v and v.isdigit() else None
 
     @property
     def height(self) -> int | None:
+        """Collision height from the ``Height`` property, or ``None`` if unset or non-numeric."""
         v = self.properties.get("height")
         return int(v) if v and v.isdigit() else None
 
     @property
     def is_monster(self) -> bool:
+        """``True`` if the actor has the ``ISMONSTER`` or ``COUNTKILL`` flag."""
         return "ISMONSTER" in self.flags or "COUNTKILL" in self.flags
 
     @property
     def is_item(self) -> bool:
+        """``True`` if the actor has the ``COUNTITEM`` flag."""
         return "COUNTITEM" in self.flags
 
 
@@ -250,6 +256,7 @@ class DecorateLump(BaseLump[Any]):
 
     @cached_property
     def actors(self) -> list[DecorateActor]:
+        """All actor definitions parsed from this lump, in declaration order."""
         return parse_decorate(self.raw().decode("utf-8", errors="replace"))
 
     @cached_property

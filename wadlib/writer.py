@@ -157,6 +157,7 @@ class WadWriter:
 
     @property
     def lump_count(self) -> int:
+        """The number of lumps currently in the writer."""
         return len(self.lumps)
 
     @property

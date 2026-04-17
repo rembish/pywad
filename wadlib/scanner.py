@@ -40,14 +40,17 @@ class UsageReport:
 
     @property
     def total_unique_textures(self) -> int:
+        """Number of distinct wall textures referenced across all maps."""
         return len(self.textures)
 
     @property
     def total_unique_flats(self) -> int:
+        """Number of distinct floor/ceiling flats referenced across all maps."""
         return len(self.flats)
 
     @property
     def total_unique_thing_types(self) -> int:
+        """Number of distinct thing type IDs referenced across all maps."""
         return len(self.thing_types)
 
 

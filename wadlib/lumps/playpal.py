@@ -59,6 +59,7 @@ class PlayPal(BaseLump[Any]):
         return [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, _PALETTE_SIZE, 3)]
 
     def __iter__(self) -> PlayPal:
+        """Iterate over all palettes, yielding each as a list of 256 ``(r, g, b)`` tuples."""
         self._palette_index = 0  # reset on each new iteration
         return self
 
@@ -70,6 +71,7 @@ class PlayPal(BaseLump[Any]):
         return pal
 
     def __len__(self) -> int:
+        """Return the number of palettes (same as :attr:`num_palettes`)."""
         return self.num_palettes
 
 

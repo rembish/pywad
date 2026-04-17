@@ -150,16 +150,19 @@ class Pk3Archive:
         self.close()
 
     def close(self) -> None:
+        """Close the underlying ZIP file, flushing any pending writes."""
         self._zf.close()
 
     # -- Read interface -------------------------------------------------------
 
     @property
     def mode(self) -> str:
+        """The mode this archive was opened in (``"r"``, ``"w"``, or ``"a"``)."""
         return self._mode
 
     @property
     def filename(self) -> str:
+        """The path of the underlying pk3 file."""
         return self._filename
 
     def namelist(self) -> list[str]:
@@ -186,6 +189,7 @@ class Pk3Archive:
         return self._zf.read(path)
 
     def __contains__(self, path: str) -> bool:
+        """Return ``True`` if *path* exists in the archive."""
         try:
             self._zf.getinfo(path)
             return True
@@ -193,6 +197,7 @@ class Pk3Archive:
             return False
 
     def __len__(self) -> int:
+        """Return the number of files in the archive (excluding directory entries)."""
         return len(self.namelist())
 
     # -- Write interface ------------------------------------------------------

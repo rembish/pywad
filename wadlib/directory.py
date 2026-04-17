@@ -7,6 +7,8 @@ if TYPE_CHECKING:
 
 
 class DirectoryEntry:
+    """A single entry in the WAD directory (name, offset, and size of a lump)."""
+
     def __init__(self, owner: WadFile, offset: int, size: int, name: bytes | str) -> None:
         from .exceptions import InvalidDirectoryError
 
@@ -24,6 +26,7 @@ class DirectoryEntry:
         return self.name
 
     def read_bytes(self) -> bytes:
+        """Read and return the raw lump bytes from the owning WAD file descriptor."""
         self.owner.fd.seek(self.offset)
         return self.owner.fd.read(self.size)
 

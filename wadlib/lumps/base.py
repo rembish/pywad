@@ -34,12 +34,14 @@ class BaseLump[T]:
 
     @property
     def name(self) -> str:
+        """The lump name, stripping the compression marker byte if present."""
         if self.compressed:
             return self._name[1:]
         return self._name
 
     @property
     def compressed(self) -> bool:
+        """``True`` if the lump name begins with the special compression marker byte (``0x80``)."""
         return self._name[0] == chr(0x80)
 
     @cached_property
@@ -81,6 +83,7 @@ class BaseLump[T]:
         return self._size is not None and self._size > 0
 
     def __len__(self) -> int:
+        """Return the number of rows for binary lumps, or raw byte size for text lumps."""
         if not self.readable():
             return 0
         if self._row_format is None:
@@ -92,9 +95,15 @@ class BaseLump[T]:
         return self._size // self._row_size
 
     def __getitem__(self, index: int) -> T:
+        """Return the row at *index*, equivalent to ``read_item(index)``."""
         return self.read_item(index)
 
     def seek(self, offset: int, whence: int = SEEK_SET) -> int | None:
+        """Move the read position to *offset*, relative to *whence*.
+
+        Follows the same semantics as :func:`io.IOBase.seek`.  Returns the
+        new position, or ``None`` for empty (non-seekable) lumps.
+        """
         if not self.seekable():
             return None
 
@@ -117,11 +126,18 @@ class BaseLump[T]:
         return self._rposition
 
     def tell(self) -> int | None:
+        """Return the current read position, or ``None`` for empty lumps."""
         if not self.seekable():
             return None
         return self._rposition
 
     def read(self, size: int | None = None) -> bytes | None:
+        """Read up to *size* bytes from the current position and advance it.
+
+        With *size* omitted or ``-1``, reads to the end of the lump.
+        Returns ``None`` for empty lumps, and raises :exc:`EOFError` if the
+        position is already at the end.
+        """
         if not self.readable():
             return None
 
@@ -143,6 +159,12 @@ class BaseLump[T]:
         return data
 
     def read_row(self, index: int | None = None) -> tuple[Any, ...] | None:
+        """Read one binary row from *index* (or the current position) as a raw tuple.
+
+        With *index* omitted, reads from the current read position and advances
+        it.  With *index* given, seeks to that row first (absolute positioning).
+        Returns ``None`` for empty lumps.
+        """
         if not self.readable():
             return None
 
@@ -157,6 +179,11 @@ class BaseLump[T]:
         return unpack(self._row_format, data)
 
     def read_item(self, index: int | None = None) -> T:
+        """Read one row from *index* (or the current position) as a typed object.
+
+        Delegates to :meth:`read_row` and passes the raw tuple to the
+        ``_row_item`` constructor defined on the subclass.
+        """
         if not self.readable():
             return None  # type: ignore[return-value]
 
@@ -173,12 +200,15 @@ class BaseLump[T]:
         return self._buf.read()
 
     def writable(self) -> bool:
+        """Always ``False``; ``BaseLump`` instances are read-only."""
         return False
 
     def seekable(self) -> bool:
+        """Return ``True`` if this lump has data and supports :meth:`seek`."""
         return self._rposition is not None
 
     def readable(self) -> bool:
+        """Return ``True`` if this lump has data and can be read."""
         return self._rposition is not None
 
     @overload
@@ -189,6 +219,7 @@ class BaseLump[T]:
     def get(self, index: int, default: None) -> T | None: ...
 
     def get(self, index: int, default: T | None = None) -> T | None:
+        """Return the item at *index*, or *default* if the index is out of range."""
         if 0 <= index < len(self):
             return self[index]
         return default

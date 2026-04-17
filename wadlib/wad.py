@@ -52,6 +52,19 @@ _SCRIPT_RE = re.compile(r"^SCRIPT\d{2}$")
 
 
 class WadFile:  # pylint: disable=too-many-public-methods
+    """Read a WAD file and expose its lumps, maps, and assets.
+
+    Wraps a binary WAD file descriptor and lazily parses the directory and
+    higher-level lump types on first access via ``cached_property``.  Supports
+    PWAD layering (``WadFile.open``) so PWAD lumps shadow base-WAD lumps by
+    name, mirroring the Doom engine's load order.
+
+    Use as a context manager to ensure the file descriptor is closed::
+
+        with WadFile("DOOM2.WAD") as wad:
+            print(len(wad.maps))
+    """
+
     fd: BinaryIO
 
     def __init__(self, filename: str) -> None:
@@ -168,6 +181,7 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return wad
 
     def close(self) -> None:
+        """Close this WAD and all layered PWADs, releasing their file descriptors."""
         for pwad in self._pwads:
             pwad.close()
         if not self.fd.closed:
@@ -196,6 +210,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
 
     @cached_property
     def directory(self) -> list[DirectoryEntry]:
+        """Parsed WAD directory as a list of :class:`~wadlib.directory.DirectoryEntry` objects.
+
+        The list is in WAD directory order (i.e. the order lumps appear in the
+        file).  Entries are validated against the file size on first access;
+        out-of-bounds entries raise :exc:`~wadlib.exceptions.InvalidDirectoryError`.
+        """
         self.fd.seek(0, SEEK_END)
         file_size = self.fd.tell()
 
@@ -401,6 +421,7 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return result
 
     def get_sound(self, name: str) -> DmxSound | None:
+        """Return a named DMX digitized sound lump (PWAD-aware), or None if not found."""
         return self.sounds.get(name.upper())
 
     @cached_property
@@ -421,10 +442,12 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return result
 
     def get_sprite(self, name: str) -> Picture | None:
+        """Return a named sprite lump as a :class:`~wadlib.lumps.picture.Picture` (PWAD-aware), or None if not found."""
         return self.sprites.get(name.upper())
 
     @cached_property
     def endoom(self) -> Endoom | None:
+        """Return the ENDOOM text-mode screen lump (PWAD-aware), or None if not present."""
         entry = self.find_lump("ENDOOM")
         return Endoom(entry) if entry else None
 

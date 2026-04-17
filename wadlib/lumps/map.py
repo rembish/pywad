@@ -24,11 +24,21 @@ from .znodes import ZNodesLump, ZNodList, ZNodNode, ZNodSeg, ZNodSubSector, ZNod
 
 @dataclass
 class Point:
+    """A 2-D map coordinate (in Doom map units)."""
+
     x: int
     y: int
 
 
 class BaseMapEntry(BaseLump[Any]):
+    """Abstract base for a single map assembled from its constituent sub-lumps.
+
+    Concrete subclasses (``Doom1MapEntry``, ``Doom2MapEntry``) fix the name
+    regex and provide format-specific properties such as ``episode``.  Sub-lumps
+    (THINGS, VERTEXES, LINEDEFS, …) are attached after construction by the
+    registry layer via ``attach_*`` methods.
+    """
+
     _regex: ClassVar[Pattern[str]]
 
     def __init__(self, entry: LumpSource) -> None:
@@ -54,11 +64,17 @@ class BaseMapEntry(BaseLump[Any]):
 
     @property
     def number(self) -> int:
+        """The map number extracted from the lump name (e.g. ``1`` for ``MAP01`` or ``E1M1``)."""
         assert self._match is not None
         return int(self._match.group("number").lstrip("0"))
 
     @cached_property
     def boundaries(self) -> tuple[Point, Point]:
+        """Bounding box of the map as ``(min_point, max_point)``.
+
+        Computed from the union of thing positions and vertex positions.
+        Returns ``((0, 0), (0, 0))`` if no geometry has been attached yet.
+        """
         entries: list[Any] = list(chain(self.things or [], self.vertices or []))
         if not entries:
             return (Point(0, 0), Point(0, 0))
@@ -73,42 +89,54 @@ class BaseMapEntry(BaseLump[Any]):
         return (Point(min_x, min_y), Point(max_x, max_y))
 
     def attach(self, lump: object) -> None:
-        pass
+        """Dispatch a generic lump object to the appropriate ``attach_*`` method."""
 
     def attach_things(self, things: Things | HexenThings) -> None:
+        """Attach the THINGS lump (actor placement data)."""
         self.things = things
 
     def attach_vertices(self, vertices: Vertices) -> None:
+        """Attach the VERTEXES lump (map vertex positions)."""
         self.vertices = vertices
 
     def attach_linedefs(self, lines: Lines | HexenLineDefs) -> None:
+        """Attach the LINEDEFS lump (wall/trigger line definitions)."""
         self.lines = lines
 
     def attach_sidedefs(self, sidedefs: SideDefs) -> None:
+        """Attach the SIDEDEFS lump (texture assignments for each linedef face)."""
         self.sidedefs = sidedefs
 
     def attach_sectors(self, sectors: Sectors) -> None:
+        """Attach the SECTORS lump (room/area definitions)."""
         self.sectors = sectors
 
     def attach_segs(self, segs: Segs) -> None:
+        """Attach the SEGS lump (BSP-split line segments)."""
         self.segs = segs
 
     def attach_ssectors(self, ssectors: SubSectors) -> None:
+        """Attach the SSECTORS lump (BSP leaf convex sub-sectors)."""
         self.ssectors = ssectors
 
     def attach_nodes(self, nodes: Nodes) -> None:
+        """Attach the NODES lump (BSP tree nodes)."""
         self.nodes = nodes
 
     def attach_reject(self, reject: Reject) -> None:
+        """Attach the REJECT lump (sector-to-sector visibility table)."""
         self.reject = reject
 
     def attach_blockmap(self, blockmap: BlockMap) -> None:
+        """Attach the BLOCKMAP lump (spatial hash for collision detection)."""
         self.blockmap = blockmap
 
     def attach_behavior(self, behavior: object) -> None:
+        """Attach the BEHAVIOR lump (compiled ACS bytecode for Hexen/ZDoom maps)."""
         self.behavior = behavior
 
     def attach_textmap(self, udmf: UdmfLump) -> None:
+        """Attach the TEXTMAP lump (UDMF text-format map data)."""
         self.udmf = udmf
 
     def attach_znodes(self, znodes: ZNodesLump) -> None:
@@ -131,10 +159,13 @@ class BaseMapEntry(BaseLump[Any]):
 
 
 class Doom1MapEntry(BaseMapEntry):
+    """A Doom 1 / Ultimate Doom map identified by an ``ExMy`` lump name."""
+
     _regex = DOOM1_MAP_NAME_REGEX
 
     @property
     def episode(self) -> int:
+        """The episode number extracted from the lump name (e.g. ``1`` for ``E1M3``)."""
         assert self._match is not None
         return int(self._match.group("episode"))
 
@@ -143,6 +174,8 @@ class Doom1MapEntry(BaseMapEntry):
 
 
 class Doom2MapEntry(BaseMapEntry):
+    """A Doom 2 / Heretic / Hexen map identified by a ``MAPxx`` lump name."""
+
     _regex = DOOM2_MAP_NAME_REGEX
 
     def __repr__(self) -> str:
@@ -150,6 +183,11 @@ class Doom2MapEntry(BaseMapEntry):
 
 
 def MapEntry(entry: LumpSource) -> BaseMapEntry:  # pylint: disable=invalid-name
+    """Construct the appropriate ``BaseMapEntry`` subclass for *entry*.
+
+    Returns a ``Doom1MapEntry`` for ``ExMy`` names, a ``Doom2MapEntry`` for
+    ``MAPxx`` names, or raises ``ValueError`` for unrecognised formats.
+    """
     if DOOM1_MAP_NAME_REGEX.match(entry.name):
         return Doom1MapEntry(entry)
 

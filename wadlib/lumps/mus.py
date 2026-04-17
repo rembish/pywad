@@ -78,7 +78,11 @@ def _vlq(n: int) -> bytes:
 
 
 class Mus(BaseLump[Any]):
-    """MUS music lump."""
+    """A MUS music lump — Doom's compact proprietary music format.
+
+    The raw lump bytes are a MUS file (``MUS\\x1a`` magic).  Use :meth:`to_midi`
+    to convert to a Standard MIDI File for playback with external tools.
+    """
 
     _CHAN_COUNT: ClassVar[int] = 16
 

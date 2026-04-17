@@ -12,6 +12,13 @@ from .base import BaseLump
 
 @dataclass
 class AnimFrame:
+    """A single frame in an animation sequence.
+
+    *pic* is the 1-based frame index relative to the animation's base name.
+    *min_tics* and *max_tics* are identical for fixed-duration frames and differ
+    for ``rand``-timed frames.
+    """
+
     pic: int
     min_tics: int
     max_tics: int  # equals min_tics for fixed timing; > min_tics for rand
@@ -19,12 +26,15 @@ class AnimFrame:
 
 @dataclass
 class AnimDef:
+    """A flat or texture animation definition parsed from an ANIMDEFS lump."""
+
     kind: Literal["flat", "texture"]
     name: str
     frames: list[AnimFrame] = field(default_factory=list)
 
     @property
     def is_random(self) -> bool:
+        """``True`` if any frame uses randomised timing (``rand`` directive)."""
         return any(f.max_tics != f.min_tics for f in self.frames)
 
     def resolve_frames(self, ordered_names: Sequence[str]) -> list[str] | None:
@@ -74,7 +84,7 @@ class AnimDef:
 
 
 def serialize_animdefs(animations: list[AnimDef]) -> str:
-    """Serialize a list of AnimDef to ANIMDEFS text."""
+    """Serialize a list of :class:`AnimDef` objects back to ANIMDEFS lump text."""
     parts: list[str] = []
     for a in animations:
         parts.append(f"{a.kind} {a.name}")
@@ -125,8 +135,10 @@ class AnimDefsLump(BaseLump[Any]):
 
     @property
     def flats(self) -> list[AnimDef]:
+        """All flat animation definitions (``kind == "flat"``)."""
         return [a for a in self.animations if a.kind == "flat"]
 
     @property
     def textures(self) -> list[AnimDef]:
+        """All texture animation definitions (``kind == "texture"``)."""
         return [a for a in self.animations if a.kind == "texture"]

@@ -55,16 +55,21 @@ def _encode_name8(name: str) -> bytes:
 
 @dataclass
 class PatchDescriptor:
+    """A single patch reference within a TEXTUREx entry (origin + patch index)."""
+
     origin_x: int
     origin_y: int
     patch_index: int
 
     def to_bytes(self) -> bytes:
+        """Serialize this patch descriptor to its binary form."""
         return pack(_PATCH_DESC_FMT, self.origin_x, self.origin_y, self.patch_index, 0, 0)
 
 
 @dataclass
 class TextureDef:
+    """A composite texture definition from TEXTURE1 or TEXTURE2."""
+
     name: str
     width: int
     height: int
