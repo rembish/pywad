@@ -129,11 +129,13 @@ class Picture(BaseLump[Any]):
                     len_raw = self.read(1)
                 except EOFError as exc:
                     raise CorruptLumpError(
-                        f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                        f"{self.name!r}: column {col_x} post length missing "
+                        f"after topdelta {topdelta}"
                     ) from exc
                 if not len_raw:
                     raise CorruptLumpError(
-                        f"{self.name!r}: column {col_x} post length missing after topdelta {topdelta}"
+                        f"{self.name!r}: column {col_x} post length missing "
+                        f"after topdelta {topdelta}"
                     )
                 post_len = len_raw[0]
                 self.read(1)  # pre-padding (unused)

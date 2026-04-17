@@ -20,16 +20,13 @@ class LumpSource(Protocol):
     @property
     def name(self) -> str:
         """The lump name (uppercase, at most 8 characters)."""
-        ...
 
     @property
     def size(self) -> int:
         """Byte size of the lump data."""
-        ...
 
     def read_bytes(self) -> bytes:
         """Return the full raw bytes of this lump."""
-        ...
 
 
 class MemoryLumpSource:

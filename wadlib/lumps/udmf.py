@@ -197,21 +197,21 @@ def _validate_by_namespace(result: UdmfMap) -> list[str]:
 
     # --- Cross-reference integrity ---
     for i, ld in enumerate(result.linedefs):
-        if not (0 <= ld.v1 < n_verts):
+        if not 0 <= ld.v1 < n_verts:
             warnings.append(f"linedef {i}: v1={ld.v1} out of range (map has {n_verts} vertices)")
-        if not (0 <= ld.v2 < n_verts):
+        if not 0 <= ld.v2 < n_verts:
             warnings.append(f"linedef {i}: v2={ld.v2} out of range (map has {n_verts} vertices)")
-        if ld.sidefront >= 0 and not (ld.sidefront < n_sides):
+        if ld.sidefront >= 0 and not ld.sidefront < n_sides:
             warnings.append(
                 f"linedef {i}: sidefront={ld.sidefront} out of range (map has {n_sides} sidedefs)"
             )
-        if ld.sideback >= 0 and not (ld.sideback < n_sides):
+        if ld.sideback >= 0 and not ld.sideback < n_sides:
             warnings.append(
                 f"linedef {i}: sideback={ld.sideback} out of range (map has {n_sides} sidedefs)"
             )
 
     for i, sd in enumerate(result.sidedefs):
-        if not (0 <= sd.sector < n_sectors):
+        if not 0 <= sd.sector < n_sectors:
             warnings.append(
                 f"sidedef {i}: sector={sd.sector} out of range (map has {n_sectors} sectors)"
             )

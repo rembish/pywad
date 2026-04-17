@@ -442,7 +442,8 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return result
 
     def get_sprite(self, name: str) -> Picture | None:
-        """Return a named sprite lump as a :class:`~wadlib.lumps.picture.Picture` (PWAD-aware), or None if not found."""
+        """Return a named sprite lump as a :class:`~wadlib.lumps.picture.Picture` (PWAD-aware),
+        or None if not found."""
         return self.sprites.get(name.upper())
 
     @cached_property
