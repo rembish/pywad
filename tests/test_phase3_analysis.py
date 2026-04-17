@@ -787,10 +787,7 @@ class TestAnalyzeGapDiagnostics:
 
     def test_udmf_no_texture_data_no_false_positives(self) -> None:
         """UDMF map with no TEXTURE1 in the WAD skips texture checks (no false alarms)."""
-        textmap = (
-            b'namespace = "zdoom";\n'
-            b'sidedef { sector = 0; texturemiddle = "ANYTHING"; }\n'
-        )
+        textmap = b'namespace = "zdoom";\nsidedef { sector = 0; texturemiddle = "ANYTHING"; }\n'
         lumps = [("MAP01", b""), ("TEXTMAP", textmap), ("ENDMAP", b"")]
         path = _wad_file(lumps)
         try:

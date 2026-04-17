@@ -6,33 +6,6 @@ Remaining work after v0.4.1.  Roughly ordered by value vs effort.
 
 ## Parser / decoder improvements
 
-### Full per-namespace UDMF field allowlists
-
-v0.4.0 added required-field checks, cross-reference integrity, and
-namespace-specific field warnings (z-height vertices, `arg0`–`arg4` things).
-Next step: full per-namespace allowlists so any field not defined in the
-ZDoom/Heretic/Strife/Hexen/Doom UDMF spec is warned rather than silently
-accepted.
-
-### Deeper `analyze()` UDMF checks
-
-The current `analyze()` validates classic WAD resources (textures, flats,
-patches, sprites, sounds, music).  UDMF-specific checks — texture/flat
-references in `TEXTMAP`, sector special validation — are not yet integrated.
-
-### ANIMDEFS compositor
-
-Given an ordered flat/texture name list and a game-tick count, return the
-name of the active texture at that moment.  `AnimDef.resolve_frames()` is
-the foundation; the compositor needs to map ticks to frame indices and handle
-random-timing frames.
-
-### PC speaker sound (format 0)
-
-DMX format-0 lumps are PC-speaker beep sequences, not PCM.  A basic
-synthesiser (triangle or square wave per note) would let `DmxSound.to_wav()`
-produce audio for these lumps.
-
 ### Full DEHACKED state machine simulation
 
 The parser covers all block types.  Simulating the resulting actor state
