@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-04-17
+
+### Added
+
+- **PC speaker sound synthesis** — `DmxSound.to_wav()` now supports DMX format-0
+  (PC speaker) lumps in addition to format-3 (digitized PCM).  Each note tick is
+  synthesized as a square wave at the frequency determined by the standard Doom
+  8253-PIT timer table (128 entries, 175 Hz – 7019 Hz).  Silence ticks (note
+  byte 0) and out-of-range values (>= 128) produce mid-level output.
+- New `DmxSound.format` property returns the raw DMX format identifier (0 or 3).
+- `DmxSound.rate` returns the synthesis rate (11025 Hz) for format-0 lumps.
+- `DmxSound.sample_count` returns the note-tick count for format-0 lumps.
+
 ## [0.4.4] - 2026-04-17
 
 ### Added
