@@ -131,7 +131,7 @@ fusermount -u /mnt/doom2
 
 ## Next steps
 
-- [Guides](guides.md) — practical how-to recipes for common tasks
+- [Guides](guides/io.md) — practical how-to recipes for common tasks
 - [API Reference](api.md) — full public API surface
 - [Game Reference](games.md) — game detection, thing catalogs, compat levels
 - [Format Reference](formats.md) — binary format details for WAD internals

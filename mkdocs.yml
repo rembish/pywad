@@ -31,7 +31,12 @@ theme:
 
 nav:
   - Home: index.md
-  - Guides: guides.md
+  - Guides:
+    - guides/io.md
+    - guides/maps.md
+    - guides/assets.md
+    - guides/sourceports.md
+    - guides/analysis.md
   - CLI Reference: cli.md
   - API Reference: api.md
   - Game Reference: games.md
