@@ -343,6 +343,7 @@ class UdmfLump(BaseLump[Any]):
 
     @cached_property
     def parsed(self) -> UdmfMap:
+        """The TEXTMAP lump decoded as a :class:`UdmfMap` (lazy, cached on first access)."""
         return parse_udmf(self.raw().decode("utf-8", errors="replace"))
 
 

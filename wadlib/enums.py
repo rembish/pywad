@@ -19,6 +19,7 @@ class WadType(ExtendedEnum):
 
 class MapData(ExtendedEnum):
     """Names of all recognized map sub-lumps (THINGS, LINEDEFS, etc.)."""
+
     THINGS = "Map Things"
     LINEDEFS = "Map Lines"
     SIDEDEFS = "Map Sides"

@@ -61,10 +61,12 @@ class DehackedLump(BaseLump[Any]):
 
     @cached_property
     def doom_version(self) -> int | None:
+        """Doom engine version targeted by this patch (e.g. ``19`` for v1.9), or ``None``."""
         return self.parsed.doom_version
 
     @cached_property
     def patch_format(self) -> int | None:
+        """DeHackEd patch format version, or ``None`` if not declared in the patch."""
         return self.parsed.patch_format
 
     @cached_property
@@ -74,7 +76,7 @@ class DehackedLump(BaseLump[Any]):
 
 
 class DehackedFile(DehackedLump):
-    """Standalone ``.deh`` file on disk."""
+    """A standalone ``.deh`` file loaded from disk, reusing the ``DehackedLump`` API."""
 
     def __init__(self, path: str | Path) -> None:  # pylint: disable=super-init-not-called
         object.__init__(self)  # pylint: disable=non-parent-init-called
@@ -85,4 +87,5 @@ class DehackedFile(DehackedLump):
         return self._deh_path.read_bytes().decode("latin-1")
 
     def raw(self) -> bytes:
+        """Return the raw bytes of the ``.deh`` file."""
         return self._deh_path.read_bytes()

@@ -49,6 +49,7 @@ class CompLevel(IntEnum):
 
     @property
     def label(self) -> str:
+        """Human-readable name for this level (e.g. ``"Boom"`` or ``"Vanilla Doom"``)."""
         return _LABELS[self]
 
 

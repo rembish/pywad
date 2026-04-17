@@ -18,12 +18,18 @@ class LumpSource(Protocol):
     """Structural protocol consumed by ``BaseLump.__init__``."""
 
     @property
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """The lump name (uppercase, at most 8 characters)."""
+        ...
 
     @property
-    def size(self) -> int: ...
+    def size(self) -> int:
+        """Byte size of the lump data."""
+        ...
 
-    def read_bytes(self) -> bytes: ...
+    def read_bytes(self) -> bytes:
+        """Return the full raw bytes of this lump."""
+        ...
 
 
 class MemoryLumpSource:
@@ -35,11 +41,14 @@ class MemoryLumpSource:
 
     @property
     def name(self) -> str:
+        """The lump name supplied at construction."""
         return self._name
 
     @property
     def size(self) -> int:
+        """Byte size of the in-memory data buffer."""
         return len(self._data)
 
     def read_bytes(self) -> bytes:
+        """Return the full in-memory data buffer."""
         return self._data
