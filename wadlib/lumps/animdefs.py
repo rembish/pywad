@@ -37,6 +37,45 @@ class AnimDef:
         """``True`` if any frame uses randomised timing (``rand`` directive)."""
         return any(f.max_tics != f.min_tics for f in self.frames)
 
+    def active_frame(self, ordered_names: Sequence[str], tick: int) -> str | None:
+        """Return the name of the frame active at *tick* game-ticks from animation start.
+
+        For fixed-duration frames the duration is exact.  For ``rand``-timed
+        frames the expected duration ``(min_tics + max_tics) // 2`` is used, so
+        the result is approximate when the animation uses randomised timing.
+
+        Returns ``None`` if the animation cannot be resolved against
+        *ordered_names* or has no frames.
+
+        Example::
+
+            flat_names = ["NUKAGE1", "NUKAGE2", "NUKAGE3"]
+            anim = AnimDef("flat", "NUKAGE1", [
+                AnimFrame(pic=1, min_tics=8, max_tics=8),
+                AnimFrame(pic=2, min_tics=8, max_tics=8),
+                AnimFrame(pic=3, min_tics=8, max_tics=8),
+            ])
+            anim.active_frame(flat_names, 0)   # -> "NUKAGE1"
+            anim.active_frame(flat_names, 8)   # -> "NUKAGE2"
+            anim.active_frame(flat_names, 24)  # -> "NUKAGE1" (wraps)
+        """
+        names = self.resolve_frames(ordered_names)
+        if names is None or not names:
+            return None
+        durations = [
+            (f.min_tics + f.max_tics) // 2 if f.min_tics != f.max_tics else f.min_tics
+            for f in self.frames
+        ]
+        cycle = sum(durations)
+        if cycle == 0:
+            return names[0]
+        t = tick % cycle
+        for name, duration in zip(names, durations, strict=True):
+            if t < duration:
+                return name
+            t -= duration
+        return names[-1]
+
     def resolve_frames(self, ordered_names: Sequence[str]) -> list[str] | None:
         """Resolve animation frame indices to actual lump names.
 

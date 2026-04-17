@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-04-17
+
+### Added
+
+- **`AnimDef.active_frame(ordered_names, tick)`** — tick-to-frame compositor for
+  ANIMDEFS animations.  Given an ordered list of lump/texture names and a game-tick
+  counter, returns the name of the frame that should be displayed.  Fixed-duration
+  frames use exact tic counts; `rand`-timed frames use the expected duration
+  ``(min_tics + max_tics) // 2``.  Returns ``None`` when the animation cannot be
+  resolved.  Zero-duration cycles return the first frame to avoid division errors.
+
 ## [0.4.3] - 2026-04-17
 
 ### Added

@@ -140,3 +140,88 @@ class TestResolveFrames:
         )
         names = ["BLOOD1", "BLOOD2", "BLOOD3"]
         assert anim.resolve_frames(names) == ["BLOOD1", "BLOOD2"]
+
+
+# ---------------------------------------------------------------------------
+# AnimDef.active_frame — tick-to-frame compositor
+# ---------------------------------------------------------------------------
+
+
+class TestActiveFrame:
+    """Unit tests for AnimDef.active_frame()."""
+
+    def _three_frame(self) -> tuple[AnimDef, list[str]]:
+        """3-frame fixed animation: NUKAGE1/2/3, 8 tics each (cycle = 24)."""
+        anim = AnimDef(
+            kind="flat",
+            name="NUKAGE1",
+            frames=[
+                AnimFrame(pic=1, min_tics=8, max_tics=8),
+                AnimFrame(pic=2, min_tics=8, max_tics=8),
+                AnimFrame(pic=3, min_tics=8, max_tics=8),
+            ],
+        )
+        names = ["NUKAGE1", "NUKAGE2", "NUKAGE3"]
+        return anim, names
+
+    def test_tick_zero_returns_first_frame(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 0) == "NUKAGE1"
+
+    def test_tick_at_boundary_returns_second_frame(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 8) == "NUKAGE2"
+
+    def test_tick_in_third_frame(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 20) == "NUKAGE3"
+
+    def test_tick_equals_cycle_wraps_to_first(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 24) == "NUKAGE1"
+
+    def test_tick_one_past_cycle(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 25) == "NUKAGE1"
+
+    def test_large_tick_wraps(self) -> None:
+        anim, names = self._three_frame()
+        assert anim.active_frame(names, 10000) == anim.active_frame(names, 10000 % 24)
+
+    def test_single_frame_always_returns_it(self) -> None:
+        anim = _anim("flat", "SLIME01", 1, tics=5)
+        names = ["SLIME01", "SLIME02"]
+        for tick in (0, 4, 5, 100):
+            assert anim.active_frame(names, tick) == "SLIME01"
+
+    def test_empty_frames_returns_none(self) -> None:
+        anim = AnimDef(kind="flat", name="FLAT01", frames=[])
+        assert anim.active_frame(["FLAT01"], 0) is None
+
+    def test_base_not_in_names_returns_none(self) -> None:
+        anim = _anim("flat", "MISSING", 1)
+        assert anim.active_frame(["FLAT01", "FLAT02"], 0) is None
+
+    def test_random_timing_uses_midpoint(self) -> None:
+        """rand(4, 12) → expected duration 8; cycle = 8 + 8 = 16."""
+        anim = AnimDef(
+            kind="flat",
+            name="BLOOD1",
+            frames=[
+                AnimFrame(pic=1, min_tics=4, max_tics=12),  # midpoint = 8
+                AnimFrame(pic=2, min_tics=4, max_tics=12),  # midpoint = 8
+            ],
+        )
+        names = ["BLOOD1", "BLOOD2"]
+        assert anim.active_frame(names, 0) == "BLOOD1"
+        assert anim.active_frame(names, 8) == "BLOOD2"
+        assert anim.active_frame(names, 16) == "BLOOD1"  # wraps
+
+    def test_all_zero_duration_returns_first(self) -> None:
+        """Frames with 0-tic duration (degenerate) should not crash."""
+        anim = AnimDef(
+            kind="flat",
+            name="FLAT01",
+            frames=[AnimFrame(pic=1, min_tics=0, max_tics=0)],
+        )
+        assert anim.active_frame(["FLAT01"], 99) == "FLAT01"
