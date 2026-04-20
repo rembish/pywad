@@ -74,6 +74,7 @@ with WadArchive("patch.wad", "w") as wad:
 wadcli --wad DOOM2.WAD info
 wadcli --wad DOOM2.WAD list maps
 wadcli --wad DOOM2.WAD export map MAP01 map01.png
+wadcli --wad DOOM2.WAD export map MAP01 --ascii          # braille terminal render
 wadcli --wad DOOM2.WAD export sound DSPISTOL pistol.wav
 wadcli --wad DOOM2.WAD check
 ```
@@ -91,14 +92,14 @@ For the full API, CLI reference, and how-to guides see the
 | WAD writing / round-trip | **Stable** | `WadWriter`, `WadArchive`; all binary types support `to_bytes()` |
 | Map inspection | **Stable** | Vanilla + Hexen map lumps; UDMF full read/write; ZNODES compressed BSP |
 | Textures / compositing | **Stable** | TEXTURE1/2, PNAMES, ZDoom TEXTURES text format; `TextureCompositor` |
-| Audio | **Stable** | DMX, MUS → MIDI, OGG/MP3/MIDI detection; WAV ↔ DMX, MIDI ↔ MUS |
+| Audio | **Stable** | DMX (PCM + PC speaker synthesis), MUS → MIDI, OGG/MP3/MIDI detection; WAV ↔ DMX, MIDI ↔ MUS |
 | CLI (`wadcli`) | **Stable** | Export, diff, check, list, render, complevel, convert |
 | PK3 / ZIP support | **Beta** | Read, write, WAD↔PK3; PK3-embedded WAD maps |
 | FUSE mount (`wadmount`) | **Beta** | Virtual WAD filesystem; OS/libfuse dependent |
 | UDMF maps | **Beta** | Full parse/serialize; namespace-specific validation started |
 | ZMAPINFO | **Beta** | Maps, episodes, clusters, defaultmap; round-trip serialiser |
 | DECORATE | **Beta** | Actors, flags, inheritance, `#include`, `replaces`; no ZScript |
-| ANIMDEFS | **Beta** | Parse; `AnimDef.resolve_frames()` maps numeric pic indices to lump names |
+| ANIMDEFS | **Beta** | Parse; `AnimDef.resolve_frames()` + `AnimDef.active_frame()` tick-to-frame compositor |
 | Compatibility analysis | **Beta** | `detect_complevel`, `check_downgrade`, `convert_complevel` |
 | LANGUAGE / SNDINFO / SNDSEQ | **Beta** | Parsed for metadata; no engine-runtime semantics |
 | ZScript / ACS execution | **Not supported** | Out of scope |

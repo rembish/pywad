@@ -28,7 +28,7 @@ manager or call `close()` when done.
 | `colormap` | `ColormapLump` -- 34 light-level remapping tables, or `None` |
 | `flats` | `dict[str, Flat]` -- floor/ceiling 64x64 textures between F_START/F_END |
 | `sprites` | `dict[str, Picture]` -- sprite frames between S_START/S_END |
-| `sounds` | `dict[str, DmxSound]` -- DMX digitised sound effects |
+| `sounds` | `dict[str, DmxSound]` -- DMX sound effects (format 3 PCM and format 0 PC speaker) |
 | `music` | `dict[str, Mus\|MidiLump\|OggLump\|Mp3Lump]` -- music lumps by name |
 | `find_lump(name)` | Return highest-priority `DirectoryEntry` for *name*, or `None` |
 | `get_lump(name)` | Return a `BaseLump` wrapper for *name*, or `None` |
@@ -161,6 +161,18 @@ WAD-native binary formats. Importable from their respective lump modules.
 | `encode_flat(image, palette)` | `wadlib.lumps.flat` | Encode a PIL Image to 4096-byte raw flat format |
 | `encode_dmx(pcm_samples, rate=11025)` | `wadlib.lumps.sound` | Encode raw 8-bit PCM to DMX sound lump bytes |
 | `wav_to_dmx(wav_data)` | `wadlib.lumps.sound` | Convert WAV file bytes to DMX sound lump bytes |
+
+### DmxSound
+
+Returned by `wad.get_sound()` and `wad.sounds[name]`.  Supports both format-3
+(digitized PCM) and format-0 (PC speaker beep sequence) lumps.
+
+| Property / Method | Description |
+|---|---|
+| `format` | Raw DMX format identifier: `3` = digitized PCM, `0` = PC speaker sequence |
+| `rate` | Sample rate in Hz.  For format-0 lumps returns the synthesis rate (11025 Hz) |
+| `sample_count` | PCM sample count (format 3) or note-tick count (format 0) |
+| `to_wav()` | Convert to WAV bytes.  Format-3 copies the embedded PCM; format-0 synthesizes square waves at the standard Doom 8253-PIT timer frequencies (175–7019 Hz) |
 | `midi_to_mus(midi_data)` | `wadlib.lumps.mid2mus` | Convert Standard MIDI bytes to MUS format bytes |
 | `build_colormap(palette, invuln_tint=None)` | `wadlib.lumps.colormap` | Build a 34-table COLORMAP from a palette |
 | `hex_to_rgb(color)` | `wadlib.lumps.colormap` | Parse `"#RRGGBB"` or `"#RGB"` to `(r, g, b)` tuple |
@@ -463,3 +475,75 @@ from wadlib.lumps.demo import parse_demo, Demo, DemoHeader, DemoTic
 | `DemoTic.fire` | `True` if fire button pressed |
 | `DemoTic.use` | `True` if use button pressed |
 | `DemoTic.weapon` | Weapon change slot (0 = no change) |
+
+---
+
+## ANIMDEFS
+
+Hexen/ZDoom flat and texture animation sequences.
+
+```python
+from wadlib.lumps.animdefs import AnimDefsLump, AnimDef, AnimFrame
+```
+
+| Class / Property | Description |
+|---|---|
+| `AnimDefsLump.animations` | `list[AnimDef]` — all animation definitions |
+| `AnimDefsLump.flats` | Subset of `animations` where `kind == "flat"` |
+| `AnimDefsLump.textures` | Subset of `animations` where `kind == "texture"` |
+| `AnimDef.kind` | `"flat"` or `"texture"` |
+| `AnimDef.name` | Base lump name (first frame) |
+| `AnimDef.frames` | `list[AnimFrame]` — ordered frame list |
+| `AnimDef.is_random` | `True` if any frame uses randomised (`rand`) timing |
+| `AnimDef.resolve_frames(ordered_names)` | Map `pic` indices to lump names from *ordered_names*; returns `list[str]` or `None` if base name not found or index out of range |
+| `AnimDef.active_frame(ordered_names, tick)` | Return the lump name active at game-tick *tick*.  Fixed frames use exact tic durations; `rand` frames use the midpoint `(min_tics + max_tics) // 2`.  Returns `None` when the animation cannot be resolved |
+| `AnimFrame.pic` | 1-based frame index relative to the base name |
+| `AnimFrame.min_tics` | Minimum display duration in game ticks |
+| `AnimFrame.max_tics` | Maximum display duration (`== min_tics` for fixed timing) |
+
+---
+
+## Renderer
+
+Image and terminal map renderers.
+
+```python
+from wadlib.renderer import MapRenderer, RenderOptions, AsciiMapRenderer
+```
+
+### MapRenderer
+
+Renders a `BaseMapEntry` to a PIL `Image`.
+
+| Class / Method | Description |
+|---|---|
+| `MapRenderer(map_entry, wad=None, options=None)` | Create a renderer; *wad* required for floor textures or sprites |
+| `render()` | Draw all enabled layers and return the PIL Image |
+| `save(path)` | Save the rendered image to *path* |
+| `image` | The current PIL Image canvas |
+
+### RenderOptions
+
+| Field | Default | Description |
+|---|---|---|
+| `scale` | `0.0` | Pixels per map unit; `0` = auto-fit to 4096 px |
+| `show_things` | `True` | Draw thing markers |
+| `show_floors` | `False` | Fill sectors with floor flat textures (requires `wad`) |
+| `palette_index` | `0` | PLAYPAL palette index |
+| `thing_scale` | `1.0` | Multiplier for thing marker radius |
+| `alpha` | `False` | RGBA output with transparent void |
+| `show_sprites` | `False` | Draw WAD sprites at thing positions instead of shapes |
+| `multiplayer` | `False` | Include `NOT_SINGLEPLAYER` things |
+
+### AsciiMapRenderer
+
+Renders a map to the terminal using Unicode braille (U+2800) + ANSI 256-colour.
+Each character cell encodes a 2×4 dot grid.  Priority-based colouring ensures
+higher-priority linedef categories always win shared cells: two-sided (0) <
+floor-step (1) < one-sided (2) < special (3) < secret (4) < things (5).
+
+| Class / Method | Description |
+|---|---|
+| `AsciiMapRenderer(map_entry, cols=0, rows=0, show_things=True, multiplayer=False, game=GameType.DOOM)` | Create a renderer; `cols`/`rows` default to terminal size minus 3 rows |
+| `render()` | Draw all layers and return the ANSI braille string |
+| `AsciiMapRenderer.legend()` | Return a colour-coded legend line for printing below the map |

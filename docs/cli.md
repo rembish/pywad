@@ -264,11 +264,26 @@ wadcli --wad DOOM2.WAD export lump GENMIDI genmidi.lmp
 
 ### `map`
 
-Render a map to PNG. Supports `--floors`, `--sprites`, `--alpha`, `--multiplayer`, `--scale`, and `--pwad`.
+Render a map to PNG or directly to the terminal (Unicode braille + ANSI colour).
+
+**PNG output** (default): supports `--floors`, `--sprites`, `--alpha`, `--multiplayer`,
+`--scale`, `--thing-scale`, and `--palette`.
 
 ```bash
 wadcli --wad DOOM2.WAD export map MAP01 map01.png
 wadcli --wad DOOM2.WAD export map MAP01 map01.png --floors --sprites --scale 2
+```
+
+**Terminal output** (`--ascii`): renders using Unicode braille (U+2800 block) at
+*(cols×2)×(rows×4)* effective dot resolution.  Terminal size is auto-detected;
+override with `--width N` and `--height N`.  Colour coding:
+dark grey = two-sided, yellow = floor step, white = solid wall,
+cyan = special/trigger, magenta = secret.
+
+```bash
+wadcli --wad DOOM2.WAD export map MAP01 --ascii
+wadcli --wad DOOM2.WAD export map MAP01 --ascii --width 120 --height 40
+wadcli --wad DOOM2.WAD export map --all --ascii
 ```
 
 ### `music`

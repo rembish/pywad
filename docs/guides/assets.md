@@ -51,10 +51,16 @@ from wadlib.lumps.sound import wav_to_dmx
 from wadlib.lumps.mid2mus import midi_to_mus
 
 with WadFile("DOOM2.WAD") as wad:
-    # DMX -> WAV
+    # DMX -> WAV (format 3: digitized PCM)
     pistol = wad.sounds["DSPISTOL"]
-    print(f"{pistol.rate} Hz, {pistol.sample_count} samples")
+    print(f"format {pistol.format}: {pistol.rate} Hz, {pistol.sample_count} samples")
     wav_bytes = pistol.to_wav()
+
+    # PC speaker sounds (format 0) are synthesized as square waves
+    # DP* lumps contain note sequences, not PCM; to_wav() handles both
+    for name, snd in wad.sounds.items():
+        if snd.format == 0:
+            pc_wav = snd.to_wav()   # synthesized from 8253-PIT timer table
     with open("pistol.wav", "wb") as f:
         f.write(wav_bytes)
 

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-04-20
+
+### Added
+
+- **Terminal map renderer** — `wadcli export map --ascii` renders any map to
+  the terminal using Unicode braille characters (U+2800 block) and ANSI
+  256-colour.  Each character cell encodes a 2×4 dot grid, giving an effective
+  resolution of *(cols×2)×(rows×4)* pixels with automatic terminal-size
+  detection.  Priority-based colouring resolves overlapping linedefs so
+  higher-priority categories always win the cell colour:
+  two-sided (dark grey) < ceiling-change (light grey) < floor-step (yellow) <
+  one-sided wall (white) < special/trigger (cyan) < secret (magenta).
+  Things are rendered as coloured 2×2 dot clusters above all lines.
+  `--width N` and `--height N` override the detected terminal size;
+  `--all` renders every map sequentially.
+- New `AsciiMapRenderer` class in `wadlib.renderer.ascii` (importable as
+  `from wadlib.renderer import AsciiMapRenderer`); `AsciiMapRenderer.legend()`
+  returns a colour-coded legend string for the terminal.
+
 ## [0.4.5] - 2026-04-17
 
 ### Added
