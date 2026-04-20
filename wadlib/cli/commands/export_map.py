@@ -1,11 +1,12 @@
-"""wadcli export map — render a map (or all maps) to PNG images."""
+"""wadcli export map — render a map (or all maps) to PNG or terminal (braille)."""
 
 import argparse
 import sys
 from pathlib import Path
 
 from ...lumps.map import BaseMapEntry
-from ...renderer import MapRenderer, RenderOptions
+from ...renderer import AsciiMapRenderer, MapRenderer, RenderOptions
+from ...types import detect_game
 from ...wad import WadFile
 from .._wad_args import open_wad
 
@@ -54,6 +55,26 @@ def configure(p: argparse.ArgumentParser) -> None:
         action="store_true",
         help="include multiplayer-only things (NOT_SINGLEPLAYER flag, extra player starts)",
     )
+    # --- terminal (ASCII/braille) output ---
+    p.add_argument(
+        "--ascii",
+        action="store_true",
+        help="render to terminal using Unicode braille + ANSI colour instead of PNG",
+    )
+    p.add_argument(
+        "--width",
+        type=int,
+        default=0,
+        metavar="N",
+        help="terminal columns for --ascii (default: auto-detect)",
+    )
+    p.add_argument(
+        "--height",
+        type=int,
+        default=0,
+        metavar="N",
+        help="terminal rows for --ascii canvas (default: auto-detect)",
+    )
     p.set_defaults(func=run)
 
 
@@ -64,10 +85,56 @@ def _render_one(target: object, wad: object, opts: RenderOptions, output: str) -
     renderer.render()
     renderer.save(output)
     w, h = renderer.image.size
-    print(f"Saved {w}x{h} → {output}")
+    print(f"Saved {w}x{h} -> {output}")
+
+
+def _render_ascii(
+    target: BaseMapEntry,
+    wad: WadFile,
+    args: argparse.Namespace,
+) -> None:
+    game = detect_game(wad)
+    renderer = AsciiMapRenderer(
+        target,
+        cols=args.width,
+        rows=args.height,
+        show_things=not args.no_things,
+        multiplayer=args.multiplayer,
+        game=game,
+    )
+    bounds = target.boundaries
+    map_w = bounds[1].x - bounds[0].x
+    map_h = bounds[1].y - bounds[0].y
+    print(f"{target}  ({map_w} x {map_h} map units)")
+    print(renderer.render())
+    print(AsciiMapRenderer.legend())
 
 
 def run(args: argparse.Namespace) -> None:  # pylint: disable=too-many-branches
+    if getattr(args, "ascii", False):
+        # ASCII/braille terminal mode — --all prints maps sequentially
+        if args.all:
+            with open_wad(args) as wad:
+                maps = wad.maps
+                if not maps:
+                    print("No maps found in WAD.", file=sys.stderr)
+                    sys.exit(1)
+                for m in maps:
+                    _render_ascii(m, wad, args)
+            return
+        if args.map is None:
+            print("Specify a map name or use --all.", file=sys.stderr)
+            sys.exit(1)
+        map_name = args.map.upper()
+        with open_wad(args) as wad:
+            target = next((m for m in wad.maps if str(m) == map_name), None)
+            if target is None:
+                available = ", ".join(str(m) for m in wad.maps)
+                print(f"Map '{map_name}' not found. Available: {available}", file=sys.stderr)
+                sys.exit(1)
+            _render_ascii(target, wad, args)
+        return
+
     opts = RenderOptions(
         scale=args.scale,
         show_things=not args.no_things,
