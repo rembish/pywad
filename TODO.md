@@ -26,13 +26,6 @@ textures, making the overhead render feel more isometric.
 
 ## API quality
 
-### Centralized typed decode path
-
-`DecoderRegistry` accepts `LumpSource` as of v0.4.0, but `WadFile.get_lump()`
-still returns `BaseLump` without going through the registry.  A single
-`decode(lump_source)` helper dispatching through `LUMP_REGISTRY` would unify
-the fragmented decode paths.
-
 ### Map subclass modeling
 
 `Doom1MapEntry` / `Doom2MapEntry` encode name/number shape only; Hexen,

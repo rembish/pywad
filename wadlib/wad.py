@@ -45,7 +45,7 @@ from .lumps.sound import DmxSound
 from .lumps.strife_conversation import ConversationLump
 from .lumps.textures import PNames, TextureList
 from .lumps.zmapinfo import ZMapInfoLump
-from .registry import assemble_maps
+from .registry import LUMP_REGISTRY, assemble_maps
 
 _STCFN_RE = re.compile(r"^STCFN(\d{3})$")
 _SCRIPT_RE = re.compile(r"^SCRIPT\d{2}$")
@@ -360,14 +360,24 @@ class WadFile:  # pylint: disable=too-many-public-methods
         return Picture(entry) if entry else None
 
     def get_lump(self, name: str) -> BaseLump[Any] | None:
-        """Return the first directory lump with the given name (PWAD-aware), or None."""
-        entry = self.find_lump(name.upper())
-        return BaseLump(entry) if entry else None
+        """Return the first directory lump with the given name (PWAD-aware), or None.
+
+        Known lump names (PLAYPAL, COLORMAP, TEXTURE1, DEHACKED, etc.) are
+        decoded through :data:`~wadlib.registry.LUMP_REGISTRY` and returned as
+        their concrete type.  Unknown names fall back to :class:`~wadlib.lumps.base.BaseLump`.
+        """
+        upper = name.upper()
+        entry = self.find_lump(upper)
+        return LUMP_REGISTRY.decode(upper, entry) if entry else None
 
     def get_lumps(self, name: str) -> list[BaseLump[Any]]:
-        """Return all directory lumps with the given name across all loaded WADs."""
+        """Return all directory lumps with the given name across all loaded WADs.
+
+        Each lump is decoded through :data:`~wadlib.registry.LUMP_REGISTRY`
+        (same dispatch as :meth:`get_lump`).
+        """
         upper = name.upper()
-        return [BaseLump(e) for wad in self._all_wads for e in wad.directory if e.name == upper]
+        return [LUMP_REGISTRY.decode(upper, e) for wad in self._all_wads for e in wad.directory if e.name == upper]
 
     @cached_property
     def music(self) -> dict[str, Mus | MidiLump | OggLump | Mp3Lump]:

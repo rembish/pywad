@@ -8,6 +8,8 @@ from pathlib import Path
 
 from wadlib.directory import DirectoryEntry
 from wadlib.lumps.base import BaseLump
+from wadlib.lumps.colormap import ColormapLump
+from wadlib.lumps.playpal import PlayPal
 from wadlib.wad import WadFile
 
 # ---------------------------------------------------------------------------
@@ -38,6 +40,27 @@ def test_get_lump_returns_baselump(freedoom1_wad: WadFile) -> None:
     lump = freedoom1_wad.get_lump("PLAYPAL")
     assert lump is not None
     assert isinstance(lump, BaseLump)
+
+
+def test_get_lump_dispatches_known_type(freedoom1_wad: WadFile) -> None:
+    assert isinstance(freedoom1_wad.get_lump("PLAYPAL"), PlayPal)
+    assert isinstance(freedoom1_wad.get_lump("COLORMAP"), ColormapLump)
+
+
+def test_get_lump_unknown_name_falls_back_to_baselump(tmp_path: Path) -> None:
+    raw = _build_wad_raw([("MYDATA", b"\x01\x02\x03")])
+    wad_path = tmp_path / "unknown.wad"
+    wad_path.write_bytes(raw)
+    with WadFile(str(wad_path)) as wad:
+        lump = wad.get_lump("MYDATA")
+        assert lump is not None
+        assert type(lump) is BaseLump
+
+
+def test_get_lumps_dispatches_known_type(freedoom1_wad: WadFile) -> None:
+    lumps = freedoom1_wad.get_lumps("PLAYPAL")
+    assert len(lumps) >= 1
+    assert all(isinstance(lump, PlayPal) for lump in lumps)
 
 
 def test_get_lump_returns_none_for_missing(freedoom1_wad: WadFile) -> None:
